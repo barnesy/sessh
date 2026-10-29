@@ -250,7 +250,7 @@ fs.writeFileSync(path.join(DOCS_DIR, '.nojekyll'), '', 'utf8');
 fs.writeFileSync(path.join(PUBLIC_DIR, 'index.html'), standaloneHtml, 'utf8');
 
 const standaloneSw = `// Session Drummer ("sessh") WebAPK / PWA Service Worker
-const CACHE_NAME = 'sessh-pwa-v21';
+const CACHE_NAME = 'sessh-pwa-v22';
 const PRECACHE_URLS = [
   './',
   './index.html',
