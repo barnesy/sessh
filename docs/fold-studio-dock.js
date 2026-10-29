@@ -3264,7 +3264,7 @@
   const CRATE_STORAGE_KEY = 'sessh_crate_v1';
   const HISTORY_STORAGE_KEY = 'sessh_history_v1';
   const PLAYER_PROFILE_KEY = 'sessh_player_v1';
-  const APP_VERSION = 'v2.3.0 (PWA Build v24)';
+  const APP_VERSION = 'v2.4.0 (PWA Build v25)';
 
   const WORKSPACE_TABS = [
     { id: 'compose', icon: '🎛️', label: 'Compose', sub: 'Select · Edit · Tweak' },
@@ -3471,6 +3471,7 @@
     // 4-Tab Workspace State (Compose, Arrange, Arrangements, Settings)
     activeTab: 'compose',           // 'compose' | 'arrange' | 'arrangements' | 'settings'
     workspaceLayoutMode: 'tabs',    // 'tabs' (focused zone view) | 'all' (show all zones stacked)
+    desktopMenuClosed: false,       // True = desktop left navigation menu collapsed/closed
     showInlinePadsInEdit: true,     // Show finger drum pads directly below sequencer in Compose tab
     showFineTuneDials: false,       // Progressive disclosure for secondary drummer dials
     showSharedGridInCollab: false,
@@ -3480,9 +3481,14 @@
     sectionSources: ['zep_levee', 'zep_levee', 'zep_levee', 'zep_levee'],
     arrangementSections: createDefaultArrangementSections('zep_levee', initialProfile.name, initialProfile.color),
 
-    // Timeline Review & Compose-to-Timeline State
+    // Timeline Review, Global Timeline BPM & Section Modal State
     selectedTimelineIdx: 0,         // Currently highlighted block on the Arrange timeline
     editingTimelineIdx: null,       // Non-null when editing a specific timeline block inside Compose
+    modalSectionIdx: null,          // Non-null when the Section Sequence Editor Modal is open
+    modalSubSlice: 0,               // Active 4-bar slice (0..3) when viewing a 16-bar block in modal
+    timelineHasUserSection: false,  // Becomes true when the first section is added to the timeline
+    timelineBpm: null,              // Global BPM for the timeline, defined by the first section added
+    timelineBpmSourceTitle: '',     // Name of the first section that defined the global timeline BPM
     timelineLoopSingle: false,      // True = loop only selectedTimelineIdx block; False = play entire timeline
     playbackMode: 'compose',        // 'compose' | 'timeline'
     activeTimelineIdx: -1,          // Index of timeline block currently playing during timeline review
@@ -3570,11 +3576,15 @@
       const payload = {
         activeTab: state.activeTab,
         workspaceLayoutMode: state.workspaceLayoutMode,
+        desktopMenuClosed: state.desktopMenuClosed,
         showInlinePadsInEdit: state.showInlinePadsInEdit,
         showFineTuneDials: state.showFineTuneDials,
         sectionSources: state.sectionSources,
         arrangementSections: state.arrangementSections,
         selectedTimelineIdx: state.selectedTimelineIdx,
+        timelineHasUserSection: state.timelineHasUserSection,
+        timelineBpm: state.timelineBpm,
+        timelineBpmSourceTitle: state.timelineBpmSourceTitle,
         timelineLoopSingle: state.timelineLoopSingle,
         selectedArtistId: state.selectedArtistId,
         selectedSongId: state.selectedSongId,
@@ -3608,6 +3618,9 @@
       if (saved.workspaceLayoutMode === 'all' || saved.workspaceLayoutMode === 'tabs') {
         state.workspaceLayoutMode = saved.workspaceLayoutMode;
       }
+      if (typeof saved.desktopMenuClosed === 'boolean') {
+        state.desktopMenuClosed = saved.desktopMenuClosed;
+      }
       if (typeof saved.showInlinePadsInEdit === 'boolean') {
         state.showInlinePadsInEdit = saved.showInlinePadsInEdit;
       }
@@ -3616,6 +3629,15 @@
       }
       if (typeof saved.timelineLoopSingle === 'boolean') {
         state.timelineLoopSingle = saved.timelineLoopSingle;
+      }
+      if (typeof saved.timelineHasUserSection === 'boolean') {
+        state.timelineHasUserSection = saved.timelineHasUserSection;
+      }
+      if (saved.timelineBpm) {
+        state.timelineBpm = Number(saved.timelineBpm);
+      }
+      if (saved.timelineBpmSourceTitle) {
+        state.timelineBpmSourceTitle = String(saved.timelineBpmSourceTitle);
       }
       state.selectedArtistId = artist.artistId;
       state.selectedSongId = song.id;
@@ -3632,7 +3654,7 @@
         Math.min(state.arrangementSections.length - 1, Number(saved.selectedTimelineIdx || 0))
       );
       state.kitId = saved.kitId || song.kit || artist.defaultKit;
-      state.tempo = Number(saved.tempo) || song.bpm;
+      state.tempo = state.timelineBpm || Number(saved.tempo) || song.bpm;
       state.intensityPct = Number(saved.intensityPct ?? 70);
       state.ghostPct = Number(saved.ghostPct ?? 45);
       state.hatEnergyPct = Number(saved.hatEnergyPct ?? 60);
@@ -3758,16 +3780,34 @@
     secItem.addedColor = state.playerColor;
   }
 
+  function setGlobalTimelineBpm(newBpm, sourceLabel = '') {
+    const clamped = Math.max(50, Math.min(200, Math.round(Number(newBpm) || 90)));
+    state.timelineBpm = clamped;
+    state.tempo = clamped;
+    if (sourceLabel) {
+      state.timelineBpmSourceTitle = sourceLabel;
+    }
+    updateDialsUI();
+    updateHeaderSummaries();
+    savePersistedState();
+    sendOsc('/live/song/set/tempo', [{ type: 'f', value: state.tempo }], false).catch(() => {});
+  }
+
   function loadSongGroove(songId, resetDials = true) {
     const { artist, song } = findSongById(songId);
     state.selectedArtistId = artist.artistId;
     state.selectedSongId = song.id;
     state.editingTimelineIdx = null;
-    if (!Array.isArray(state.arrangementSections) || state.arrangementSections.length === 0) {
+    if (!Array.isArray(state.arrangementSections)) {
       state.arrangementSections = createDefaultArrangementSections(song.id, state.playerName, state.playerColor);
     }
     if (resetDials) {
-      state.tempo = song.bpm;
+      // BPM is global to the timeline once the first section has been added!
+      if (state.timelineHasUserSection && state.timelineBpm) {
+        state.tempo = state.timelineBpm;
+      } else {
+        state.tempo = song.bpm;
+      }
       state.swingPct = song.swing;
       state.kitId = song.kit || artist.defaultKit;
     }
@@ -4151,6 +4191,18 @@
       const idx = Number(el.getAttribute('data-seq-row'));
       el.classList.toggle('playing-seq-row', idx === blockIdx);
     });
+    // Also highlight step playhead inside the Section Sequence Modal if open for this block!
+    const modalGridEl = document.getElementById('fold-modal-seq-grid');
+    if (modalGridEl) {
+      const stepInBlock =
+        blockIdx >= 0 && blockIdx === state.modalSectionIdx && activeBlockRange
+          ? relStep - activeBlockRange.startStep
+          : -1;
+      modalGridEl.querySelectorAll('.drum-step-cell[data-modal-step]').forEach((cellEl) => {
+        const s = Number(cellEl.getAttribute('data-modal-step'));
+        cellEl.classList.toggle('playhead', s === stepInBlock);
+      });
+    }
     const tlHudEl = document.getElementById('fold-timeline-hud-pill');
     if (tlHudEl) {
       if (blockIdx >= 0 && activeBlockRange && activeBlockRange.secItem) {
@@ -4158,13 +4210,13 @@
         const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
         const { song } = findSongById(secItem.songId || state.selectedSongId);
         const beatInBar = Math.floor((relStep % 16) / 4) + 1;
-        tlHudEl.textContent = `▶ Block #${blockIdx + 1} (${roleObj.label} · ${song.title}) · Bar ${timelineBarIdx + 1} of ${totalBars} · Beat ${beatInBar}`;
+        tlHudEl.textContent = `▶ Block #${blockIdx + 1} (${roleObj.label} · ${song.title}) · Bar ${timelineBarIdx + 1} of ${totalBars} · Beat ${beatInBar} · ${state.tempo} BPM`;
         tlHudEl.style.borderColor = roleObj.color;
         tlHudEl.style.color = '#fff';
       } else {
         const arr = state.arrangementSections || [];
         const tBars = arr.reduce((sum, s) => sum + (Number(s.bars) || 4), 0);
-        tlHudEl.textContent = `⏸ Ready (${arr.length} Blocks · ${tBars} Bars Total)`;
+        tlHudEl.textContent = `⏸ Ready (${arr.length} Blocks · ${tBars} Bars · ${state.tempo} BPM)`;
         tlHudEl.style.borderColor = 'rgba(255,255,255,0.2)';
         tlHudEl.style.color = '#d1d5db';
       }
@@ -4254,6 +4306,19 @@
       tlLoopBtn.textContent = state.timelineLoopSingle
         ? `🔁 Loop: Block #${(state.selectedTimelineIdx || 0) + 1} Only`
         : `🔁 Loop: Full Timeline (${arr.length} Blocks)`;
+    }
+
+    const modalPlayBtn = document.getElementById('fold-modal-play-btn');
+    if (modalPlayBtn) {
+      const isModalBlockPlaying =
+        state.phonePlayer.playing &&
+        state.playbackMode === 'timeline' &&
+        state.timelineLoopSingle &&
+        state.selectedTimelineIdx === state.modalSectionIdx;
+      modalPlayBtn.textContent = isModalBlockPlaying
+        ? '⏹ Stop Section Loop'
+        : `▶ Loop Section #${(state.modalSectionIdx ?? 0) + 1}`;
+      modalPlayBtn.classList.toggle('active', isModalBlockPlaying);
     }
 
     if (sendBtn) {
@@ -5160,9 +5225,11 @@
 
   function addComposeToTimeline(barsToAdd = 4, songIdOverride = null, roleIdOverride = null) {
     pushUndoState();
-    if (!Array.isArray(state.arrangementSections)) {
-      state.arrangementSections = createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
-    }
+    const isFirstSectionAdded =
+      !state.timelineHasUserSection ||
+      !Array.isArray(state.arrangementSections) ||
+      state.arrangementSections.length === 0;
+
     const bars = barsToAdd === 1 ? 1 : barsToAdd === 16 ? 16 : 4;
     const targetSongId = songIdOverride || state.selectedSongId;
     const isCurrentComposeSong = targetSongId === state.selectedSongId;
@@ -5216,12 +5283,30 @@
       addedColor: state.playerColor
     };
 
-    state.arrangementSections.push(newBlock);
-    state.selectedTimelineIdx = state.arrangementSections.length - 1;
+    if (isFirstSectionAdded) {
+      const firstSectionBpm = isCurrentComposeSong ? state.tempo : song.bpm;
+      state.timelineHasUserSection = true;
+      setGlobalTimelineBpm(firstSectionBpm, song.title);
+      state.arrangementSections = [newBlock];
+      state.selectedTimelineIdx = 0;
+    } else {
+      if (state.timelineBpm) {
+        state.tempo = state.timelineBpm;
+      }
+      state.arrangementSections.push(newBlock);
+      state.selectedTimelineIdx = state.arrangementSections.length - 1;
+    }
 
     const totalBars = state.arrangementSections.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
-    const barDesc = bars === 1 ? `1 Bar (Bar ${sourceBar + 1})` : bars === 16 ? 'All 16 Bars' : `4 Bars (${SONG_SECTIONS[sourceSlice]?.badge || 'Section'})`;
-    const msg = `✅ Added ${barDesc} of "${song.title}" → Timeline Block #${state.arrangementSections.length} (${totalBars} Bars Total)`;
+    const barDesc =
+      bars === 1
+        ? `1 Bar (Bar ${sourceBar + 1})`
+        : bars === 16
+        ? 'All 16 Bars'
+        : `4 Bars (${SONG_SECTIONS[sourceSlice]?.badge || 'Section'})`;
+    const msg = isFirstSectionAdded
+      ? `✅ Added 1st Section (${barDesc} of "${song.title}") → Global Timeline BPM set to ${state.tempo} BPM!`
+      : `✅ Added ${barDesc} of "${song.title}" → Timeline Block #${state.arrangementSections.length} (${totalBars} Bars @ ${state.tempo} BPM)`;
     showTimelineToast(msg);
 
     recordSessionHistoryEntry(`Added ${barDesc} (${song.title}) to Timeline`);
@@ -5477,22 +5562,48 @@
     } else if (state.editingTimelineIdx !== null && state.editingTimelineIdx > secIdx) {
       state.editingTimelineIdx--;
     }
+    if (state.modalSectionIdx === secIdx) {
+      closeSectionSequenceModal();
+    } else if (state.modalSectionIdx !== null && state.modalSectionIdx > secIdx) {
+      state.modalSectionIdx--;
+    }
     const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === removed?.roleId) || ARRANGEMENT_ROLES[1];
     commitArrangementChange(`Removed Timeline Block #${secIdx + 1} (${roleObj.label})`);
   }
 
-  function moveArrangementSection(secIdx, delta) {
+  function reorderArrangementSection(fromIdx, toIdx) {
     if (!Array.isArray(state.arrangementSections)) return;
-    const targetIdx = secIdx + delta;
-    if (targetIdx < 0 || targetIdx >= state.arrangementSections.length) return;
+    if (
+      fromIdx === toIdx ||
+      fromIdx < 0 ||
+      toIdx < 0 ||
+      fromIdx >= state.arrangementSections.length ||
+      toIdx >= state.arrangementSections.length
+    ) {
+      return;
+    }
     pushUndoState();
-    const temp = state.arrangementSections[secIdx];
-    state.arrangementSections[secIdx] = state.arrangementSections[targetIdx];
-    state.arrangementSections[targetIdx] = temp;
-    state.selectedTimelineIdx = targetIdx;
-    if (state.editingTimelineIdx === secIdx) state.editingTimelineIdx = targetIdx;
-    else if (state.editingTimelineIdx === targetIdx) state.editingTimelineIdx = secIdx;
-    commitArrangementChange(`Moved Timeline Block #${secIdx + 1} → #${targetIdx + 1}`);
+    const [moved] = state.arrangementSections.splice(fromIdx, 1);
+    state.arrangementSections.splice(toIdx, 0, moved);
+    state.selectedTimelineIdx = toIdx;
+    if (state.editingTimelineIdx === fromIdx) {
+      state.editingTimelineIdx = toIdx;
+    } else if (state.editingTimelineIdx !== null) {
+      if (fromIdx < state.editingTimelineIdx && toIdx >= state.editingTimelineIdx) {
+        state.editingTimelineIdx--;
+      } else if (fromIdx > state.editingTimelineIdx && toIdx <= state.editingTimelineIdx) {
+        state.editingTimelineIdx++;
+      }
+    }
+    if (state.modalSectionIdx === fromIdx) {
+      state.modalSectionIdx = toIdx;
+    }
+    const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === moved?.roleId) || ARRANGEMENT_ROLES[1];
+    commitArrangementChange(`Dragged Timeline Block #${fromIdx + 1} (${roleObj.label}) → #${toIdx + 1}`);
+  }
+
+  function moveArrangementSection(secIdx, delta) {
+    reorderArrangementSection(secIdx, secIdx + delta);
   }
 
   function duplicateArrangementSection(secIdx) {
@@ -5541,7 +5652,508 @@
       });
     }
     state.arrangementSections = nextArr;
+    if (!state.timelineHasUserSection && nextArr[0]) {
+      const firstSong = findSongById(nextArr[0].songId).song;
+      state.timelineHasUserSection = true;
+      setGlobalTimelineBpm(firstSong ? firstSong.bpm : state.tempo, firstSong ? firstSong.title : 'Block #1');
+    }
     commitArrangementChange(`Randomized ${currentLen}-Block Timeline`);
+  }
+
+  // ==========================================================================
+  // Section Sequence Modal Editor (Opens when clicking a section in Timeline)
+  // ==========================================================================
+  let isPaintingModalSteps = false;
+  let modalPaintTargetState = null;
+
+  function openSectionSequenceModal(secIdx) {
+    if (!Array.isArray(state.arrangementSections) || !state.arrangementSections[secIdx]) return;
+    state.selectedTimelineIdx = secIdx;
+    state.modalSectionIdx = secIdx;
+    state.modalSubSlice = 0;
+
+    const secItem = state.arrangementSections[secIdx];
+    if (!secItem.customGrid) {
+      secItem.customGrid = getTimelineBlockGrid(secItem);
+    }
+
+    const modalEl = document.getElementById('fold-section-modal');
+    if (modalEl) {
+      modalEl.style.display = 'flex';
+    }
+    renderSectionSequenceModal();
+    renderSongBuilderAndClipsUI();
+    updatePlayerButtons();
+  }
+
+  function closeSectionSequenceModal() {
+    state.modalSectionIdx = null;
+    const modalEl = document.getElementById('fold-section-modal');
+    if (modalEl) {
+      modalEl.style.display = 'none';
+    }
+    renderSongBuilderAndClipsUI();
+    updatePlayerButtons();
+  }
+
+  function applyBrushToModalCell(secIdx, vIdx, stepIdx, forceState = null) {
+    const secItem = state.arrangementSections && state.arrangementSections[secIdx];
+    if (!secItem) return null;
+    if (!secItem.customGrid) {
+      secItem.customGrid = getTimelineBlockGrid(secItem);
+    }
+    if (!secItem.customGrid[vIdx] || !secItem.customGrid[vIdx][stepIdx]) {
+      return null;
+    }
+
+    const cell = secItem.customGrid[vIdx][stepIdx];
+    const mode = state.brushMode;
+
+    if (forceState !== null) {
+      secItem.customGrid[vIdx][stepIdx] = { ...forceState };
+    } else if (mode === 'normal') {
+      cell.state = cell.state === 1 && cell.sub === 1 ? 0 : 1;
+      cell.sub = 1;
+    } else if (mode === 'accent') {
+      cell.state = cell.state === 2 ? 0 : 2;
+      cell.sub = 1;
+    } else if (mode === 'ghost') {
+      cell.state = cell.state === 3 ? 0 : 3;
+      cell.sub = 1;
+    } else if (mode === 'roll2') {
+      if (cell.state > 0 && cell.sub === 2) {
+        cell.state = 0;
+        cell.sub = 1;
+      } else {
+        cell.state = cell.state || 1;
+        cell.sub = 2;
+      }
+    } else if (mode === 'roll3') {
+      if (cell.state > 0 && cell.sub === 3) {
+        cell.state = 0;
+        cell.sub = 1;
+      } else {
+        cell.state = cell.state || 2;
+        cell.sub = 3;
+      }
+    }
+
+    secItem.customEdited = true;
+    secItem.addedBy = state.playerName;
+    secItem.addedColor = state.playerColor;
+
+    const updated = secItem.customGrid[vIdx][stepIdx];
+    if (updated.state > 0 && !state.phonePlayer.playing) {
+      const ctx = getAudioCtx();
+      const vel = updated.state === 2 ? 124 : updated.state === 3 ? 48 : 100;
+      triggerDrumVoice(ctx, DRUM_VOICES[vIdx].pitch, vel, ctx.currentTime);
+    }
+
+    savePersistedState();
+    renderSectionSequenceModalGridOnly();
+    renderSongBuilderAndClipsUI();
+    return { ...updated };
+  }
+
+  function renderSectionSequenceModalGridOnly() {
+    const gridContainer = document.getElementById('fold-modal-seq-grid');
+    if (!gridContainer || state.modalSectionIdx === null) return;
+    const secIdx = state.modalSectionIdx;
+    const secItem = state.arrangementSections && state.arrangementSections[secIdx];
+    if (!secItem) return;
+
+    const blockGrid = getTimelineBlockGrid(secItem);
+    secItem.customGrid = blockGrid;
+    const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
+    const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
+
+    if (bars === 1) {
+      // 1-Bar (16-step) high-visibility step grid
+      let html = `<div class="drum-seq-header-row">
+        <div class="drum-lane-controls-header" style="color:${roleObj.color};">1-BAR SECTION · 16 STEPS</div>
+        <div class="drum-steps-row">`;
+      for (let s = 0; s < 16; s++) {
+        const isBeat = s % 4 === 0;
+        const beatNum = Math.floor(s / 4) + 1;
+        html += `<div class="drum-step-num ${isBeat ? 'beat' : ''}">${isBeat ? `Beat ${beatNum}` : (s % 4) + 1}</div>`;
+      }
+      html += `</div></div>`;
+
+      for (let vIdx = 0; vIdx < DRUM_VOICES.length; vIdx++) {
+        const voice = DRUM_VOICES[vIdx];
+        const muted = state.mutedLanes[vIdx];
+        html += `
+          <div class="drum-seq-row ${muted ? 'muted' : ''}">
+            <div class="drum-lane-info">
+              <button type="button" class="drum-voice-btn" data-modal-audition="${vIdx}" style="border-left:4px solid ${voice.color};">
+                ${voice.name}
+              </button>
+              <button type="button" class="drum-mini-ctrl ${muted ? 'muted-on' : ''}" data-modal-mute="${vIdx}" title="Mute Voice">M</button>
+              <button type="button" class="drum-mini-ctrl" data-modal-clear-lane="${vIdx}" title="Clear Voice in Section">×</button>
+            </div>
+            <div class="drum-steps-row">`;
+        for (let s = 0; s < 16; s++) {
+          const cell = blockGrid[vIdx][s] || { state: 0, sub: 1 };
+          const beatGroup = Math.floor(s / 4) % 2 === 1 ? 'alt-group' : '';
+          const stClass =
+            cell.state === 2
+              ? 'on accent'
+              : cell.state === 3
+              ? 'on ghost'
+              : cell.state === 1
+              ? 'on normal'
+              : '';
+          const subBadge = cell.state > 0 && cell.sub > 1 ? `<span class="sub-badge">${cell.sub}x</span>` : '';
+          const bgStyle = cell.state > 0 ? `background:${voice.color};border-color:${voice.color};` : '';
+          html += `
+            <div class="drum-step-cell ${beatGroup} ${stClass}"
+                 data-modal-v="${vIdx}" data-modal-step="${s}" style="${bgStyle}">
+              ${subBadge}
+            </div>`;
+        }
+        html += `</div></div>`;
+      }
+      gridContainer.innerHTML = html;
+    } else {
+      // 4-Bar (64-step) view (or active 4-bar slice of a 16-bar block)
+      const subSlice = bars === 16 ? Math.max(0, Math.min(3, state.modalSubSlice || 0)) : 0;
+      const startBarInBlock = subSlice * 4;
+      const startStepInBlock = subSlice * 64;
+
+      let html = `<div class="drum-seq-64-wrapper" style="border-left:4px solid ${roleObj.color};padding-left:8px;">`;
+      html += `<div class="drum-seq-row-64 header">
+        <div class="drum-lane-controls-header" style="color:${roleObj.color};">
+          ${bars === 16 ? `SLICE ${subSlice + 1} (BARS ${startBarInBlock + 1}–${startBarInBlock + 4})` : `4-BAR SECTION`}<br>
+          <span style="font-size:9px;color:#9ca3af;">Steps ${startStepInBlock + 1}–${startStepInBlock + 64}</span>
+        </div>
+        <div class="drum-bars-4-grid">
+          <div class="bar-banner">BAR ${startBarInBlock + 1}</div>
+          <div class="bar-banner">BAR ${startBarInBlock + 2}</div>
+          <div class="bar-banner">BAR ${startBarInBlock + 3}</div>
+          <div class="bar-banner fill-bar">BAR ${startBarInBlock + 4} (Turnaround / Fill)</div>
+        </div>
+      </div>`;
+
+      for (let vIdx = 0; vIdx < DRUM_VOICES.length; vIdx++) {
+        const voice = DRUM_VOICES[vIdx];
+        const muted = state.mutedLanes[vIdx];
+        html += `
+          <div class="drum-seq-row-64 ${muted ? 'muted' : ''}">
+            <div class="drum-lane-info">
+              <button type="button" class="drum-voice-btn" data-modal-audition="${vIdx}" style="border-left:4px solid ${voice.color};">
+                ${voice.name}
+              </button>
+              <button type="button" class="drum-mini-ctrl ${muted ? 'muted-on' : ''}" data-modal-mute="${vIdx}" title="Mute Voice">M</button>
+              <button type="button" class="drum-mini-ctrl" data-modal-clear-lane="${vIdx}" title="Clear Voice in Section">×</button>
+            </div>
+            <div class="drum-bars-4-grid">`;
+
+        for (let b = 0; b < 4; b++) {
+          html += `<div class="drum-bar-16-subgrid">`;
+          for (let i = 0; i < 16; i++) {
+            const s = startStepInBlock + b * 16 + i;
+            const cell = blockGrid[vIdx][s] || { state: 0, sub: 1 };
+            const isBeat = i % 4 === 0;
+            const stClass =
+              cell.state === 2
+                ? 'on accent'
+                : cell.state === 3
+                ? 'on ghost'
+                : cell.state === 1
+                ? 'on normal'
+                : '';
+            const bgStyle = cell.state > 0 ? `background:${voice.color};border-color:${voice.color};` : '';
+            const subBadge = cell.state > 0 && cell.sub > 1 ? `<span class="sub-badge-mini">${cell.sub}</span>` : '';
+            html += `
+              <div class="drum-step-cell compact64 ${isBeat ? 'beat-start' : ''} ${stClass}"
+                   data-modal-v="${vIdx}" data-modal-step="${s}" style="${bgStyle}">
+                ${subBadge}
+              </div>`;
+          }
+          html += `</div>`;
+        }
+        html += `</div></div>`;
+      }
+      html += `</div>`;
+      gridContainer.innerHTML = html;
+    }
+
+    gridContainer.querySelectorAll('[data-modal-audition]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const vIdx = Number(btn.getAttribute('data-modal-audition'));
+        const ctx = getAudioCtx();
+        triggerDrumVoice(ctx, DRUM_VOICES[vIdx].pitch, 118, ctx.currentTime);
+      });
+    });
+
+    gridContainer.querySelectorAll('[data-modal-mute]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const vIdx = Number(btn.getAttribute('data-modal-mute'));
+        state.mutedLanes[vIdx] = !state.mutedLanes[vIdx];
+        renderSectionSequenceModalGridOnly();
+      });
+    });
+
+    gridContainer.querySelectorAll('[data-modal-clear-lane]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const vIdx = Number(btn.getAttribute('data-modal-clear-lane'));
+        if (!secItem.customGrid) secItem.customGrid = getTimelineBlockGrid(secItem);
+        const totalSteps = secItem.customGrid[vIdx] ? secItem.customGrid[vIdx].length : 64;
+        for (let s = 0; s < totalSteps; s++) {
+          secItem.customGrid[vIdx][s] = { state: 0, sub: 1 };
+        }
+        secItem.customEdited = true;
+        savePersistedState();
+        renderSectionSequenceModalGridOnly();
+        renderSongBuilderAndClipsUI();
+      });
+    });
+
+    gridContainer.querySelectorAll('.drum-step-cell[data-modal-step]').forEach((cellEl) => {
+      cellEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const vIdx = Number(cellEl.getAttribute('data-modal-v'));
+        const sIdx = Number(cellEl.getAttribute('data-modal-step'));
+        isPaintingModalSteps = true;
+        modalPaintTargetState = applyBrushToModalCell(secIdx, vIdx, sIdx, null);
+      });
+      cellEl.addEventListener('pointerenter', () => {
+        if (!isPaintingModalSteps || !modalPaintTargetState) return;
+        const vIdx = Number(cellEl.getAttribute('data-modal-v'));
+        const sIdx = Number(cellEl.getAttribute('data-modal-step'));
+        applyBrushToModalCell(secIdx, vIdx, sIdx, modalPaintTargetState);
+      });
+    });
+  }
+
+  window.addEventListener('pointerup', () => {
+    isPaintingModalSteps = false;
+    modalPaintTargetState = null;
+  });
+
+  function renderSectionSequenceModal() {
+    const contentEl = document.getElementById('fold-section-modal-content');
+    if (!contentEl || state.modalSectionIdx === null) return;
+    const secIdx = state.modalSectionIdx;
+    const arr = state.arrangementSections || [];
+    const secItem = arr[secIdx];
+    if (!secItem) {
+      closeSectionSequenceModal();
+      return;
+    }
+
+    const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
+    const curSongId = secItem.songId || state.selectedSongId;
+    const { artist, song } = findSongById(curSongId);
+    const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
+    const sliceIdx = Math.max(0, Math.min(3, Number(secItem.sourceSlice ?? 0)));
+    const sourceBarIdx = Math.max(0, Math.min(15, Number(secItem.sourceBar ?? sliceIdx * 4)));
+
+    let startBarNum = 1;
+    for (let i = 0; i < secIdx; i++) {
+      startBarNum += Math.max(1, Math.min(16, Number(arr[i].bars) || 4));
+    }
+    const endBarNum = startBarNum + bars - 1;
+    const barRangeText = bars === 1 ? `Timeline Bar ${startBarNum}` : `Timeline Bars ${startBarNum}–${endBarNum}`;
+
+    const songOptionsHtml = ARTIST_CATALOG.map(
+      (a) =>
+        `<optgroup label="${a.artistName} (${a.drummer})">${a.songs
+          .map((s) => `<option value="${s.id}" ${s.id === curSongId ? 'selected' : ''}>${s.title}</option>`)
+          .join('')}</optgroup>`
+    ).join('');
+
+    const sliceLabels = [
+      'Sec 1: Intro / Verse (Bars 1–4)',
+      'Sec 2: Chorus / Hook (Bars 5–8)',
+      'Sec 3: Bridge / Break (Bars 9–12)',
+      'Sec 4: Climax & Fill (Bars 13–16)'
+    ];
+
+    let sourcePickerHtml = '';
+    if (bars === 1) {
+      sourcePickerHtml = `
+        <select id="fold-modal-source-bar" class="fold-select" style="height:34px;font-size:12px;">
+          ${Array.from({ length: 16 }, (_, b) => {
+            const secNum = Math.floor(b / 4) + 1;
+            const isFill = (b + 1) % 4 === 0;
+            return `<option value="${b}" ${b === sourceBarIdx ? 'selected' : ''}>Source Bar ${b + 1} of 16 (Sec ${secNum}${isFill ? ' · Fill' : ''})</option>`;
+          }).join('')}
+        </select>`;
+    } else if (bars === 4) {
+      sourcePickerHtml = `
+        <select id="fold-modal-source-slice" class="fold-select" style="height:34px;font-size:12px;">
+          ${sliceLabels.map((lbl, idx) => `<option value="${idx}" ${idx === sliceIdx ? 'selected' : ''}>${lbl}</option>`).join('')}
+        </select>`;
+    } else {
+      sourcePickerHtml = `
+        <div class="fold-btn-row" style="gap:4px;">
+          ${[0, 1, 2, 3]
+            .map(
+              (sIdx) =>
+                `<button type="button" class="fold-btn ${state.modalSubSlice === sIdx ? 'chip-on' : ''}" data-modal-subslice="${sIdx}" style="padding:5px 9px;font-size:11px;">Bars ${sIdx * 4 + 1}–${sIdx * 4 + 4}</button>`
+            )
+            .join('')}
+        </div>`;
+    }
+
+    contentEl.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.14);">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:900;color:#fff;background:${roleObj.color};padding:4px 10px;border-radius:7px;">SECTION #${secIdx + 1}</span>
+          <strong style="font-size:15px;color:#fff;">${artist.artistName} — ${song.title}</strong>
+          <span style="font-size:12px;font-weight:800;color:#fbbf24;background:rgba(251,191,36,0.16);padding:3px 9px;border-radius:6px;">${barRangeText} (${bars}B)</span>
+          <span id="fold-modal-bpm-badge" style="font-size:12px;font-weight:800;color:#84dcc6;background:rgba(132,220,198,0.14);padding:3px 9px;border-radius:6px;">⏱️ Global Timeline: ${state.tempo} BPM</span>
+        </div>
+        <div class="fold-btn-row">
+          <button type="button" id="fold-modal-play-btn" class="fold-btn primary">▶ Loop Section #${secIdx + 1}</button>
+          <button type="button" id="fold-modal-reset-btn" class="fold-btn" title="Reset this section back to the factory pattern of its selected song">🔄 Reset Section</button>
+          <button type="button" id="fold-modal-open-compose-btn" class="fold-btn teal" title="Open this section in full Compose view with Dials & Finger Instruments">🎛️ Open in Compose</button>
+          <button type="button" id="fold-modal-close-btn" class="fold-btn" style="background:#374151;border-color:#6b7280;color:#fff;">✕ Done</button>
+        </div>
+      </div>
+
+      <!-- Section Role, Length (1B/4B/16B), Song & Source Bar Controls -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.34);padding:8px 11px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);">
+        <div class="fold-btn-row" style="gap:6px;">
+          <span style="font-size:11px;font-weight:800;color:#9ca3af;">ROLE:</span>
+          <select id="fold-modal-role-select" class="fold-select" style="height:34px;font-size:12px;border-color:${roleObj.color};">
+            ${ARRANGEMENT_ROLES.map((r) => `<option value="${r.id}" ${r.id === roleObj.id ? 'selected' : ''}>${r.label}</option>`).join('')}
+          </select>
+          <span style="font-size:11px;font-weight:800;color:#9ca3af;margin-left:4px;">LENGTH:</span>
+          <div style="display:inline-flex;background:#14151e;border:1px solid rgba(255,255,255,0.2);border-radius:7px;overflow:hidden;">
+            ${[1, 4, 16]
+              .map(
+                (bLen) =>
+                  `<button type="button" data-modal-bars="${bLen}" style="border:none;padding:5px 10px;font-size:12px;font-weight:800;cursor:pointer;background:${
+                    bars === bLen ? '#e73ff6' : 'transparent'
+                  };color:${bars === bLen ? '#fff' : '#9ca3af'};">${bLen} Bar${bLen === 1 ? '' : 's'}</button>`
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="fold-btn-row" style="gap:6px;flex:1;justify-content:flex-end;">
+          <select id="fold-modal-song-select" class="fold-select" style="height:34px;font-size:12px;max-width:260px;">
+            ${songOptionsHtml}
+          </select>
+          ${sourcePickerHtml}
+        </div>
+      </div>
+
+      <!-- Step Brush Bar inside Modal -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.26);padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+        <div class="fold-btn-row">
+          <span style="font-size:11px;font-weight:800;color:#84dcc6;">STEP BRUSH (TAP OR DRAG STEPS):</span>
+          <button type="button" class="fold-btn ${state.brushMode === 'normal' ? 'chip-on' : ''}" data-modal-brush="normal">● Normal</button>
+          <button type="button" class="fold-btn ${state.brushMode === 'accent' ? 'chip-on' : ''}" data-modal-brush="accent">🔥 Accent</button>
+          <button type="button" class="fold-btn ${state.brushMode === 'ghost' ? 'chip-on' : ''}" data-modal-brush="ghost">👻 Ghost</button>
+          <button type="button" class="fold-btn ${state.brushMode === 'roll2' ? 'chip-on' : ''}" data-modal-brush="roll2">⚡ 32nd (2x)</button>
+          <button type="button" class="fold-btn ${state.brushMode === 'roll3' ? 'chip-on' : ''}" data-modal-brush="roll3">⚡ Triplet (3x)</button>
+        </div>
+        <span style="font-size:11px;color:#d1d5db;">💡 Changes save automatically to Section #${secIdx + 1} on your timeline</span>
+      </div>
+
+      <!-- Interactive Step Sequencer Grid for this Section -->
+      <div id="fold-modal-seq-grid" style="overflow-x:auto;padding-bottom:6px;"></div>
+    `;
+
+    renderSectionSequenceModalGridOnly();
+    updatePlayerButtons();
+
+    // Wire up modal controls
+    document.getElementById('fold-modal-close-btn')?.addEventListener('click', closeSectionSequenceModal);
+    document.getElementById('fold-modal-play-btn')?.addEventListener('click', () => {
+      const isPlayingThis =
+        state.phonePlayer.playing &&
+        state.playbackMode === 'timeline' &&
+        state.timelineLoopSingle &&
+        state.selectedTimelineIdx === secIdx;
+      if (isPlayingThis) {
+        stopPhonePlayback();
+      } else {
+        state.selectedTimelineIdx = secIdx;
+        state.timelineLoopSingle = true;
+        startPhonePlayback('timeline');
+      }
+      updatePlayerButtons();
+    });
+
+    document.getElementById('fold-modal-reset-btn')?.addEventListener('click', () => {
+      secItem.customGrid = null;
+      secItem.customEdited = false;
+      secItem.customGrid = getTimelineBlockGrid(secItem);
+      commitArrangementChange(`Reset Section #${secIdx + 1} Sequence`);
+      renderSectionSequenceModal();
+    });
+
+    document.getElementById('fold-modal-open-compose-btn')?.addEventListener('click', () => {
+      closeSectionSequenceModal();
+      openTimelineBlockInCompose(secIdx);
+    });
+
+    document.getElementById('fold-modal-role-select')?.addEventListener('change', (e) => {
+      const newRole = ARRANGEMENT_ROLES.find((r) => r.id === e.target.value) || ARRANGEMENT_ROLES[1];
+      secItem.roleId = newRole.id;
+      commitArrangementChange(`Changed Section #${secIdx + 1} Role → ${newRole.label}`);
+      renderSectionSequenceModal();
+    });
+
+    contentEl.querySelectorAll('[data-modal-bars]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const newBars = Number(btn.getAttribute('data-modal-bars')) || 4;
+        secItem.bars = newBars;
+        secItem.customGrid = null;
+        secItem.customEdited = false;
+        secItem.customGrid = getTimelineBlockGrid(secItem);
+        commitArrangementChange(`Changed Section #${secIdx + 1} Length → ${newBars} Bar(s)`);
+        renderSectionSequenceModal();
+      });
+    });
+
+    document.getElementById('fold-modal-song-select')?.addEventListener('change', (e) => {
+      secItem.songId = e.target.value;
+      secItem.customGrid = null;
+      secItem.customEdited = false;
+      secItem.customGrid = getTimelineBlockGrid(secItem);
+      const { song: newSong } = findSongById(e.target.value);
+      commitArrangementChange(`Changed Section #${secIdx + 1} Song → ${newSong.title}`);
+      renderSectionSequenceModal();
+    });
+
+    document.getElementById('fold-modal-source-bar')?.addEventListener('change', (e) => {
+      secItem.sourceBar = Number(e.target.value);
+      secItem.customGrid = null;
+      secItem.customEdited = false;
+      secItem.customGrid = getTimelineBlockGrid(secItem);
+      commitArrangementChange(`Changed Section #${secIdx + 1} Source Bar → Bar ${Number(e.target.value) + 1}`);
+      renderSectionSequenceModal();
+    });
+
+    document.getElementById('fold-modal-source-slice')?.addEventListener('change', (e) => {
+      secItem.sourceSlice = Number(e.target.value);
+      secItem.customGrid = null;
+      secItem.customEdited = false;
+      secItem.customGrid = getTimelineBlockGrid(secItem);
+      commitArrangementChange(`Changed Section #${secIdx + 1} 4-Bar Slice`);
+      renderSectionSequenceModal();
+    });
+
+    contentEl.querySelectorAll('[data-modal-subslice]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.modalSubSlice = Number(btn.getAttribute('data-modal-subslice')) || 0;
+        renderSectionSequenceModal();
+      });
+    });
+
+    contentEl.querySelectorAll('[data-modal-brush]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.brushMode = btn.getAttribute('data-modal-brush');
+        document.querySelectorAll('[data-brush]').forEach((b) => {
+          b.classList.toggle('chip-on', b.getAttribute('data-brush') === state.brushMode);
+        });
+        renderSectionSequenceModal();
+      });
+    });
   }
 
   async function refreshAbletonTrackClips() {
@@ -5590,6 +6202,124 @@
     return `<div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px;height:22px;align-items:end;margin-top:4px;">${spans}</div>`;
   }
 
+  let draggedTimelineBlockIdx = null;
+  let pointerDragState = null;
+
+  function wireTimelineDragAndClick(containerEl, selector, attrName, onTapBlock) {
+    if (!containerEl) return;
+    const items = Array.from(containerEl.querySelectorAll(selector));
+
+    items.forEach((itemEl) => {
+      const idx = Number(itemEl.getAttribute(attrName));
+
+      // 1. HTML5 Drag & Drop (Desktop Mouse)
+      itemEl.addEventListener('dragstart', (e) => {
+        if (e.target && (e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT')) {
+          e.preventDefault();
+          return;
+        }
+        draggedTimelineBlockIdx = idx;
+        itemEl.classList.add('dragging-tl-block');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          try {
+            e.dataTransfer.setData('text/plain', String(idx));
+          } catch (_) {}
+        }
+      });
+
+      itemEl.addEventListener('dragover', (e) => {
+        if (draggedTimelineBlockIdx === null || draggedTimelineBlockIdx === idx) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        const rect = itemEl.getBoundingClientRect();
+        const isAfter = e.clientX > rect.left + rect.width / 2;
+        itemEl.classList.toggle('drag-over-left', !isAfter);
+        itemEl.classList.toggle('drag-over-right', isAfter);
+      });
+
+      itemEl.addEventListener('dragleave', () => {
+        itemEl.classList.remove('drag-over-left', 'drag-over-right');
+      });
+
+      itemEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        itemEl.classList.remove('drag-over-left', 'drag-over-right');
+        const fromIdx = draggedTimelineBlockIdx;
+        draggedTimelineBlockIdx = null;
+        if (fromIdx === null || fromIdx === idx) return;
+        reorderArrangementSection(fromIdx, idx);
+      });
+
+      itemEl.addEventListener('dragend', () => {
+        draggedTimelineBlockIdx = null;
+        items.forEach((el) => el.classList.remove('dragging-tl-block', 'drag-over-left', 'drag-over-right'));
+      });
+
+      // 2. Touch / Pointer Drag Reordering + Click-to-Open-Modal
+      itemEl.addEventListener('pointerdown', (e) => {
+        if (e.button && e.button !== 0) return;
+        if (e.target.closest('button, select, input')) return;
+        pointerDragState = {
+          fromIdx: idx,
+          startX: e.clientX,
+          startY: e.clientY,
+          moved: false,
+          overIdx: idx,
+          sourceEl: itemEl
+        };
+      });
+    });
+  }
+
+  window.addEventListener('pointermove', (e) => {
+    if (!pointerDragState) return;
+    const dx = e.clientX - pointerDragState.startX;
+    const dy = e.clientY - pointerDragState.startY;
+    if (!pointerDragState.moved && Math.hypot(dx, dy) > 10) {
+      pointerDragState.moved = true;
+      pointerDragState.sourceEl.classList.add('dragging-tl-block');
+    }
+    if (pointerDragState.moved) {
+      document.querySelectorAll('.fold-tl-block, .fold-seq-card-row').forEach((el) => {
+        el.classList.remove('drag-over-left', 'drag-over-right');
+      });
+      const underEl = document.elementFromPoint(e.clientX, e.clientY);
+      const targetBlock = underEl && underEl.closest('[data-tl-block], [data-seq-row]');
+      if (targetBlock) {
+        const targetIdx = Number(
+          targetBlock.hasAttribute('data-tl-block')
+            ? targetBlock.getAttribute('data-tl-block')
+            : targetBlock.getAttribute('data-seq-row')
+        );
+        if (!Number.isNaN(targetIdx) && targetIdx !== pointerDragState.fromIdx) {
+          pointerDragState.overIdx = targetIdx;
+          const rect = targetBlock.getBoundingClientRect();
+          const isAfter = e.clientX > rect.left + rect.width / 2;
+          targetBlock.classList.toggle('drag-over-left', !isAfter);
+          targetBlock.classList.toggle('drag-over-right', isAfter);
+        }
+      }
+    }
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    if (!pointerDragState) return;
+    const st = pointerDragState;
+    pointerDragState = null;
+    document.querySelectorAll('.fold-tl-block, .fold-seq-card-row').forEach((el) => {
+      el.classList.remove('dragging-tl-block', 'drag-over-left', 'drag-over-right');
+    });
+    if (st.moved) {
+      if (st.overIdx !== st.fromIdx) {
+        reorderArrangementSection(st.fromIdx, st.overIdx);
+      }
+    } else if (st.sourceEl && st.sourceEl.hasAttribute('data-tl-block')) {
+      // Simple click/tap on a Timeline Block opens the Section Sequence Modal!
+      openSectionSequenceModal(st.fromIdx);
+    }
+  });
+
   function renderSongBuilderAndClipsUI() {
     const visualTimelineEl = document.getElementById('fold-visual-timeline');
     const mashupGridEl = document.getElementById('fold-mashup-sections-grid');
@@ -5604,7 +6334,7 @@
 
     const arrangeSummaryEl = document.getElementById('fold-summary-arrange');
     if (arrangeSummaryEl) {
-      arrangeSummaryEl.textContent = `${arr.length} Blocks · ${totalBars} Bars Total`;
+      arrangeSummaryEl.textContent = `${arr.length} Blocks · ${totalBars} Bars · ${state.tempo} BPM`;
     }
     const arrangeBadgeEl = document.getElementById('fold-tab-badge-arrange');
     if (arrangeBadgeEl) {
@@ -5616,8 +6346,23 @@
     }
     const builderSendFullBtn = document.getElementById('fold-builder-send-full-btn');
     if (builderSendFullBtn) {
-      builderSendFullBtn.textContent = `🚀 Send Full Timeline (${totalBars} Bars) → Ableton`;
+      builderSendFullBtn.textContent = `🚀 Send Full Timeline (${totalBars} Bars @ ${state.tempo} BPM) → Ableton`;
     }
+
+    // Update Global Timeline BPM Bar
+    const tlBpmSlider = document.getElementById('fold-timeline-bpm-slider');
+    const tlBpmVal = document.getElementById('fold-timeline-bpm-val');
+    const tlBpmSource = document.getElementById('fold-timeline-bpm-source');
+    if (tlBpmSlider) tlBpmSlider.value = state.tempo;
+    if (tlBpmVal) tlBpmVal.textContent = `${state.tempo} BPM`;
+    if (tlBpmSource) {
+      const firstBlockSong = arr[0] ? findSongById(arr[0].songId || state.selectedSongId).song : null;
+      const srcTitle = state.timelineBpmSourceTitle || (firstBlockSong ? firstBlockSong.title : '1st Section');
+      tlBpmSource.textContent = state.timelineHasUserSection
+        ? `Locked by 1st Section (${srcTitle})`
+        : `1st section added defines BPM (Currently ${srcTitle})`;
+    }
+
     updatePlayerButtons();
 
     // 1. Render Horizontal Proportional Song Arrangement Timeline (#fold-visual-timeline)
@@ -5636,16 +6381,18 @@
           const isSelected = secIdx === state.selectedTimelineIdx;
           const isPlaying = state.phonePlayer.playing && state.playbackMode === 'timeline' && state.activeTimelineIdx === secIdx;
           const flexWeight = bars === 1 ? 1.35 : bars === 16 ? 3.6 : 2.1;
-          const minW = bars === 1 ? 128 : bars === 16 ? 230 : 165;
+          const minW = bars === 1 ? 135 : bars === 16 ? 235 : 170;
 
           return `
             <div class="fold-tl-block ${isSelected ? 'selected-tl-block' : ''} ${isPlaying ? 'playing-tl-block' : ''}"
                  data-tl-block="${secIdx}"
+                 draggable="true"
+                 title="Drag to reorder · Click to open Section Sequence Editor Modal"
                  style="flex:${flexWeight} 1 ${minW}px;min-width:${minW}px;border-top:4px solid ${roleObj.color};position:relative;overflow:hidden;">
               <div class="fold-tl-needle" style="display:${isPlaying ? 'block' : 'none'};left:0%;"></div>
               <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
-                <span style="font-size:11px;font-weight:900;color:#fbbf24;">${barLabel}</span>
-                <span style="font-size:10px;font-weight:900;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.1);color:#fff;">${bars}B</span>
+                <span style="font-size:11px;font-weight:900;color:#fbbf24;">⠿ ${barLabel}</span>
+                <span style="font-size:10px;font-weight:900;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.12);color:#fff;">${bars}B · 🎹 Click</span>
               </div>
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px;">
                 <strong style="font-size:12px;color:#fff;">#${secIdx + 1} ${roleObj.label}</strong>
@@ -5659,21 +6406,8 @@
         })
         .join('');
 
-      visualTimelineEl.querySelectorAll('[data-tl-block]').forEach((blockEl) => {
-        blockEl.addEventListener('click', () => {
-          const idx = Number(blockEl.getAttribute('data-tl-block'));
-          state.selectedTimelineIdx = idx;
-          renderSongBuilderAndClipsUI();
-          const cardRow = document.querySelector(`.fold-seq-card-row[data-seq-row="${idx}"]`);
-          if (cardRow) {
-            cardRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
-          if (state.phonePlayer.playing && state.playbackMode === 'timeline' && state.timelineLoopSingle) {
-            const ctx = getAudioCtx();
-            state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
-            state.phonePlayer.lastStepTime = -0.001;
-          }
-        });
+      wireTimelineDragAndClick(visualTimelineEl, '[data-tl-block]', 'data-tl-block', (idx) => {
+        openSectionSequenceModal(idx);
       });
     }
 
@@ -5685,7 +6419,7 @@
             `<optgroup label="${a.artistName} (${a.drummer})">${a.songs
               .map(
                 (s) =>
-                  `<option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${s.title} (${s.bpm} BPM)</option>`
+                  `<option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${s.title}</option>`
               )
               .join('')}</optgroup>`
         ).join('');
@@ -5737,14 +6471,14 @@
           }
 
           return `
-            <div class="fold-seq-card-row ${isSelected ? 'selected-seq-row' : ''}" data-seq-row="${secIdx}" style="background:${
+            <div class="fold-seq-card-row ${isSelected ? 'selected-seq-row' : ''}" data-seq-row="${secIdx}" draggable="true" style="background:${
               isSelected ? 'rgba(231,63,246,0.11)' : 'rgba(0,0,0,0.36)'
             };border:1.5px solid ${
               isSelected ? '#e73ff6' : 'rgba(255,255,255,0.14)'
-            };border-top:4px solid ${roleObj.color};border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:9px;">
+            };border-top:4px solid ${roleObj.color};border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:9px;cursor:grab;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <span style="font-size:12px;font-weight:900;color:#fff;background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">#${secIdx + 1}</span>
+                  <span style="font-size:12px;font-weight:900;color:#fff;background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;" title="Drag to reorder">⠿ #${secIdx + 1}</span>
                   <select class="fold-select" data-arr-role="${secIdx}" style="height:32px;font-size:12px;padding:2px 8px;border-color:${roleObj.color};">
                     ${ARRANGEMENT_ROLES.map(
                       (r) => `<option value="${r.id}" ${r.id === roleObj.id ? 'selected' : ''}>${r.label}</option>`
@@ -5770,8 +6504,8 @@
                 </div>
               </div>
 
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:12px;color:#84dcc6;font-weight:700;">
-                <span>${artist.artistName} — ${song.title}</span>
+              <div data-arr-modal="${secIdx}" style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:12px;color:#84dcc6;font-weight:700;cursor:pointer;" title="Click to open Section Sequence Editor Modal">
+                <span>🎹 ${artist.artistName} — ${song.title}</span>
                 <span style="font-size:10px;color:#9ca3af;">
                   ${secItem.customEdited ? `<strong style="color:#f0abfc;">✏️ Custom Edited</strong> · ` : ''}by <strong style="color:${secItem.addedColor || '#84dcc6'};">${secItem.addedBy || 'Producer'}</strong>
                 </span>
@@ -5784,13 +6518,24 @@
               ${sourceSelectorHtml}
 
               <div class="fold-btn-row" style="gap:6px;margin-top:2px;">
-                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-play="${secIdx}">▶ Review Block</button>
-                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.18);" data-arr-edit="${secIdx}">🎛️ Edit in Compose</button>
+                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.22);" data-arr-modal="${secIdx}">🎹 Edit Sequence (Modal)</button>
+                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-play="${secIdx}">▶ Loop</button>
+                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-edit="${secIdx}">🎛️ Compose</button>
                 <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-send="${secIdx}">🚀 → Scene ${secIdx + 1}</button>
               </div>
             </div>`;
         })
         .join('');
+
+      wireTimelineDragAndClick(mashupGridEl, '[data-seq-row]', 'data-seq-row', null);
+
+      mashupGridEl.querySelectorAll('[data-arr-modal]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = Number(el.getAttribute('data-arr-modal'));
+          openSectionSequenceModal(idx);
+        });
+      });
 
       mashupGridEl.querySelectorAll('[data-arr-role]').forEach((sel) => {
         sel.addEventListener('change', (e) => {
@@ -7993,6 +8738,12 @@
           flex-direction: column;
           justify-content: space-between;
           box-shadow: 6px 0 24px rgba(0, 0, 0, 0.65);
+          transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        body.fold-desktop-menu-closed #fold-nav-rail {
+          transform: translateX(-105%) !important;
+          pointer-events: none !important;
+          opacity: 0 !important;
         }
         #fold-nav-rail .fold-ws-tab-list {
           flex-direction: column;
@@ -8001,11 +8752,22 @@
         }
         #fold-studio-dock {
           padding-left: 228px !important;
+          transition: padding-left 0.2s ease;
+        }
+        body.fold-desktop-menu-closed #fold-studio-dock {
+          padding-left: 0 !important;
+        }
+        #fold-desktop-menu-btn {
+          display: inline-flex;
         }
       }
 
       /* Mobile Layout: Fixed Bottom Tab Bar */
       @media (max-width: 819px) {
+        #fold-desktop-menu-btn,
+        #fold-close-desktop-menu-btn {
+          display: none !important;
+        }
         #fold-nav-rail {
           position: fixed;
           left: 0;
@@ -8117,12 +8879,15 @@
         border: 1.5px solid rgba(255, 255, 255, 0.16);
         border-radius: 10px;
         padding: 9px 11px;
-        cursor: pointer;
+        cursor: grab;
         display: flex;
         flex-direction: column;
         gap: 4px;
-        transition: transform 0.1s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+        transition: transform 0.1s ease, box-shadow 0.14s ease, border-color 0.14s ease, opacity 0.14s ease;
         user-select: none;
+      }
+      .fold-tl-block:active {
+        cursor: grabbing;
       }
       .fold-tl-block:hover {
         border-color: rgba(132, 220, 198, 0.7);
@@ -8135,6 +8900,48 @@
       .fold-tl-block.playing-tl-block {
         border-color: #84dcc6;
         box-shadow: 0 0 18px rgba(132, 220, 198, 0.55), inset 0 0 0 1px #84dcc6;
+      }
+      .fold-tl-block.dragging-tl-block,
+      .fold-seq-card-row.dragging-tl-block {
+        opacity: 0.45 !important;
+        transform: scale(0.96);
+      }
+      .fold-tl-block.drag-over-left,
+      .fold-seq-card-row.drag-over-left {
+        box-shadow: -5px 0 0 0 #84dcc6, 0 0 16px rgba(132, 220, 198, 0.55) !important;
+        border-left: 3px solid #84dcc6 !important;
+      }
+      .fold-tl-block.drag-over-right,
+      .fold-seq-card-row.drag-over-right {
+        box-shadow: 5px 0 0 0 #e73ff6, 0 0 16px rgba(231, 63, 246, 0.55) !important;
+        border-right: 3px solid #e73ff6 !important;
+      }
+      .fold-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(6, 7, 12, 0.85);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 100020;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
+        box-sizing: border-box;
+        overflow-y: auto;
+      }
+      .fold-modal-box {
+        width: 100%;
+        max-width: 1120px;
+        max-height: 92vh;
+        overflow-y: auto;
+        background: #141621;
+        border: 2px solid #e73ff6;
+        border-radius: 14px;
+        padding: 14px 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.88), 0 0 28px rgba(231, 63, 246, 0.35);
+        color: #f4f4f6;
+        box-sizing: border-box;
       }
       .fold-tl-needle {
         position: absolute;
@@ -8185,6 +8992,7 @@
       <div class="fold-top-bar" id="fold-top-bar" style="padding:8px 12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;width:100%;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" id="fold-desktop-menu-btn" class="fold-btn chip-on" title="Open or Close Left Menu on Desktop">✕ Close Menu</button>
             <strong style="font-size:14px;color:#fff;">🥁 Session Drummer</strong>
             <span id="fold-now-playing-pill" class="fold-now-playing">🔨 Led Zeppelin — When the Levee Breaks (71 BPM · 🟢 SEC 1)</span>
             <span id="fold-conn-badge" class="fold-badge online" title="Tap to configure Studio Bridge IP">🟢 Ready</span>
@@ -8245,6 +9053,7 @@
         <div class="fold-nav-footer">
           <button type="button" id="fold-layout-mode-btn" class="fold-btn" style="width:100%;" title="Switch between focused 4-Tab View or showing All Zones stacked">⊞ Show All Zones</button>
           <button type="button" id="fold-collapse-all-btn" class="fold-btn" style="width:100%;" title="Collapse or Expand All Panels">↕ Collapse All</button>
+          <button type="button" id="fold-close-desktop-menu-btn" class="fold-btn" style="width:100%;border-color:rgba(231,63,246,0.45);color:#f5d0fe;" title="Close Left Menu on Desktop">✕ Close Menu</button>
         </div>
       </div>
 
@@ -8500,13 +9309,23 @@
                 <button type="button" id="fold-builder-split-scenes-btn" class="fold-btn amber" title="Write each block in your timeline into sequential Ableton Scenes (Scene 1, Scene 2, Scene 3...)">🎛️ Split 4 Blocks → Scenes 1–4</button>
               </div>
             </div>
+
+            <!-- Global Timeline BPM Bar (First section added defines the BPM) -->
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:rgba(0,0,0,0.34);padding:7px 11px;border-radius:8px;border:1px solid rgba(132,220,198,0.38);">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <strong style="font-size:12px;color:#84dcc6;">⏱️ Global Timeline BPM:</strong>
+                <span id="fold-timeline-bpm-val" style="font-size:13px;font-weight:900;color:#fff;background:rgba(132,220,198,0.2);padding:2px 8px;border-radius:6px;border:1px solid #84dcc6;">71 BPM</span>
+                <input id="fold-timeline-bpm-slider" type="range" min="50" max="200" step="1" value="71" style="width:165px;accent-color:#84dcc6;cursor:pointer;" title="Global Timeline Tempo (BPM)">
+              </div>
+              <span id="fold-timeline-bpm-source" style="font-size:11px;color:#d1d5db;font-weight:700;">⏱️ First section added to timeline defines Global BPM</span>
+            </div>
           </div>
 
           <!-- 1. Horizontal Proportional Song Arrangement Timeline -->
           <div style="background:rgba(0,0,0,0.32);border:1px solid rgba(255,255,255,0.11);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <div>
-                <strong style="font-size:13px;color:#fff;">📏 Horizontal Song Arrangement Timeline (Tap any Block to Focus or Loop)</strong>
+                <strong style="font-size:13px;color:#fff;">📏 Horizontal Song Arrangement Timeline (✋ Drag Blocks to Reorder · 🎹 Click Section to Edit Sequence in Modal)</strong>
                 <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Proportional 1-Bar, 4-Bar & 16-Bar blocks with live playhead needle</span>
               </div>
               <div class="fold-btn-row">
@@ -8524,7 +9343,7 @@
           <!-- 2. Detailed Timeline Block Sequence Cards (Reorder, Resize 1B/4B/16B, Swap Song/Bar, or Edit in Compose) -->
           <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <strong style="font-size:12px;color:#f5d0fe;">🧬 Timeline Blocks — Reorder (←/→), Set Length (1B / 4B / 16B), Swap Song or Tweak in Compose</strong>
+              <strong style="font-size:12px;color:#f5d0fe;">🧬 Timeline Blocks — Drag or Use ←/→ to Reorder, Set Length (1B / 4B / 16B), or Click to Open Sequence Modal</strong>
               <div class="fold-btn-row">
                 ${ARRANGEMENT_ROLES.map(
                   (r) =>
@@ -8695,6 +9514,13 @@
           </div>
         </div>
       </div>
+
+      <!-- ================================================================ -->
+      <!-- SECTION SEQUENCE EDITOR MODAL (Click any Timeline Section)       -->
+      <!-- ================================================================ -->
+      <div id="fold-section-modal" class="fold-modal-backdrop" style="display:none;">
+        <div id="fold-section-modal-content" class="fold-modal-box"></div>
+      </div>
     `;
     document.body.appendChild(dock);
 
@@ -8713,6 +9539,46 @@
       new ResizeObserver(syncTopBarSpacer).observe(topBarEl);
     }
     window.addEventListener('resize', syncTopBarSpacer);
+
+    // Wire Up Desktop Left Menu Close / Toggle Buttons
+    const setDesktopMenuClosed = (closed) => {
+      state.desktopMenuClosed = Boolean(closed);
+      document.body.classList.toggle('fold-desktop-menu-closed', state.desktopMenuClosed);
+      const menuBtn = document.getElementById('fold-desktop-menu-btn');
+      if (menuBtn) {
+        menuBtn.textContent = state.desktopMenuClosed ? '☰ Menu' : '✕ Close Menu';
+        menuBtn.classList.toggle('chip-on', !state.desktopMenuClosed);
+      }
+      savePersistedState();
+    };
+
+    const desktopMenuBtn = document.getElementById('fold-desktop-menu-btn');
+    if (desktopMenuBtn) {
+      desktopMenuBtn.addEventListener('click', () => {
+        setDesktopMenuClosed(!state.desktopMenuClosed);
+      });
+    }
+    const closeDesktopMenuBtn = document.getElementById('fold-close-desktop-menu-btn');
+    if (closeDesktopMenuBtn) {
+      closeDesktopMenuBtn.addEventListener('click', () => {
+        setDesktopMenuClosed(true);
+      });
+    }
+
+    // Wire Up Section Sequence Editor Modal Backdrop & Escape Key
+    const sectionModalBackdrop = document.getElementById('fold-section-modal');
+    if (sectionModalBackdrop) {
+      sectionModalBackdrop.addEventListener('click', (e) => {
+        if (e.target === sectionModalBackdrop) {
+          closeSectionSequenceModal();
+        }
+      });
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && state.modalSectionIdx !== null) {
+        closeSectionSequenceModal();
+      }
+    });
 
     // ========================================================================
     // Wire Up 4 Workspace Tabs (Compose, Arrange, Arrangements, Settings)
@@ -8903,7 +9769,19 @@
         state.arrangementSections = [firstBlock];
         state.selectedTimelineIdx = 0;
         state.editingTimelineIdx = null;
-        commitArrangementChange('Reset Arrange Timeline to 1 Block');
+        state.timelineHasUserSection = false;
+        state.timelineBpm = null;
+        state.timelineBpmSourceTitle = '';
+        commitArrangementChange('Reset Arrange Timeline to 1 Block (Next Section Defines Global BPM)');
+      });
+    }
+
+    const timelineBpmSlider = document.getElementById('fold-timeline-bpm-slider');
+    if (timelineBpmSlider) {
+      timelineBpmSlider.addEventListener('input', async (e) => {
+        const nextBpm = Number(e.target.value);
+        setGlobalTimelineBpm(nextBpm, state.timelineBpmSourceTitle || 'Manual Timeline BPM');
+        await sendOsc('/live/song/set/tempo', [{ type: 'f', value: state.tempo }], false);
       });
     }
 
@@ -9222,9 +10100,8 @@
     });
 
     document.getElementById('dial-bpm').addEventListener('input', async (e) => {
-      state.tempo = Number(e.target.value);
-      document.getElementById('val-bpm').textContent = `${state.tempo} BPM`;
-      updateHeaderSummaries();
+      const nextBpm = Number(e.target.value);
+      setGlobalTimelineBpm(nextBpm, state.timelineBpmSourceTitle || 'Manual BPM Adjust');
       await sendOsc('/live/song/set/tempo', [{ type: 'f', value: state.tempo }], false);
     });
 
@@ -9555,6 +10432,7 @@
     } else {
       loadSongGroove('zep_levee', true);
     }
+    setDesktopMenuClosed(Boolean(state.desktopMenuClosed));
     try {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('jam') === '1') {
