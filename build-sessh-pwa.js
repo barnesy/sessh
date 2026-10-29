@@ -164,7 +164,7 @@ const manifestObj = {
   id: './?pwa=1',
   name: 'Session Drummer',
   short_name: 'sessh',
-  description: '16-Bar Session Drummer & Artist Groove Workstation (18 Legendary Drummers, 90 Songs, 18 Drum Kits)',
+  description: '16-Bar Session Drummer & Artist Groove Workstation (21 Legendary Drummers, 105 Songs, 21 Drum Kits)',
   start_url: './?pwa=1',
   scope: './',
   display: 'standalone',
@@ -250,7 +250,7 @@ fs.writeFileSync(path.join(DOCS_DIR, '.nojekyll'), '', 'utf8');
 fs.writeFileSync(path.join(PUBLIC_DIR, 'index.html'), standaloneHtml, 'utf8');
 
 const standaloneSw = `// Session Drummer ("sessh") WebAPK / PWA Service Worker
-const CACHE_NAME = 'sessh-pwa-v20';
+const CACHE_NAME = 'sessh-pwa-v21';
 const PRECACHE_URLS = [
   './',
   './index.html',

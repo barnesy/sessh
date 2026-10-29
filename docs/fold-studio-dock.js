@@ -179,6 +179,27 @@
       hatHp: 7500, hatDecay: 0.048, openHatDecay: 0.38, tomBase: 104, laybackMs: 0
     },
     {
+      id: 'tameimpala',
+      name: '🌀 Parker DBX-165A Crushed Ludwigs (Tame Impala)',
+      kickStart: 156, kickEnd: 44, kickDecay: 0.28, kickClick: 0.56,
+      snareTone: 208, snareHp: 390, snareDecay: 0.17, rimMix: 1.25,
+      hatHp: 6400, hatDecay: 0.052, openHatDecay: 0.34, tomBase: 118, laybackMs: 6
+    },
+    {
+      id: 'paulsimon',
+      name: '🌍 Steve Gadd Studio Custom & Graceland Kit (Paul Simon)',
+      kickStart: 146, kickEnd: 47, kickDecay: 0.25, kickClick: 0.48,
+      snareTone: 194, snareHp: 360, snareDecay: 0.15, rimMix: 1.48,
+      hatHp: 6800, hatDecay: 0.044, openHatDecay: 0.27, tomBase: 108, laybackMs: 3
+    },
+    {
+      id: 'nirvana',
+      name: '🧷 Sound City Tama Granstar / Albini Room Kit (Nirvana / Dave Grohl)',
+      kickStart: 168, kickEnd: 43, kickDecay: 0.36, kickClick: 0.66,
+      snareTone: 184, snareHp: 230, snareDecay: 0.29, rimMix: 1.1,
+      hatHp: 5100, hatDecay: 0.082, openHatDecay: 0.44, tomBase: 88, laybackMs: 2
+    },
+    {
       id: 'trap808',
       name: '🔊 Modern 808 Sub-Trap Kit',
       kickStart: 150, kickEnd: 31, kickDecay: 0.52, kickClick: 0.35,
@@ -1961,6 +1982,310 @@
           fillStyle: 'travis_barker'
         }
       ]
+    },
+    {
+      artistId: 'tameimpala',
+      artistName: '🌀 Tame Impala',
+      drummer: 'Kevin Parker (DBX-165A Psych-Disco Pocket)',
+      defaultKit: 'tameimpala',
+      songs: [
+        {
+          id: 'ti_letithappen',
+          title: 'Let It Happen',
+          bpm: 125,
+          swing: 12,
+          kit: 'tameimpala',
+          desc: 'Hypnotic 7-minute psych-disco odyssey: DBX-165A squashed Ludwig kick/snare, crisp handclaps, and relentless 16th hi-hat propulsion',
+          kicks: [0, 3, 6, 8, 10, 14],
+          kicksBar2: [0, 3, 6, 8, 10, 11, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 12, 15],
+          rims: [2, 10],
+          claps: [4, 12],
+          ghostSnares: [1, 7, 9, 15],
+          openHats: [2, 14],
+          tomsBar2: [13, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'kevin_parker'
+        },
+        {
+          id: 'ti_lessiknow',
+          title: 'The Less I Know the Better',
+          bpm: 117,
+          swing: 16,
+          kit: 'tameimpala',
+          desc: 'Iconic Currents disco-funk strut locking with the fuzz-bass riff, tight snare+clap backbeat, and barking open hi-hats on 2-& and 4-&',
+          kicks: [0, 4, 7, 8, 10, 12],
+          kicksBar2: [0, 3, 4, 7, 8, 10, 12, 14],
+          snares: [4, 12],
+          rims: [2, 6, 10, 14],
+          claps: [4, 12],
+          ghostSnares: [1, 9, 15],
+          openHats: [6, 14],
+          tomsBar2: [11, 13, 14],
+          hatMode: '16th_funk',
+          fillStyle: 'kevin_parker'
+        },
+        {
+          id: 'ti_elephant',
+          title: 'Elephant',
+          bpm: 123,
+          swing: 28,
+          kit: 'tameimpala',
+          desc: 'Heavy Lonerism glam-psych shuffle stomp with swung kicks, sloshy open hats, and signature Kevin Parker flanged tom-roll turnarounds',
+          kicks: [0, 3, 6, 8, 11, 14],
+          kicksBar2: [0, 2, 3, 6, 8, 10, 11, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 7, 12, 15],
+          rims: [],
+          claps: [],
+          ghostSnares: [2, 7, 10, 15],
+          openHats: [2, 6, 10, 14],
+          tomsBar2: [6, 7, 13, 14, 15],
+          hatMode: '8th_rock',
+          fillStyle: 'kevin_parker'
+        },
+        {
+          id: 'ti_backwards',
+          title: 'Feels Like We Only Go Backwards',
+          bpm: 76,
+          swing: 18,
+          kit: 'tameimpala',
+          desc: 'Dreamy Lonerism psych-soul sway with booming tape-saturated snare cracks, lazy kick pickups, and constant tumbling tom fills',
+          kicks: [0, 2, 7, 8, 10, 15],
+          kicksBar2: [0, 2, 6, 7, 8, 10, 14, 15],
+          snares: [4, 12],
+          snaresBar2: [4, 12, 15],
+          rims: [6, 14],
+          claps: [4, 12],
+          ghostSnares: [1, 5, 9, 13, 15],
+          openHats: [6, 14],
+          tomsBar2: [11, 12, 13, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'kevin_parker'
+        },
+        {
+          id: 'ti_borderline',
+          title: 'Borderline',
+          bpm: 98,
+          swing: 14,
+          kit: 'tameimpala',
+          desc: 'Modern yacht-disco groove from The Slow Rush with syncopated bongo/rim counter-rhythm, punchy four-on-the-floor lift & crisp claps',
+          kicks: [0, 3, 6, 8, 10, 14],
+          kicksBar2: [0, 4, 6, 8, 10, 12, 14],
+          snares: [4, 12],
+          rims: [2, 6, 11, 14],
+          claps: [4, 12],
+          ghostSnares: [1, 7, 9, 15],
+          openHats: [2, 10, 14],
+          tomsBar2: [12, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'kevin_parker'
+        }
+      ]
+    },
+    {
+      artistId: 'paulsimon',
+      artistName: '🌍 Paul Simon',
+      drummer: 'Steve Gadd, Isaac Mtshali & Bakithi Kumalo',
+      defaultKit: 'paulsimon',
+      songs: [
+        {
+          id: 'ps_50ways',
+          title: '50 Ways to Leave Your Lover',
+          bpm: 101,
+          swing: 14,
+          kit: 'paulsimon',
+          desc: 'Steve Gadd’s immortal linear drum groove: military paradiddle ostinato between inverted hi-hat, snare ghost notes & floor tom opening to Chorus backbeat',
+          kicks: [0, 3, 6, 10, 14],
+          kicksBar2: [0, 3, 6, 8, 10, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 7, 12, 15],
+          rims: [1, 3, 6, 9, 11, 14],
+          claps: [],
+          ghostSnares: [1, 2, 5, 7, 9, 10, 13, 15],
+          openHats: [2, 10],
+          tomsBar2: [7, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'steve_gadd'
+        },
+        {
+          id: 'ps_callmeal',
+          title: 'You Can Call Me Al',
+          bpm: 128,
+          swing: 10,
+          kit: 'paulsimon',
+          desc: 'Joyous Graceland township jive / mbaqanga bounce with Isaac Mtshali’s propulsive kick/snare pocket, crisp rim clicks & talking-drum tom accents',
+          kicks: [0, 4, 7, 8, 10, 12, 14],
+          kicksBar2: [0, 3, 4, 7, 8, 10, 12, 14, 15],
+          snares: [4, 12],
+          rims: [2, 6, 10, 14],
+          claps: [4, 12],
+          ghostSnares: [1, 5, 9, 13, 15],
+          openHats: [6, 14],
+          tomsBar2: [3, 6, 11, 14],
+          hatMode: '16th_funk',
+          fillStyle: 'steve_gadd'
+        },
+        {
+          id: 'ps_lateintheevening',
+          title: 'Late in the Evening',
+          bpm: 118,
+          swing: 16,
+          kit: 'paulsimon',
+          desc: 'Steve Gadd playing with 4 drumsticks (2 in each hand!) to weave a legendary Mozambique/salsa cowbell, rack-tom & snare polyrhythm',
+          kicks: [0, 3, 6, 10, 14],
+          kicksBar2: [0, 3, 6, 7, 10, 11, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 9, 12, 15],
+          rims: [0, 2, 5, 7, 10, 12, 15],
+          claps: [4, 12],
+          ghostSnares: [1, 5, 9, 13, 15],
+          openHats: [2, 10],
+          tomsBar2: [3, 6, 11, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'steve_gadd'
+        },
+        {
+          id: 'ps_graceland',
+          title: 'Graceland',
+          bpm: 119,
+          swing: 12,
+          kit: 'paulsimon',
+          desc: 'Rolling South African train-beat country-jive shuffle with cross-stick rim+snare backbeat, melodic tom pickups & shimmering 16th hats',
+          kicks: [0, 3, 8, 11],
+          kicksBar2: [0, 3, 6, 8, 11, 14],
+          snares: [4, 12],
+          rims: [2, 4, 6, 10, 12, 14],
+          claps: [],
+          ghostSnares: [1, 5, 7, 9, 13, 15],
+          openHats: [14],
+          tomsBar2: [6, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'steve_gadd'
+        },
+        {
+          id: 'ps_diamonds',
+          title: 'Diamonds on the Soles of Her Shoes',
+          bpm: 112,
+          swing: 14,
+          kit: 'paulsimon',
+          desc: 'Afro-pop rhythm showcase: intricate Intro/Verse rim, shaker & talking-drum interplay erupting into the full horn-section groove',
+          kicks: [0, 3, 6, 8, 11, 14],
+          kicksBar2: [0, 3, 6, 8, 10, 11, 14, 15],
+          snares: [4, 12],
+          rims: [2, 3, 6, 10, 11, 14],
+          claps: [4, 12],
+          ghostSnares: [1, 7, 9, 15],
+          openHats: [2, 10, 14],
+          tomsBar2: [3, 6, 7, 13, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'steve_gadd'
+        }
+      ]
+    },
+    {
+      artistId: 'nirvana',
+      artistName: '🧷 Nirvana',
+      drummer: 'Dave Grohl (Sound City / In Utero Thunder)',
+      defaultKit: 'nirvana',
+      songs: [
+        {
+          id: 'nir_teenspirit',
+          title: 'Smells Like Teen Spirit',
+          bpm: 117,
+          swing: 0,
+          kit: 'nirvana',
+          desc: 'Dave Grohl’s immortal Sound City Gap-Band-inspired disco-punk stomp: tight bassline Verse exploding into sloshy Chorus crashes & 16th snare launch fills',
+          kicks: [0, 2, 6, 8, 11, 14],
+          kicksBar2: [0, 2, 3, 6, 8, 10, 11, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 7, 10, 12, 15],
+          rims: [],
+          claps: [],
+          ghostSnares: [7, 10, 15],
+          openHats: [2, 6, 10, 14],
+          tomsBar2: [12, 13, 14, 15],
+          hatMode: '8th_rock',
+          fillStyle: 'dave_grohl'
+        },
+        {
+          id: 'nir_inbloom',
+          title: 'In Bloom',
+          bpm: 79,
+          swing: 4,
+          kit: 'nirvana',
+          desc: 'Colossal half-time sludge-grunge stomp with 24" kick pairs, 8x14" Tama Birch "Terminator" snare flams, and thunderous 18" floor-tom turnarounds',
+          kicks: [0, 2, 7, 8, 10],
+          kicksBar2: [0, 2, 6, 7, 8, 10, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 12, 15],
+          rims: [],
+          claps: [],
+          ghostSnares: [5, 11, 15],
+          openHats: [2, 6, 10, 14],
+          tomsBar2: [6, 7, 13, 14, 15],
+          hatMode: '8th_rock',
+          fillStyle: 'dave_grohl'
+        },
+        {
+          id: 'nir_comeasyouare',
+          title: 'Come as You Are',
+          bpm: 120,
+          swing: 0,
+          kit: 'nirvana',
+          desc: 'Driving watery Chorus-pedal grunge groove: hypnotic kick lock with Krist Novoselic’s bass riff, steady ride/hat pulse & explosive Chorus crashes',
+          kicks: [0, 2, 8, 10, 14],
+          kicksBar2: [0, 2, 6, 8, 10, 11, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 12, 15],
+          rims: [],
+          claps: [],
+          ghostSnares: [7, 15],
+          openHats: [6, 14],
+          tomsBar2: [12, 14, 15],
+          hatMode: '8th_rock',
+          fillStyle: 'dave_grohl'
+        },
+        {
+          id: 'nir_heartshapedbox',
+          title: 'Heart-Shaped Box',
+          bpm: 101,
+          swing: 4,
+          kit: 'nirvana',
+          desc: 'Steve Albini In Utero room-mic dynamics: restrained brooding Verse pocket erupting into mammoth Chorus crashes and flam-snare/floor-tom cascades',
+          kicks: [0, 6, 8, 10, 14],
+          kicksBar2: [0, 3, 6, 8, 10, 11, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 7, 12, 15],
+          rims: [4, 12],
+          claps: [],
+          ghostSnares: [7, 15],
+          openHats: [2, 6, 10, 14],
+          tomsBar2: [11, 12, 14, 15],
+          hatMode: '8th_rock',
+          fillStyle: 'dave_grohl'
+        },
+        {
+          id: 'nir_scentless',
+          title: 'Scentless Apprentice',
+          bpm: 89,
+          swing: 6,
+          kit: 'nirvana',
+          desc: 'Dave Grohl’s monstrous Bonham-inspired main drum riff from In Utero: rapid double-kick pairs slamming into cracking snare and open-hat barks',
+          kicks: [0, 1, 6, 7, 8, 9, 14],
+          kicksBar2: [0, 1, 6, 7, 8, 9, 11, 14, 15],
+          snares: [4, 12],
+          snaresBar2: [4, 12, 15],
+          rims: [],
+          claps: [],
+          ghostSnares: [3, 11, 15],
+          openHats: [2, 4, 10, 12, 14],
+          tomsBar2: [12, 13, 14, 15],
+          hatMode: '8th_rock',
+          fillStyle: 'dave_grohl'
+        }
+      ]
     }
   ];
 
@@ -2294,6 +2619,29 @@
         hit(6, s60 + 2, 2, 1);
         hit(0, s60 + 3, 2, 1);
         hit(7, nextSectionFirstStep, 2, 1);
+      } else if (style === 'kevin_parker') {
+        // Kevin Parker flanged psych-tom + squashed snare + clap pickup
+        hit(2, s60, 2, 1);
+        hit(3, s60, 2, 1);
+        hit(6, s60 + 1, 2, 1);
+        hit(6, s60 + 2, 2, 1);
+        hit(0, s60 + 3, 2, 1);
+        hit(7, nextSectionFirstStep, 2, 1);
+      } else if (style === 'steve_gadd') {
+        // Steve Gadd linear inverted paradiddle (snare ghost -> rim -> floor tom -> kick)
+        hit(2, s60, 3, 2);
+        hit(1, s60 + 1, 2, 1);
+        hit(6, s60 + 2, 2, 1);
+        hit(0, s60 + 3, 2, 1);
+      } else if (style === 'dave_grohl') {
+        // Dave Grohl flam-snare + floor-tom + 24" kick cannon turnaround
+        hit(2, s60, 2, 2);
+        hit(6, s60, 2, 1);
+        hit(0, s60 + 1, 2, 1);
+        hit(2, s60 + 2, 2, 1);
+        hit(6, s60 + 2, 2, 1);
+        hit(0, s60 + 3, 2, 1);
+        hit(7, nextSectionFirstStep, 2, 1);
       } else {
         hit(2, s60, 2, 1);
         hit(2, s60 + 1, 1, 1);
@@ -2390,6 +2738,44 @@
       hit(6, s56 + 5, 2, 1);
       hit(6, s56 + 6, 2, 1);
       hit(2, s56 + 6, 2, 1);
+      hit(0, s56 + 7, 2, 1);
+      hit(7, nextSectionFirstStep, 2, 1);
+    } else if (style === 'kevin_parker') {
+      // Kevin Parker signature DBX-165A psychedelic tumbling tom + snare triplet-drag fill
+      hit(0, s56, 2, 1);
+      hit(2, s56 + 1, 2, highFill ? 2 : 1);
+      hit(6, s56 + 2, 2, 1);
+      hit(6, s56 + 3, 1, 1);
+      hit(0, s56 + 4, 2, 1);
+      hit(2, s56 + 4, 2, 1);
+      hit(6, s56 + 5, 2, 1);
+      hit(6, s56 + 6, 2, highFill ? 2 : 1);
+      hit(5, s56 + 6, 2, 1);
+      hit(0, s56 + 7, 2, 1);
+      hit(7, nextSectionFirstStep, 2, 1);
+    } else if (style === 'steve_gadd') {
+      // Steve Gadd linear 6-stroke roll / paradiddle-diddle across snare, rim, rack & floor tom
+      hit(2, s56, 2, 2);
+      hit(2, s56 + 1, 3, 1);
+      hit(1, s56 + 2, 2, 1);
+      hit(0, s56 + 3, 2, 1);
+      hit(6, s56 + 4, 2, 1);
+      hit(2, s56 + 5, 3, highFill ? 2 : 1);
+      hit(6, s56 + 6, 2, 1);
+      hit(0, s56 + 7, 2, 1);
+      hit(7, nextSectionFirstStep, 2, 1);
+    } else if (style === 'dave_grohl') {
+      // Dave Grohl "Teen Spirit / Scentless" 16th-note snare & floor-tom cannon crescendo with kick triplets
+      hit(0, s56, 2, 1);
+      hit(2, s56 + 1, 2, 1);
+      hit(2, s56 + 2, 2, highFill ? 2 : 1);
+      hit(6, s56 + 2, 2, 1);
+      hit(0, s56 + 3, 2, 1);
+      hit(2, s56 + 4, 2, 1);
+      hit(6, s56 + 4, 2, 1);
+      hit(2, s56 + 5, 2, 1);
+      hit(2, s56 + 6, 2, highFill ? 2 : 1);
+      hit(6, s56 + 6, 2, 1);
       hit(0, s56 + 7, 2, 1);
       hit(7, nextSectionFirstStep, 2, 1);
     } else if (style === 'clyde_funk') {
@@ -2557,6 +2943,15 @@
         // Travis Barker "Feeling This" Flanged Intro/Verse (Bars 1–4): cowbell/rim ostinato + latin tom accents
         for (const s of snareList || []) hit(2, o + s, 2, 1);
         for (const s of [7, 14, 15]) hit(6, o + s, s === 14 ? 2 : 1, 1);
+      } else if (songId === 'ps_50ways' && (secIdx === 0 || secIdx === 2)) {
+        // Steve Gadd "50 Ways" Verse/Bridge (Sections 1 & 3): linear military paradiddle ostinato (light snare on 4, floor tom on 6/14, ghost snares)
+        hit(2, o + 4, 1, 1);
+        hit(1, o + 12, 2, 1);
+        for (const s of [6, 14, 15]) hit(6, o + s, s === 14 ? 2 : 1, 1);
+      } else if (songId === 'nir_teenspirit' && secIdx === 0 && barInSec < 3) {
+        // Nirvana "Smells Like Teen Spirit" Verse (Bars 1–3): restrained closed-hat + kick/snare pocket before Bar 4 pre-chorus build
+        hit(2, o + 4, 2, 1);
+        hit(2, o + 12, 2, 1);
       } else {
         for (const s of snareList || []) {
           hit(2, o + s, 2, 1);
@@ -2657,6 +3052,33 @@
           hit(6, o + 12, 2, 1);
           hit(6, o + 14, 2, 1);
           hit(0, o + 15, 2, 1);
+        } else if (style === 'kevin_parker') {
+          // Kevin Parker Psych-Disco / Phased Breakdown Bridge (Bars 9–12):
+          // Offbeat open hats + syncopated rim/clap + tumbling DBX tom rolls
+          for (const s of [2, 6, 10, 14]) hit(5, o + s, 2, 1);
+          for (const s of [4, 12]) hit(3, o + s, 2, 1);
+          if (barInSec % 2 === 1) {
+            for (const s of [11, 13, 14, 15]) hit(6, o + s, s % 2 === 0 ? 2 : 1, 1);
+          }
+        } else if (style === 'steve_gadd') {
+          // Steve Gadd / Graceland Percussion & Linear Pocket Bridge (Bars 9–12):
+          // Mozambique cowbell/rim pattern + talking-drum tom accents + ghost snare chatter
+          for (const s of [0, 2, 5, 7, 10, 12, 15]) hit(1, o + s, s % 5 === 0 ? 2 : 1, 1);
+          for (const s of [3, 6, 11, 14]) hit(6, o + s, 1, 1);
+          for (const s of [1, 9, 13]) if (g[2][o + s].state === 0) hit(2, o + s, 3, 1);
+        } else if (style === 'dave_grohl') {
+          // Dave Grohl Sound City / Albini Room Bridge (Bars 9–12):
+          // Thunderous floor-tom & crash quarter-note stomp with Bar-12 16th-note snare/tom launch build!
+          for (let s = 0; s < 16; s += 4) {
+            hit(7, o + s, 2, 1);
+            hit(6, o + s, 2, 1);
+          }
+          if (barInSec === 3) {
+            for (let s = 8; s < 16; s++) {
+              hit(2, o + s, s % 2 === 0 ? 2 : 1, 1);
+              hit(6, o + s, s % 2 === 0 ? 2 : 1, 1);
+            }
+          }
         }
       }
 
@@ -6534,7 +6956,7 @@
           <div class="fold-ws-tab-list">
             <button type="button" class="fold-ws-tab-btn active" data-ws-tab="selections">
               <span>🎸 1. Selections</span>
-              <span class="fold-ws-tab-badge">90 Songs</span>
+              <span class="fold-ws-tab-badge">105 Songs</span>
             </button>
             <button type="button" class="fold-ws-tab-btn" data-ws-tab="edit">
               <span>🎛️ 2. Tweak & Edit</span>
@@ -6566,16 +6988,16 @@
       <div id="fold-top-bar-spacer"></div>
 
       <!-- ================================================================ -->
-      <!-- ZONE 1 (TAB: SELECTIONS): ARTIST BAND SELECTOR + 90 SONG GROOVES -->
+      <!-- ZONE 1 (TAB: SELECTIONS): ARTIST BAND SELECTOR + 105 SONG GROOVES -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-artists">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-artists">
-            <h3>🎸 1. Session Selections (18 Bands · 90 Iconic Grooves · Search & Tempo Filter)</h3>
+            <h3>🎸 1. Session Selections (21 Bands · 105 Iconic Grooves · Search & Tempo Filter)</h3>
             <span id="fold-summary-artist" class="fold-panel-summary">🔨 Led Zeppelin · When the Levee Breaks (71 BPM · 16 Bars)</span>
           </div>
           <div class="fold-btn-row">
-            <button type="button" id="fold-random-groove-btn" class="fold-btn amber" title="Pick a random iconic groove from all 90 songs">🎲 Random Groove</button>
+            <button type="button" id="fold-random-groove-btn" class="fold-btn amber" title="Pick a random iconic groove from all 105 songs">🎲 Random Groove</button>
             <button type="button" id="fold-go-edit-from-artists-btn" class="fold-btn primary">🎛️ Open in Tweak & Edit →</button>
             <button class="fold-collapse-btn" data-toggle-card="card-artists">▼ Collapse</button>
           </div>
@@ -6583,10 +7005,10 @@
         <div class="fold-card-body">
           <!-- Search & Tempo Filter Bar -->
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.28);padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);">
-            <input id="fold-song-search-input" class="fold-crate-input" type="text" placeholder="🔍 Search 90 songs, bands, or drummers (e.g. Bonham, Blink, Collins, Disco, 112)...">
+            <input id="fold-song-search-input" class="fold-crate-input" type="text" placeholder="🔍 Search 105 songs, 21 bands, or drummers (e.g. Tame Impala, Paul Simon, Nirvana, Gadd, Grohl)...">
             <div class="fold-btn-row">
               <span style="font-size:11px;font-weight:800;color:#84dcc6;">TEMPO:</span>
-              <button type="button" class="fold-btn chip-on" data-tempo-filter="all">All (90)</button>
+              <button type="button" class="fold-btn chip-on" data-tempo-filter="all">All (105)</button>
               <button type="button" class="fold-btn" data-tempo-filter="slow">🐢 Slow &lt;95</button>
               <button type="button" class="fold-btn" data-tempo-filter="mid">🚶 Mid 95–124</button>
               <button type="button" class="fold-btn" data-tempo-filter="fast">⚡ Fast 125+</button>
