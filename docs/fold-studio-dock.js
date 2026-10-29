@@ -2819,6 +2819,12 @@
     bridgeUrl: isLocalBridgeOrigin
       ? window.location.origin
       : localStorage.getItem(BRIDGE_URL_KEY) || '',
+    targetTrack: 'selected',   // 'selected' (follows Ableton's highlighted track) or explicit track index '0', '1', ...
+    targetSlot: 'selected',    // 'selected' (follows Ableton's highlighted clip slot/scene), 'artist', or explicit scene index '0', '1', ...
+    abletonSelectedTrackIndex: 0,
+    abletonSelectedTrackName: 'Selected Track',
+    abletonSelectedSceneIndex: 0,
+    abletonTracks: [],
 
     selectedArtistId: 'zeppelin',
     selectedSongId: 'zep_levee',
@@ -3208,7 +3214,13 @@
       playBtn.classList.toggle('active', state.phonePlayer.playing);
     }
     if (sendBtn) {
-      sendBtn.textContent = `🚀 Play in Ableton (${loopLabel})`;
+      const targetLabel =
+        state.targetTrack === 'selected'
+          ? state.abletonConnected
+            ? `🎯 ${state.abletonSelectedTrackName}`
+            : '🎯 Selected Track'
+          : `Track #${Number(state.targetTrack) + 1}`;
+      sendBtn.textContent = `🚀 Send to ${targetLabel} (${loopLabel})`;
     }
   }
 
@@ -3233,15 +3245,27 @@
     const btn = document.getElementById('fold-send-ableton-btn');
     const { startStep, endStep, barsCount, durationBeats } = getActiveLoopStepBounds();
     if (!state.bridgeUrl) {
-      configureStudioBridgeUrl();
-      if (!state.bridgeUrl) return;
+      await autoDiscoverStudioBridge();
+      if (!state.bridgeUrl) {
+        configureStudioBridgeUrl();
+        if (!state.bridgeUrl) return;
+      }
     }
-    if (btn) btn.textContent = `⏳ Sending ${barsCount} Bars...`;
+    if (btn) btn.textContent = `⏳ Sending ${barsCount} Bars to Ableton...`;
 
     try {
       const notes = buildNotesFromSequencer(startStep, endStep);
       const { artist, song } = findSongById(state.selectedSongId);
-      const slotIdx = Math.max(0, ARTIST_CATALOG.findIndex((a) => a.artistId === artist.artistId));
+      const artistSlotIdx = Math.max(0, ARTIST_CATALOG.findIndex((a) => a.artistId === artist.artistId));
+      const useSelectedTrack = state.targetTrack === 'selected';
+      const useSelectedScene = state.targetSlot === 'selected';
+      const resolvedSlot =
+        state.targetSlot === 'selected'
+          ? -1
+          : state.targetSlot === 'artist'
+          ? artistSlotIdx
+          : Number(state.targetSlot) || 0;
+
       const secSuffix =
         state.loopMode === 'section4'
           ? ` [${SONG_SECTIONS[state.activeSection].shortTitle}]`
@@ -3251,8 +3275,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          trackIndex: 0,
-          slotIndex: slotIdx,
+          useSelectedTrack,
+          useSelectedScene,
+          trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
+          slotIndex: resolvedSlot,
           name: `${artist.artistName.replace(/^[^\w]+/, '')} - ${song.title}${secSuffix}`,
           duration: durationBeats,
           color: 0xe73ff6,
@@ -3262,11 +3288,14 @@
       });
       const data = await res.json();
       if (btn) {
+        const trackLabel = data.trackName || state.abletonSelectedTrackName || 'Selected Track';
+        const sceneNum = (Number(data.slotIndex ?? 0) || 0) + 1;
         btn.textContent = data.ok
-          ? `✅ Playing "${song.title}" (${barsCount} Bars)!`
+          ? `✅ Sent to "${trackLabel}" (Scene ${sceneNum})!`
           : `✅ Saved ${barsCount}-Bar MIDI!`;
-        setTimeout(() => updatePlayerButtons(), 1800);
+        setTimeout(() => updatePlayerButtons(), 2000);
       }
+      refreshAbletonStatus();
     } catch (e) {
       if (btn) {
         btn.textContent = '📱 Saved Offline (Use ⬇ .mid)';
@@ -3277,27 +3306,34 @@
 
   async function sendSplitSectionsToAbletonScenes() {
     const btn = document.getElementById('fold-split-scenes-btn');
-    const origText = btn ? btn.textContent : '🎛️ Split 4 Sections → Ableton Scenes 1–4';
+    const origText = btn ? btn.textContent : '🎛️ Split 4 Sections → Selected Track (Scenes 1–4)';
     if (!state.bridgeUrl) {
-      configureStudioBridgeUrl();
-      if (!state.bridgeUrl) return;
+      await autoDiscoverStudioBridge();
+      if (!state.bridgeUrl) {
+        configureStudioBridgeUrl();
+        if (!state.bridgeUrl) return;
+      }
     }
     if (btn) btn.textContent = '⏳ Writing 4 Song Sections to Scenes 1–4...';
 
     try {
       const { artist, song } = findSongById(state.selectedSongId);
       const cleanArtist = artist.artistName.replace(/^[^\w]+/, '');
+      const useSelectedTrack = state.targetTrack === 'selected';
       await sendOsc('/live/song/set/tempo', [{ type: 'f', value: state.tempo }], false);
 
       const sectionColors = [0x10b981, 0xf59e0b, 0x38bdf8, 0xe73ff6];
+      let targetTrackName = state.abletonSelectedTrackName || 'Selected Track';
       for (let secIdx = 0; secIdx < SONG_SECTIONS.length; secIdx++) {
         const sec = SONG_SECTIONS[secIdx];
         const secNotes = buildNotesFromSequencer(sec.startStep, sec.endStep + 1);
-        await fetch(getApiUrl('/api/write-clip'), {
+        const res = await fetch(getApiUrl('/api/write-clip'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            trackIndex: 0,
+            useSelectedTrack,
+            useSelectedScene: false,
+            trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
             slotIndex: secIdx,
             name: `${secIdx + 1}-${sec.id.toUpperCase()}: ${cleanArtist} - ${song.title}`,
             duration: 16.0,
@@ -3306,12 +3342,15 @@
             notes: secNotes
           })
         });
+        const data = await res.json();
+        if (data.trackName) targetTrackName = data.trackName;
       }
 
       if (btn) {
-        btn.textContent = '✅ 4 Sections Loaded in Ableton Scenes 1–4!';
+        btn.textContent = `✅ 4 Sections → "${targetTrackName}" (Scenes 1–4)!`;
         setTimeout(() => (btn.textContent = origText), 2400);
       }
+      refreshAbletonStatus();
     } catch (e) {
       if (btn) {
         btn.textContent = '⚠️ Tap Badge to Set Studio Bridge IP';
@@ -3353,21 +3392,43 @@
       .map((s, idx) => {
         const active = s.id === state.selectedSongId;
         return `
-          <button class="fold-song-card ${active ? 'active' : ''}" data-song-id="${s.id}">
+          <div class="fold-song-card ${active ? 'active' : ''}" data-song-id="${s.id}">
             <div class="song-top-row">
               <span class="song-tempo-tag">#${idx + 1} · ${s.bpm} BPM (${s.swing}% Swing) · 16 Bars</span>
-              ${active ? `<span class="song-active-badge">● LOADED</span>` : ''}
+              <span style="display:flex;align-items:center;gap:6px;">
+                ${active ? `<span class="song-active-badge">● LOADED</span>` : ''}
+                <button type="button" class="fold-song-send-btn" data-quick-send-song="${s.id}" title="Load and immediately send this groove into the selected track in Ableton Live">🚀 → Ableton</button>
+              </span>
             </div>
             <div class="song-title">${s.title}</div>
             <div class="song-desc">${s.desc}</div>
-          </button>`;
+          </div>`;
       })
       .join('');
 
-    songsGridEl.querySelectorAll('[data-song-id]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+    songsGridEl.querySelectorAll('[data-song-id]').forEach((cardEl) => {
+      cardEl.addEventListener('click', (e) => {
+        if (e.target.closest('[data-quick-send-song]')) return;
         pushUndoState();
-        loadSongGroove(btn.getAttribute('data-song-id'), true);
+        loadSongGroove(cardEl.getAttribute('data-song-id'), true);
+      });
+    });
+
+    songsGridEl.querySelectorAll('[data-quick-send-song]').forEach((sendBtn) => {
+      sendBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const sid = sendBtn.getAttribute('data-quick-send-song');
+        if (sid !== state.selectedSongId) {
+          pushUndoState();
+          loadSongGroove(sid, true);
+        }
+        const origLabel = sendBtn.textContent;
+        sendBtn.textContent = '⏳ Sending...';
+        await sendCurrentBeatToAbleton(true);
+        sendBtn.textContent = '✅ In Ableton!';
+        setTimeout(() => {
+          sendBtn.textContent = origLabel;
+        }, 1600);
       });
     });
   }
@@ -3821,10 +3882,66 @@
     updateHeaderSummaries();
   }
 
+  async function autoDiscoverStudioBridge() {
+    if (state.bridgeUrl) return state.bridgeUrl;
+    const candidates = ['http://localhost:3333', 'http://192.168.1.247:3333'];
+    for (const candidate of candidates) {
+      try {
+        const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = ctrl ? setTimeout(() => ctrl.abort(), 900) : null;
+        const res = await fetch(`${candidate}/api/status`, ctrl ? { signal: ctrl.signal } : {});
+        if (timer) clearTimeout(timer);
+        if (res.ok) {
+          state.bridgeUrl = candidate;
+          try {
+            localStorage.setItem(BRIDGE_URL_KEY, candidate);
+          } catch (_) {}
+          return candidate;
+        }
+      } catch (_) {}
+    }
+    return '';
+  }
+
+  function renderAbletonTargetSelectors() {
+    const trackSel = document.getElementById('fold-target-track-select');
+    const slotSel = document.getElementById('fold-target-slot-select');
+    if (trackSel) {
+      const selTrackLabel = state.abletonConnected
+        ? `🎯 Selected Track (#${state.abletonSelectedTrackIndex + 1}: ${state.abletonSelectedTrackName})`
+        : '🎯 Selected Track in Ableton';
+      const midiTracks = (state.abletonTracks || []).filter((t) => t.isMidi);
+      const trackOptions = [
+        `<option value="selected">${selTrackLabel}</option>`,
+        ...midiTracks.map(
+          (t) =>
+            `<option value="${t.index}">🎹 Track #${t.index + 1}: ${t.name}${t.armed ? ' (● Armed)' : ''}</option>`
+        )
+      ];
+      const prevVal = state.targetTrack;
+      trackSel.innerHTML = trackOptions.join('');
+      trackSel.value = trackOptions.some((o) => o.includes(`value="${prevVal}"`)) ? prevVal : 'selected';
+    }
+    if (slotSel) {
+      const selSceneLabel = state.abletonConnected
+        ? `🎯 Selected Slot (Scene ${state.abletonSelectedSceneIndex + 1})`
+        : '🎯 Selected Slot in Ableton';
+      const prevSlot = state.targetSlot;
+      const slotOptions = [
+        `<option value="selected">${selSceneLabel}</option>`,
+        `<option value="artist">🗂️ Auto Slot by Artist</option>`,
+        ...Array.from({ length: 8 }, (_, i) => `<option value="${i}">🎬 Scene ${i + 1}</option>`)
+      ];
+      slotSel.innerHTML = slotOptions.join('');
+      slotSel.value = prevSlot;
+    }
+    updatePlayerButtons();
+  }
+
   function configureStudioBridgeUrl() {
     const current = state.bridgeUrl || 'http://192.168.1.247:3333';
     const input = window.prompt(
-      'Optional Ableton Live 12 Studio Bridge URL (leave blank for pure Standalone Offline PWA mode):',
+      'Ableton Live 12 Studio Bridge URL (e.g. http://localhost:3333 on PC or http://192.168.1.247:3333 on Phone Wi-Fi; leave blank for pure Standalone Offline mode):',
       current
     );
     if (input === null) return;
@@ -3840,11 +3957,15 @@
   async function refreshAbletonStatus() {
     const badge = document.getElementById('fold-conn-badge');
     if (!state.bridgeUrl) {
+      await autoDiscoverStudioBridge();
+    }
+    if (!state.bridgeUrl) {
       state.abletonConnected = false;
       if (badge) {
         badge.textContent = '📱 Standalone PWA (Tap for Studio Bridge)';
         badge.className = 'fold-badge offline';
       }
+      renderAbletonTargetSelectors();
       return;
     }
     try {
@@ -3852,18 +3973,27 @@
       if (!res.ok) throw new Error('status error');
       const data = await res.json();
       state.abletonConnected = Boolean(data.abletonOscConnected);
+      if (data.session) {
+        state.abletonSelectedTrackIndex = Number(data.session.selectedTrackIndex ?? 0);
+        state.abletonSelectedTrackName =
+          data.session.selectedTrackName || `Track ${state.abletonSelectedTrackIndex + 1}`;
+        state.abletonSelectedSceneIndex = Number(data.session.selectedSceneIndex ?? 0);
+        state.abletonTracks = Array.isArray(data.session.tracks) ? data.session.tracks : [];
+      }
       if (badge) {
         badge.textContent = state.abletonConnected
-          ? '🟢 Ableton Live Connected'
-          : '📱 Bridge Ready (Standalone Mode)';
+          ? `🟢 Ableton: #${state.abletonSelectedTrackIndex + 1} "${state.abletonSelectedTrackName}"`
+          : '📱 Bridge Ready (Open Ableton Live)';
         badge.className = state.abletonConnected ? 'fold-badge online' : 'fold-badge offline';
       }
+      renderAbletonTargetSelectors();
     } catch (e) {
       state.abletonConnected = false;
       if (badge) {
         badge.textContent = '📱 Standalone PWA (Offline Ready)';
         badge.className = 'fold-badge offline';
       }
+      renderAbletonTargetSelectors();
     }
   }
 
@@ -4462,6 +4592,32 @@
         background: rgba(231,63,246,0.32);
         box-shadow: 0 0 16px rgba(231,63,246,0.6);
       }
+      .fold-song-send-btn {
+        background: rgba(132, 220, 198, 0.2);
+        border: 1px solid #84dcc6;
+        color: #84dcc6;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .fold-song-send-btn:hover {
+        background: rgba(132, 220, 198, 0.35);
+      }
+      .fold-top-select {
+        height: 36px;
+        background: #14151e;
+        color: #84dcc6;
+        border: 1px solid rgba(132, 220, 198, 0.55);
+        border-radius: 8px;
+        padding: 0 8px;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+        max-width: 235px;
+      }
       @media (max-width: 780px) {
         #fold-section-tabs { grid-template-columns: repeat(2, 1fr); }
         #fold-4bar-minimap { grid-template-columns: repeat(4, 1fr); }
@@ -4477,12 +4633,19 @@
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <strong style="font-size:14px;color:#fff;">🥁 Session Drummer</strong>
           <span id="fold-now-playing-pill" class="fold-now-playing">🔨 Led Zeppelin — When the Levee Breaks (71 BPM · 🟢 SEC 1)</span>
-          <span id="fold-conn-badge" class="fold-badge online">🟢 Ready</span>
+          <span id="fold-conn-badge" class="fold-badge online" title="Tap to configure Studio Bridge IP">🟢 Ready</span>
         </div>
         <div class="fold-btn-row">
           <button id="fold-play-phone-btn" class="fold-btn primary">▶ Play 16-Bar Song on Phone</button>
-          <button id="fold-send-ableton-btn" class="fold-btn teal">🚀 Play in Ableton (16-Bar Song)</button>
-          <button id="fold-split-scenes-btn" class="fold-btn amber" title="Write Intro/Verse, Chorus, Bridge, and Climax as 4 separate clips in Ableton Scenes 1–4">🎛️ Split 4 Sections → Ableton Scenes 1–4</button>
+          <select id="fold-target-track-select" class="fold-top-select" title="Target Ableton MIDI Track (Default: follows whichever track is currently selected in Ableton Live)">
+            <option value="selected">🎯 Selected Track in Ableton</option>
+          </select>
+          <select id="fold-target-slot-select" class="fold-top-select" title="Target Ableton Clip Slot / Scene (Default: follows whichever clip slot row is selected in Ableton Live)">
+            <option value="selected">🎯 Selected Slot in Ableton</option>
+            <option value="artist">🗂️ Auto Slot by Artist</option>
+          </select>
+          <button id="fold-send-ableton-btn" class="fold-btn teal" title="Write and fire this groove directly into the selected track & clip slot in Ableton Live">🚀 Send to 🎯 Selected Track</button>
+          <button id="fold-split-scenes-btn" class="fold-btn amber" title="Write Intro/Verse, Chorus, Bridge, and Climax as 4 separate clips in Scenes 1–4 of the selected track">🎛️ Split 4 Sections → Scenes 1–4</button>
           <button id="fold-download-midi-btn" class="fold-btn">⬇ .mid</button>
           <button id="fold-collapse-all-btn" class="fold-btn" title="Collapse or Expand All Panels">↕ Collapse All</button>
           <button id="fold-install-btn" class="fold-btn amber" style="display:none;">📲 Install App</button>
@@ -4862,6 +5025,15 @@
       configureStudioBridgeUrl();
     });
     document.getElementById('fold-conn-badge').style.cursor = 'pointer';
+
+    document.getElementById('fold-target-track-select').addEventListener('change', (e) => {
+      state.targetTrack = e.target.value;
+      updatePlayerButtons();
+    });
+
+    document.getElementById('fold-target-slot-select').addEventListener('change', (e) => {
+      state.targetSlot = e.target.value;
+    });
 
     dock.querySelectorAll('[data-brush]').forEach((btn) => {
       btn.addEventListener('click', () => {

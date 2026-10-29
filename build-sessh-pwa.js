@@ -235,7 +235,7 @@ fs.writeFileSync(path.join(DOCS_DIR, 'index.html'), standaloneHtml, 'utf8');
 fs.writeFileSync(path.join(DOCS_DIR, '404.html'), standaloneHtml, 'utf8');
 fs.writeFileSync(path.join(DOCS_DIR, '.nojekyll'), '', 'utf8');
 
-const standaloneSw = `const CACHE_NAME = 'sessh-pwa-v15';
+const standaloneSw = `const CACHE_NAME = 'sessh-pwa-v16';
 const PRECACHE_URLS = [
   './',
   './index.html',
