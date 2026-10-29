@@ -3264,11 +3264,11 @@
   const CRATE_STORAGE_KEY = 'sessh_crate_v1';
   const HISTORY_STORAGE_KEY = 'sessh_history_v1';
   const PLAYER_PROFILE_KEY = 'sessh_player_v1';
-  const APP_VERSION = 'v2.2.1 (PWA Build v23)';
+  const APP_VERSION = 'v2.3.0 (PWA Build v24)';
 
   const WORKSPACE_TABS = [
     { id: 'compose', icon: '🎛️', label: 'Compose', sub: 'Select · Edit · Tweak' },
-    { id: 'arrange', icon: '🎬', label: 'Arrange', sub: 'Collab Sections · Save' },
+    { id: 'arrange', icon: '🎬', label: 'Arrange', sub: 'Timeline · Review · Save' },
     { id: 'arrangements', icon: '📂', label: 'Arrangements', sub: 'Past Arrangements' },
     { id: 'settings', icon: '⚙️', label: 'Settings', sub: 'Sync · Ableton · Wi-Fi · Peers' }
   ];
@@ -3281,6 +3281,7 @@
     { id: 'bridge', label: '🔵 Bridge', color: '#38bdf8', defaultSlice: 2 },
     { id: 'breakdown', label: '🟣 Breakdown', color: '#a855f7', defaultSlice: 2 },
     { id: 'solo', label: '⚡ Solo', color: '#38bdf8', defaultSlice: 2 },
+    { id: 'fill', label: '🥁 Fill / Break', color: '#f43f5e', defaultSlice: 3 },
     { id: 'climax', label: '🔥 Climax', color: '#e73ff6', defaultSlice: 3 },
     { id: 'outro', label: '🏁 Outro', color: '#e73ff6', defaultSlice: 3 }
   ];
@@ -3292,10 +3293,70 @@
       roleId,
       songId,
       sourceSlice: i,
+      sourceBar: i * 4,
       bars: 4,
+      customEdited: false,
+      customGrid: null,
       addedBy: authorName,
       addedColor: authorColor
     }));
+  }
+
+  function extractGridSlice(srcGrid, startStep = 0, stepCount = 64) {
+    const count = Math.max(16, Number(stepCount) || 64);
+    const out = [];
+    for (let v = 0; v < DRUM_VOICES.length; v++) {
+      const row = [];
+      for (let i = 0; i < count; i++) {
+        const srcIdx = (startStep + i) % TOTAL_STEPS;
+        const cell = srcGrid && srcGrid[v] && srcGrid[v][srcIdx] ? srcGrid[v][srcIdx] : { state: 0, sub: 1 };
+        row.push({ state: Number(cell.state || 0), sub: Number(cell.sub || 1) });
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  function getTimelineBlockGrid(secItem) {
+    const bars = Math.max(1, Math.min(16, Number(secItem?.bars) || 4));
+    const targetSteps = bars * 16;
+    if (
+      secItem &&
+      Array.isArray(secItem.customGrid) &&
+      secItem.customGrid.length === DRUM_VOICES.length &&
+      Array.isArray(secItem.customGrid[0]) &&
+      secItem.customGrid[0].length > 0
+    ) {
+      const srcLen = secItem.customGrid[0].length;
+      const out = [];
+      for (let v = 0; v < DRUM_VOICES.length; v++) {
+        const row = [];
+        for (let i = 0; i < targetSteps; i++) {
+          const c = secItem.customGrid[v][i % srcLen] || { state: 0, sub: 1 };
+          row.push({ state: Number(c.state || 0), sub: Number(c.sub || 1) });
+        }
+        out.push(row);
+      }
+      return out;
+    }
+
+    const sid = (secItem && secItem.songId) || state.selectedSongId || 'zep_levee';
+    const fullSongGrid = generateSongGrooveGrid(
+      sid,
+      state.intensityPct,
+      state.ghostPct,
+      state.hatEnergyPct,
+      state.fillPct
+    );
+    let startStep = 0;
+    if (bars === 1) {
+      const barIdx = Math.max(0, Math.min(15, Number(secItem?.sourceBar ?? (Number(secItem?.sourceSlice || 0) * 4))));
+      startStep = barIdx * 16;
+    } else if (bars < 16) {
+      const sliceIdx = Math.max(0, Math.min(3, Number(secItem?.sourceSlice ?? 0)));
+      startStep = sliceIdx * 64;
+    }
+    return extractGridSlice(fullSongGrid, startStep, targetSteps);
   }
 
   function normalizeTabId(rawTab) {
@@ -3411,12 +3472,22 @@
     activeTab: 'compose',           // 'compose' | 'arrange' | 'arrangements' | 'settings'
     workspaceLayoutMode: 'tabs',    // 'tabs' (focused zone view) | 'all' (show all zones stacked)
     showInlinePadsInEdit: true,     // Show finger drum pads directly below sequencer in Compose tab
+    showFineTuneDials: false,       // Progressive disclosure for secondary drummer dials
     showSharedGridInCollab: false,
     songSearchQuery: '',
     songTempoFilter: 'all',         // 'all' | 'slow' | 'mid' | 'fast'
     crateVaultFilter: 'all',        // 'all' | 'outbox' | 'crate' | 'history' | 'pcfiles'
     sectionSources: ['zep_levee', 'zep_levee', 'zep_levee', 'zep_levee'],
     arrangementSections: createDefaultArrangementSections('zep_levee', initialProfile.name, initialProfile.color),
+
+    // Timeline Review & Compose-to-Timeline State
+    selectedTimelineIdx: 0,         // Currently highlighted block on the Arrange timeline
+    editingTimelineIdx: null,       // Non-null when editing a specific timeline block inside Compose
+    timelineLoopSingle: false,      // True = loop only selectedTimelineIdx block; False = play entire timeline
+    playbackMode: 'compose',        // 'compose' | 'timeline'
+    activeTimelineIdx: -1,          // Index of timeline block currently playing during timeline review
+    activeTimelineBar: -1,          // 0-based bar across the full timeline during timeline review
+    timelineToastMessage: '',       // Confirmation toast when adding bars to timeline
 
     abletonConnected: false,
     bridgeReachable: false,
@@ -3500,8 +3571,11 @@
         activeTab: state.activeTab,
         workspaceLayoutMode: state.workspaceLayoutMode,
         showInlinePadsInEdit: state.showInlinePadsInEdit,
+        showFineTuneDials: state.showFineTuneDials,
         sectionSources: state.sectionSources,
         arrangementSections: state.arrangementSections,
+        selectedTimelineIdx: state.selectedTimelineIdx,
+        timelineLoopSingle: state.timelineLoopSingle,
         selectedArtistId: state.selectedArtistId,
         selectedSongId: state.selectedSongId,
         kitId: state.kitId,
@@ -3537,6 +3611,12 @@
       if (typeof saved.showInlinePadsInEdit === 'boolean') {
         state.showInlinePadsInEdit = saved.showInlinePadsInEdit;
       }
+      if (typeof saved.showFineTuneDials === 'boolean') {
+        state.showFineTuneDials = saved.showFineTuneDials;
+      }
+      if (typeof saved.timelineLoopSingle === 'boolean') {
+        state.timelineLoopSingle = saved.timelineLoopSingle;
+      }
       state.selectedArtistId = artist.artistId;
       state.selectedSongId = song.id;
       state.sectionSources =
@@ -3547,6 +3627,10 @@
         Array.isArray(saved.arrangementSections) && saved.arrangementSections.length > 0
           ? saved.arrangementSections
           : createDefaultArrangementSections(song.id, state.playerName, state.playerColor);
+      state.selectedTimelineIdx = Math.max(
+        0,
+        Math.min(state.arrangementSections.length - 1, Number(saved.selectedTimelineIdx || 0))
+      );
       state.kitId = saved.kitId || song.kit || artist.defaultKit;
       state.tempo = Number(saved.tempo) || song.bpm;
       state.intensityPct = Number(saved.intensityPct ?? 70);
@@ -3632,6 +3716,10 @@
   }
 
   function getActiveLoopStepBounds() {
+    if (state.viewMode === 'zoom1' && state.loopMode === 'section4') {
+      const startStep = state.zoomedBar * 16;
+      return { startStep, endStep: startStep + 16, barsCount: 1, durationBeats: 4.0 };
+    }
     if (state.loopMode === 'section4') {
       const startStep = state.activeSection * 64;
       return { startStep, endStep: startStep + 64, barsCount: 4, durationBeats: 16.0 };
@@ -3649,12 +3737,35 @@
     if (undoBtn) undoBtn.disabled = false;
   }
 
+  function syncEditingTimelineBlockFromCompose() {
+    if (state.editingTimelineIdx === null || state.editingTimelineIdx === undefined) return;
+    const secItem = state.arrangementSections && state.arrangementSections[state.editingTimelineIdx];
+    if (!secItem) {
+      state.editingTimelineIdx = null;
+      return;
+    }
+    const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
+    let startStep = 0;
+    if (bars === 1) {
+      startStep = state.zoomedBar * 16;
+    } else if (bars < 16) {
+      startStep = state.activeSection * 64;
+    }
+    secItem.customGrid = extractGridSlice(state.grid, startStep, bars * 16);
+    secItem.customEdited = true;
+    secItem.songId = state.selectedSongId;
+    secItem.addedBy = state.playerName;
+    secItem.addedColor = state.playerColor;
+  }
+
   function loadSongGroove(songId, resetDials = true) {
     const { artist, song } = findSongById(songId);
     state.selectedArtistId = artist.artistId;
     state.selectedSongId = song.id;
-    state.sectionSources = [song.id, song.id, song.id, song.id];
-    state.arrangementSections = createDefaultArrangementSections(song.id, state.playerName, state.playerColor);
+    state.editingTimelineIdx = null;
+    if (!Array.isArray(state.arrangementSections) || state.arrangementSections.length === 0) {
+      state.arrangementSections = createDefaultArrangementSections(song.id, state.playerName, state.playerColor);
+    }
     if (resetDials) {
       state.tempo = song.bpm;
       state.swingPct = song.swing;
@@ -3677,6 +3788,7 @@
     renderCrateAndJamUI();
     updateDialsUI();
     updatePlayerButtons();
+    renderComposeTimelineBanner();
     const titleInput = document.getElementById('fold-crate-title-input');
     const arrangeTitleInput = document.getElementById('fold-arrange-title-input');
     const cleanDefault = `${artist.artistName.replace(/^[^\w]+/, '').trim()} - ${song.title} (${state.tempo} BPM)`;
@@ -3684,10 +3796,10 @@
       titleInput.placeholder = cleanDefault;
     }
     if (arrangeTitleInput && artist && song) {
-      arrangeTitleInput.placeholder = `${cleanDefault} Arrangement`;
+      arrangeTitleInput.placeholder = `${cleanDefault} Timeline`;
     }
     if (!state.suppressJamBroadcast && state.jamMode === 'shared') {
-      broadcastFullJamState(`Loaded ${song.title}`);
+      broadcastFullJamState(`Selected ${song.title} in Compose`);
     }
   }
 
@@ -3697,43 +3809,48 @@
       : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
     const merged = createEmptyGrid256();
     const newSources = [];
-    for (let slotIdx = 0; slotIdx < 4; slotIdx++) {
-      const secItem = arr[slotIdx % arr.length];
-      const sid = (secItem && secItem.songId) || state.selectedSongId;
-      const srcSlice = Math.max(0, Math.min(3, Number(secItem?.sourceSlice ?? slotIdx)));
-      newSources.push(sid);
-      const secGrid = generateSongGrooveGrid(
-        sid,
-        state.intensityPct,
-        state.ghostPct,
-        state.hatEnergyPct,
-        state.fillPct
-      );
-      const dstStart = slotIdx * 64;
-      const srcStart = srcSlice * 64;
-      for (let v = 0; v < DRUM_VOICES.length; v++) {
-        for (let i = 0; i < 64; i++) {
-          merged[v][dstStart + i] = { ...secGrid[v][srcStart + i] };
+    let dstStep = 0;
+    let idx = 0;
+    while (dstStep < TOTAL_STEPS && arr.length > 0) {
+      const secItem = arr[idx % arr.length];
+      if (newSources.length < 4) newSources.push(secItem.songId || state.selectedSongId);
+      const blockGrid = getTimelineBlockGrid(secItem);
+      const blockSteps = blockGrid[0] ? blockGrid[0].length : 64;
+      for (let i = 0; i < blockSteps && dstStep + i < TOTAL_STEPS; i++) {
+        for (let v = 0; v < DRUM_VOICES.length; v++) {
+          merged[v][dstStep + i] = { ...blockGrid[v][i] };
         }
       }
+      dstStep += blockSteps;
+      idx++;
     }
+    while (newSources.length < 4) newSources.push(state.selectedSongId);
     state.sectionSources = newSources;
     state.grid = merged;
     syncSequencerNotes();
   }
 
   function regenerateFromDials() {
-    rebuildGridFromArrangementSections();
+    state.grid = generateSongGrooveGrid(
+      state.selectedSongId,
+      state.intensityPct,
+      state.ghostPct,
+      state.hatEnergyPct,
+      state.fillPct
+    );
+    syncEditingTimelineBlockFromCompose();
+    syncSequencerNotes();
     recordSessionHistoryEntry('Tweaked Drummer Dials');
     renderSectionTabs();
     renderMini4BarMap();
     renderSequencerGrid();
+    renderSongBuilderAndClipsUI();
     if (!state.suppressJamBroadcast && state.jamMode === 'shared') {
       broadcastFullJamState('Adjusted Drummer Dials');
     }
   }
 
-  function buildNotesFromSequencer(rangeStartStep = 0, rangeEndStep = TOTAL_STEPS) {
+  function buildNotesFromArbitraryGrid(gridObj, rangeStartStep = 0, rangeEndStep = TOTAL_STEPS) {
     const notes = [];
     const stepDur = 0.25;
     const swingOffset = (state.swingPct / 100) * 0.145;
@@ -3750,14 +3867,14 @@
       if (state.mutedLanes[vIdx]) continue;
       const voice = DRUM_VOICES[vIdx];
       const isSnareOrRim = vIdx === 1 || vIdx === 2;
+      const row = gridObj && gridObj[vIdx] ? gridObj[vIdx] : [];
 
       for (let s = rangeStartStep; s < rangeEndStep; s++) {
-        const cell = state.grid[vIdx][s];
+        const cell = row[s];
         if (!cell || cell.state === 0) continue;
 
         const baseVel = cell.state === 2 ? 124 : cell.state === 3 ? 46 : 96;
         const subCount = cell.sub || 1;
-        // Turnaround fill zones at the end of Bars 4, 8, 12, and 16 (last 2–3 beats of each 64-step section)
         const isTurnaroundFillZone = (s % 64) >= 48;
 
         const stepStart = getSwungStepStart(s) - baseBeatOffset;
@@ -3765,7 +3882,6 @@
         const actualStepSpan = Math.max(0.12, nextStepStart - stepStart);
         const subStepDur = subCount > 1 ? actualStepSpan / subCount : stepDur;
 
-        // Only apply snare layback on single groove hits (never smear fast rolls or turnaround fills)
         const layback =
           isSnareOrRim && subCount === 1 && !isTurnaroundFillZone ? snareLaybackBeats : 0;
 
@@ -3792,6 +3908,63 @@
     return notes;
   }
 
+  function buildNotesFromSequencer(rangeStartStep = 0, rangeEndStep = TOTAL_STEPS) {
+    return buildNotesFromArbitraryGrid(state.grid, rangeStartStep, rangeEndStep);
+  }
+
+  function buildTimelinePlaybackData(onlySelectedBlock = false) {
+    const arr =
+      Array.isArray(state.arrangementSections) && state.arrangementSections.length > 0
+        ? state.arrangementSections
+        : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
+
+    const blocksToBuild =
+      onlySelectedBlock && arr[state.selectedTimelineIdx]
+        ? [{ secItem: arr[state.selectedTimelineIdx], origIdx: state.selectedTimelineIdx }]
+        : arr.map((secItem, origIdx) => ({ secItem, origIdx }));
+
+    const fullGrid = Array.from({ length: DRUM_VOICES.length }, () => []);
+    const blockRanges = [];
+    let runningStep = 0;
+    let runningBar = 0;
+
+    for (const { secItem, origIdx } of blocksToBuild) {
+      const blockGrid = getTimelineBlockGrid(secItem);
+      const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
+      const steps = bars * 16;
+      for (let v = 0; v < DRUM_VOICES.length; v++) {
+        for (let i = 0; i < steps; i++) {
+          fullGrid[v].push(blockGrid[v][i] || { state: 0, sub: 1 });
+        }
+      }
+      blockRanges.push({
+        origIdx,
+        secItem,
+        startStep: runningStep,
+        endStep: runningStep + steps,
+        startBar: runningBar,
+        endBar: runningBar + bars - 1,
+        bars,
+        steps
+      });
+      runningStep += steps;
+      runningBar += bars;
+    }
+
+    const totalSteps = Math.max(16, runningStep);
+    const totalBars = Math.max(1, runningBar);
+    const durationBeats = totalBars * 4.0;
+    const notes = buildNotesFromArbitraryGrid(fullGrid, 0, totalSteps);
+    return {
+      totalBars,
+      totalSteps,
+      durationBeats,
+      notes,
+      blockRanges,
+      fullGrid
+    };
+  }
+
   function syncSequencerNotes() {
     state.currentNotes = buildNotesFromSequencer(0, TOTAL_STEPS);
     savePersistedState();
@@ -3799,16 +3972,22 @@
   }
 
   // ==========================================================================
-  // 8. Real-Time 16-Bar / 4-Section Phone Playback Clock (WebAudio Lookahead)
+  // 8. Real-Time Phone Playback Clock (Compose Mode + Full Timeline Review Mode)
   // ==========================================================================
-  function startPhonePlayback() {
+  function startPhonePlayback(modeOverride = null) {
     const ctx = getAudioCtx();
+    if (modeOverride) {
+      state.playbackMode = modeOverride;
+    } else {
+      state.playbackMode = state.activeTab === 'arrange' ? 'timeline' : 'compose';
+    }
     state.phonePlayer.playing = true;
     state.phonePlayer.startWallTime = ctx.currentTime + 0.02;
     state.phonePlayer.lastStepTime = -0.001;
     updatePlayerButtons();
 
     function scheduleWindow(
+      notesList,
       windowStartRelBeat,
       windowEndRelBeat,
       loopStartBeatOffset,
@@ -3816,10 +3995,9 @@
       beatsPerSec,
       now
     ) {
-      const notes = state.currentNotes || [];
       const absStart = loopStartBeatOffset + windowStartRelBeat;
       const absEnd = loopStartBeatOffset + windowEndRelBeat;
-      for (const n of notes) {
+      for (const n of notesList) {
         if (n.muted) continue;
         const st = Number(n.startTime ?? 0);
         if (st > absStart && st <= absEnd) {
@@ -3835,7 +4013,15 @@
       const now = ctx.currentTime;
       const bpm = state.tempo || 90;
       const beatsPerSec = bpm / 60;
-      const { startStep, durationBeats: clipDur } = getActiveLoopStepBounds();
+
+      const isTimelineMode = state.playbackMode === 'timeline';
+      const tlData = isTimelineMode ? buildTimelinePlaybackData(state.timelineLoopSingle) : null;
+      const composeBounds = isTimelineMode ? null : getActiveLoopStepBounds();
+
+      const startStep = isTimelineMode ? 0 : composeBounds.startStep;
+      const clipDur = isTimelineMode ? tlData.durationBeats : composeBounds.durationBeats;
+      const notesList = isTimelineMode ? tlData.notes : state.currentNotes || [];
+
       const loopStartBeatOffset = startStep * 0.25;
       const lookaheadBeats = 0.085 * beatsPerSec;
 
@@ -3845,6 +4031,7 @@
 
       if (targetBeat >= clipDur) {
         scheduleWindow(
+          notesList,
           prevBeat,
           clipDur + 0.05,
           loopStartBeatOffset,
@@ -3855,6 +4042,7 @@
         const nextLoopWallTime = state.phonePlayer.startWallTime + clipDur / beatsPerSec;
         const wrappedTargetBeat = targetBeat - clipDur;
         scheduleWindow(
+          notesList,
           -0.001,
           wrappedTargetBeat,
           loopStartBeatOffset,
@@ -3867,6 +4055,7 @@
         elapsedBeats = Math.max(0, (now - state.phonePlayer.startWallTime) * beatsPerSec);
       } else {
         scheduleWindow(
+          notesList,
           prevBeat,
           targetBeat,
           loopStartBeatOffset,
@@ -3877,31 +4066,51 @@
         state.phonePlayer.lastStepTime = targetBeat;
       }
 
-      const relStep = Math.floor(elapsedBeats / 0.25) % Math.round(clipDur * 4);
-      const current16th = startStep + relStep;
-      const currentBar = Math.floor(current16th / 16);
-      const currentSec = Math.floor(currentBar / 4);
+      const relStep = Math.floor(elapsedBeats / 0.25) % Math.max(1, Math.round(clipDur * 4));
 
-      if (current16th !== state.activeStep) {
-        state.activeStep = current16th;
-        state.activeBar = currentBar;
-
-        // If Auto-Follow is enabled during 16-bar or 8-bar playback, flip activeSection as playhead enters a new section!
-        if (
-          state.autoFollowSection &&
-          state.loopMode !== 'section4' &&
-          currentSec !== state.activeSection
-        ) {
-          state.activeSection = currentSec;
-          if (state.viewMode === 'zoom1') {
-            state.zoomedBar = currentBar;
+      if (isTimelineMode && tlData) {
+        const currentTimelineBar = Math.floor(relStep / 16);
+        let activeBlockRange = tlData.blockRanges[0];
+        for (const br of tlData.blockRanges) {
+          if (relStep >= br.startStep && relStep < br.endStep) {
+            activeBlockRange = br;
+            break;
           }
-          renderSectionTabs();
-          renderMini4BarMap();
-          renderSequencerGrid();
-          updateHeaderSummaries();
-        } else {
-          highlightPlayheadStep(current16th, currentBar, currentSec);
+        }
+        const blockIdx = activeBlockRange ? activeBlockRange.origIdx : 0;
+        const stepInBlock = activeBlockRange ? relStep - activeBlockRange.startStep : 0;
+        const progressPct = activeBlockRange
+          ? Math.min(100, Math.max(0, ((stepInBlock + 0.5) / activeBlockRange.steps) * 100))
+          : 0;
+
+        state.activeTimelineIdx = blockIdx;
+        state.activeTimelineBar = currentTimelineBar;
+        highlightTimelinePlayhead(blockIdx, currentTimelineBar, tlData.totalBars, relStep, progressPct, activeBlockRange);
+      } else {
+        const current16th = startStep + relStep;
+        const currentBar = Math.floor(current16th / 16);
+        const currentSec = Math.floor(currentBar / 4);
+
+        if (current16th !== state.activeStep) {
+          state.activeStep = current16th;
+          state.activeBar = currentBar;
+
+          if (
+            state.autoFollowSection &&
+            state.loopMode !== 'section4' &&
+            currentSec !== state.activeSection
+          ) {
+            state.activeSection = currentSec;
+            if (state.viewMode === 'zoom1') {
+              state.zoomedBar = currentBar;
+            }
+            renderSectionTabs();
+            renderMini4BarMap();
+            renderSequencerGrid();
+            updateHeaderSummaries();
+          } else {
+            highlightPlayheadStep(current16th, currentBar, currentSec);
+          }
         }
       }
 
@@ -3916,12 +4125,50 @@
     state.phonePlayer.playing = false;
     state.activeStep = -1;
     state.activeBar = -1;
+    state.activeTimelineIdx = -1;
+    state.activeTimelineBar = -1;
     if (state.phonePlayer.rafId) {
       cancelAnimationFrame(state.phonePlayer.rafId);
       state.phonePlayer.rafId = null;
     }
     highlightPlayheadStep(-1, -1, -1);
+    highlightTimelinePlayhead(-1, -1, 0, -1, 0, null);
     updatePlayerButtons();
+  }
+
+  function highlightTimelinePlayhead(blockIdx, timelineBarIdx, totalBars, relStep, progressPct, activeBlockRange) {
+    document.querySelectorAll('.fold-tl-block').forEach((el) => {
+      const idx = Number(el.getAttribute('data-tl-block'));
+      const isPlaying = idx === blockIdx;
+      el.classList.toggle('playing-tl-block', isPlaying);
+      const needle = el.querySelector('.fold-tl-needle');
+      if (needle) {
+        needle.style.display = isPlaying ? 'block' : 'none';
+        if (isPlaying) needle.style.left = `${progressPct}%`;
+      }
+    });
+    document.querySelectorAll('.fold-seq-card-row').forEach((el) => {
+      const idx = Number(el.getAttribute('data-seq-row'));
+      el.classList.toggle('playing-seq-row', idx === blockIdx);
+    });
+    const tlHudEl = document.getElementById('fold-timeline-hud-pill');
+    if (tlHudEl) {
+      if (blockIdx >= 0 && activeBlockRange && activeBlockRange.secItem) {
+        const secItem = activeBlockRange.secItem;
+        const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
+        const { song } = findSongById(secItem.songId || state.selectedSongId);
+        const beatInBar = Math.floor((relStep % 16) / 4) + 1;
+        tlHudEl.textContent = `▶ Block #${blockIdx + 1} (${roleObj.label} · ${song.title}) · Bar ${timelineBarIdx + 1} of ${totalBars} · Beat ${beatInBar}`;
+        tlHudEl.style.borderColor = roleObj.color;
+        tlHudEl.style.color = '#fff';
+      } else {
+        const arr = state.arrangementSections || [];
+        const tBars = arr.reduce((sum, s) => sum + (Number(s.bars) || 4), 0);
+        tlHudEl.textContent = `⏸ Ready (${arr.length} Blocks · ${tBars} Bars Total)`;
+        tlHudEl.style.borderColor = 'rgba(255,255,255,0.2)';
+        tlHudEl.style.color = '#d1d5db';
+      }
+    }
   }
 
   function highlightPlayheadStep(stepIdx, barIdx, secIdx) {
@@ -3956,20 +4203,59 @@
 
   function updatePlayerButtons() {
     const playBtn = document.getElementById('fold-play-phone-btn');
+    const padsPlayBtn = document.getElementById('fold-pads-play-btn');
     const sendBtn = document.getElementById('fold-send-ableton-btn');
+    const tlPlayBtn = document.getElementById('fold-timeline-play-btn');
+    const tlLoopBtn = document.getElementById('fold-timeline-loop-mode-btn');
     const { barsCount } = getActiveLoopStepBounds();
     const secName = SONG_SECTIONS[state.activeSection]?.badge || '4-Bar';
     const loopLabel =
       state.loopMode === 'section4'
-        ? `${secName} (4 Bars)`
-        : `${barsCount}-Bar Song`;
+        ? state.viewMode === 'zoom1'
+          ? `Bar ${state.zoomedBar + 1} (1 Bar)`
+          : `${secName} (4 Bars)`
+        : `${barsCount} Bars`;
+
+    const arr = state.arrangementSections || [];
+    const totalTlBars = arr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
 
     if (playBtn) {
-      playBtn.textContent = state.phonePlayer.playing
-        ? '⏹ Stop Drummer'
-        : `▶ Play ${loopLabel} on Phone`;
+      if (state.phonePlayer.playing) {
+        playBtn.textContent =
+          state.playbackMode === 'timeline' ? '⏹ Stop Timeline' : '⏹ Stop Drummer';
+      } else if (state.activeTab === 'arrange') {
+        playBtn.textContent = `▶ Play Timeline (${totalTlBars} Bars)`;
+      } else {
+        playBtn.textContent = `▶ Play (${loopLabel})`;
+      }
       playBtn.classList.toggle('active', state.phonePlayer.playing);
     }
+
+    if (padsPlayBtn) {
+      const isPlayingCompose = state.phonePlayer.playing && state.playbackMode !== 'timeline';
+      padsPlayBtn.textContent = isPlayingCompose
+        ? `⏹ Stop Groove (${loopLabel})`
+        : `▶ Play Groove to Jam Over (${loopLabel})`;
+      padsPlayBtn.classList.toggle('active', isPlayingCompose);
+    }
+
+    if (tlPlayBtn) {
+      const isTlPlaying = state.phonePlayer.playing && state.playbackMode === 'timeline';
+      tlPlayBtn.textContent = isTlPlaying
+        ? '⏹ Stop Timeline Review'
+        : state.timelineLoopSingle
+        ? `▶ Play Block #${(state.selectedTimelineIdx || 0) + 1} Loop`
+        : `▶ Play Full Timeline (${totalTlBars} Bars)`;
+      tlPlayBtn.classList.toggle('active', isTlPlaying);
+    }
+
+    if (tlLoopBtn) {
+      tlLoopBtn.classList.toggle('chip-on', state.timelineLoopSingle);
+      tlLoopBtn.textContent = state.timelineLoopSingle
+        ? `🔁 Loop: Block #${(state.selectedTimelineIdx || 0) + 1} Only`
+        : `🔁 Loop: Full Timeline (${arr.length} Blocks)`;
+    }
+
     if (sendBtn) {
       const targetLabel =
         state.targetTrack === 'selected'
@@ -3977,12 +4263,15 @@
             ? `🎯 ${state.abletonSelectedTrackName}`
             : '🎯 Selected Track'
           : `Track #${Number(state.targetTrack) + 1}`;
-      sendBtn.textContent = `🚀 Send to ${targetLabel} (${loopLabel})`;
+      sendBtn.textContent =
+        state.activeTab === 'arrange'
+          ? `🚀 Send Timeline (${totalTlBars}B) → ${targetLabel}`
+          : `🚀 Send (${loopLabel}) → ${targetLabel}`;
     }
   }
 
   // ==========================================================================
-  // 9. Send 16-Bar Song or 4 Split Song Sections to Ableton Live 12
+  // 9. Send 16-Bar Song, Full Timeline, or Split Blocks to Ableton Live 12
   // ==========================================================================
   async function sendOsc(address, args = [], expectReply = false) {
     if (!state.bridgeUrl) return { ok: false };
@@ -4019,8 +4308,9 @@
   function buildCurrentIdeaSnapshot(options = {}) {
     const { artist, song } = findSongById(state.selectedSongId);
     const cleanArtist = artist ? artist.artistName.replace(/^[^\w]+/, '').trim() : 'Session';
-    const arrCount = Array.isArray(state.arrangementSections) ? state.arrangementSections.length : 4;
-    const defaultTitle = `${cleanArtist} - ${song ? song.title : 'Groove'} (${state.tempo} BPM · ${arrCount} Secs)`;
+    const arr = Array.isArray(state.arrangementSections) ? state.arrangementSections : [];
+    const totalBars = arr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0) || 16;
+    const defaultTitle = `${cleanArtist} - ${song ? song.title : 'Groove'} (${state.tempo} BPM · ${arr.length} Blocks / ${totalBars}B)`;
     const inputEl = document.getElementById('fold-crate-title-input');
     const arrangeInputEl = document.getElementById('fold-arrange-title-input');
     const customTitle =
@@ -4029,7 +4319,8 @@
       (inputEl && inputEl.value.trim() ? inputEl.value.trim() : '') ||
       defaultTitle;
 
-    const fullNotes = buildNotesFromSequencer(0, TOTAL_STEPS).map((n) => [
+    const tlData = buildTimelinePlaybackData(false);
+    const fullNotes = tlData.notes.map((n) => [
       n.pitch,
       Number(n.startTime.toFixed(3)),
       Number(n.duration.toFixed(3)),
@@ -4044,14 +4335,14 @@
       sectionSources: [...(state.sectionSources || [state.selectedSongId, state.selectedSongId, state.selectedSongId, state.selectedSongId])],
       arrangementSections: JSON.parse(
         JSON.stringify(
-          Array.isArray(state.arrangementSections) && state.arrangementSections.length > 0
-            ? state.arrangementSections
+          arr.length > 0
+            ? arr
             : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor)
         )
       ),
       kitId: state.kitId,
       tempo: state.tempo,
-      duration: 64.0,
+      duration: tlData.durationBeats || 64.0,
       intensityPct: state.intensityPct,
       ghostPct: state.ghostPct,
       hatEnergyPct: state.hatEnergyPct,
@@ -4111,6 +4402,7 @@
     const { artist, song } = findSongById(idea.songId || 'zep_levee');
     state.selectedArtistId = idea.artistId || artist.artistId;
     state.selectedSongId = idea.songId || song.id;
+    state.editingTimelineIdx = null;
     state.sectionSources =
       Array.isArray(idea.sectionSources) && idea.sectionSources.length === 4
         ? [...idea.sectionSources]
@@ -4124,11 +4416,13 @@
         roleId: roles[i] || 'verse',
         songId: sid || state.selectedSongId,
         sourceSlice: i,
+        sourceBar: i * 4,
         bars: 4,
         addedBy: idea.authorName || state.playerName,
         addedColor: idea.authorColor || state.playerColor
       }));
     }
+    state.selectedTimelineIdx = 0;
     state.kitId = idea.kitId || song.kit || artist.defaultKit;
     state.tempo = Number(idea.tempo) || song.bpm;
     state.intensityPct = Number(idea.intensityPct ?? 70);
@@ -4158,6 +4452,7 @@
     renderCrateAndJamUI();
     updateDialsUI();
     updatePlayerButtons();
+    renderComposeTimelineBanner();
     if (broadcastIfShared && !state.suppressJamBroadcast && state.jamMode === 'shared') {
       broadcastFullJamState(`Loaded "${idea.title}"`);
     }
@@ -4444,9 +4739,13 @@
     } catch (_) {}
   }
 
-  async function sendCurrentBeatToAbleton(fire = true) {
+  async function sendCurrentBeatToAbleton(fire = true, forceTimeline = false) {
     const btn = document.getElementById('fold-send-ableton-btn');
-    const { startStep, endStep, barsCount, durationBeats } = getActiveLoopStepBounds();
+    const isTimelineSend = forceTimeline || state.activeTab === 'arrange';
+    const tlData = isTimelineSend ? buildTimelinePlaybackData(false) : null;
+    const composeBounds = isTimelineSend ? null : getActiveLoopStepBounds();
+    const barsCount = isTimelineSend ? tlData.totalBars : composeBounds.barsCount;
+    const durationBeats = isTimelineSend ? tlData.durationBeats : composeBounds.durationBeats;
 
     // If device is completely offline, automatically queue into the Offline Outbox!
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -4466,7 +4765,9 @@
     }
     if (btn) btn.textContent = `⏳ Sending ${barsCount} Bars to Ableton...`;
 
-    const notes = buildNotesFromSequencer(startStep, endStep);
+    const notes = isTimelineSend
+      ? tlData.notes
+      : buildNotesFromSequencer(composeBounds.startStep, composeBounds.endStep);
     const { artist, song } = findSongById(state.selectedSongId);
     const artistSlotIdx = Math.max(0, ARTIST_CATALOG.findIndex((a) => a.artistId === artist.artistId));
     const useSelectedTrack = state.targetTrack === 'selected';
@@ -4478,11 +4779,9 @@
         ? artistSlotIdx
         : Number(state.targetSlot) || 0;
 
-    const secSuffix =
-      state.loopMode === 'section4'
-        ? ` [${SONG_SECTIONS[state.activeSection].shortTitle}]`
-        : ` [${barsCount} Bars]`;
-    const clipName = `${artist.artistName.replace(/^[^\w]+/, '')} - ${song.title}${secSuffix}`;
+    const clipName = isTimelineSend
+      ? `Timeline Arrangement (${(state.arrangementSections || []).length} Blocks · ${barsCount} Bars)`
+      : `${artist.artistName.replace(/^[^\w]+/, '')} - ${song.title} [${barsCount}B]`;
     const reqPayload = {
       useSelectedTrack,
       useSelectedScene,
@@ -4540,32 +4839,16 @@
     }
   }
 
-  function buildNotesFromCustomGrid(customGrid, rangeStartStep = 0, rangeEndStep = 64) {
-    const savedGrid = state.grid;
-    state.grid = customGrid;
-    const notes = buildNotesFromSequencer(rangeStartStep, rangeEndStep);
-    state.grid = savedGrid;
-    return notes;
-  }
-
   function getNotesForArrangementSectionIndex(secIdx) {
     const arr =
       Array.isArray(state.arrangementSections) && state.arrangementSections.length > 0
         ? state.arrangementSections
         : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
     const secItem = arr[secIdx] || arr[0];
-    if (secIdx < 4) {
-      return buildNotesFromSequencer(secIdx * 64, (secIdx + 1) * 64);
-    }
-    const tempGrid = generateSongGrooveGrid(
-      secItem.songId || state.selectedSongId,
-      state.intensityPct,
-      state.ghostPct,
-      state.hatEnergyPct,
-      state.fillPct
-    );
-    const slice = Math.max(0, Math.min(3, Number(secItem.sourceSlice ?? (secIdx % 4))));
-    return buildNotesFromCustomGrid(tempGrid, slice * 64, (slice + 1) * 64);
+    const bars = Math.max(1, Math.min(16, Number(secItem?.bars) || 4));
+    const steps = bars * 16;
+    const blockGrid = getTimelineBlockGrid(secItem);
+    return buildNotesFromArbitraryGrid(blockGrid, 0, steps);
   }
 
   async function sendSplitSectionsToAbletonScenes() {
@@ -4576,17 +4859,17 @@
         ? state.arrangementSections
         : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
     const count = arr.length;
-    const origText = btn ? btn.textContent : `🎛️ Split Sections → Scenes`;
-    const origBuilderText = builderBtn ? builderBtn.textContent : `🚀 Send All ${count} Sections → Ableton Scenes 1–${count}`;
+    const origText = btn ? btn.textContent : `🎛️ Split → Scenes`;
+    const origBuilderText = builderBtn ? builderBtn.textContent : `🎛️ Split ${count} Blocks → Ableton Scenes 1–${count}`;
 
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       await saveCurrentIdeaToCrate({ queuedForOutbox: true, exportMode: 'split4', offlineOnly: true });
       if (btn) {
-        btn.textContent = `📦 ${count}-Section Split Queued in Outbox!`;
+        btn.textContent = `📦 ${count}-Block Split Queued in Outbox!`;
         setTimeout(() => (btn.textContent = origText), 2200);
       }
       if (builderBtn) {
-        builderBtn.textContent = `📦 ${count} Sections Queued in Outbox!`;
+        builderBtn.textContent = `📦 ${count} Blocks Queued in Outbox!`;
         setTimeout(() => (builderBtn.textContent = origBuilderText), 2200);
       }
       return;
@@ -4597,8 +4880,8 @@
         state.bridgeUrl = 'http://192.168.1.247:3333';
       }
     }
-    if (btn) btn.textContent = `⏳ Writing ${count} Sections to Scenes 1–${count}...`;
-    if (builderBtn) builderBtn.textContent = `⏳ Writing ${count} Sections to Scenes 1–${count}...`;
+    if (btn) btn.textContent = `⏳ Writing ${count} Blocks to Scenes 1–${count}...`;
+    if (builderBtn) builderBtn.textContent = `⏳ Writing ${count} Blocks to Scenes 1–${count}...`;
 
     const useSelectedTrack = state.targetTrack === 'selected';
     const sectionColors = [0x10b981, 0xf59e0b, 0x38bdf8, 0xe73ff6, 0xa855f7, 0xf43f5e, 0x14b8a6, 0xeab308];
@@ -4607,6 +4890,7 @@
       let targetTrackName = state.abletonSelectedTrackName || 'Selected Track';
       for (let secIdx = 0; secIdx < count; secIdx++) {
         const secItem = arr[secIdx];
+        const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
         const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
         const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
         const cleanArtist = artist.artistName.replace(/^[^\w]+/, '').trim();
@@ -4621,8 +4905,8 @@
             trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
             slotIndex: secIdx,
             tempo: secIdx === 0 ? state.tempo : null,
-            name: `${secIdx + 1}-${roleLabel}: ${cleanArtist} - ${song.title}`,
-            duration: 16.0,
+            name: `${secIdx + 1}-${roleLabel} (${bars}B): ${cleanArtist} - ${song.title}`,
+            duration: bars * 4.0,
             color: sectionColors[secIdx % sectionColors.length],
             fire: secIdx === 0,
             notes: secNotes
@@ -4634,17 +4918,18 @@
       }
 
       if (btn) {
-        btn.textContent = `✅ ${count} Sections → "${targetTrackName}" (Scenes 1–${count})!`;
+        btn.textContent = `✅ ${count} Blocks → "${targetTrackName}" (Scenes 1–${count})!`;
         setTimeout(() => (btn.textContent = origText), 2400);
       }
       if (builderBtn) {
-        builderBtn.textContent = `✅ ${count} Sections → "${targetTrackName}" (Scenes 1–${count})!`;
+        builderBtn.textContent = `✅ ${count} Blocks → "${targetTrackName}" (Scenes 1–${count})!`;
         setTimeout(() => renderSongBuilderAndClipsUI(), 2400);
       }
       refreshAbletonStatus();
     } catch (e) {
       try {
         const clips = arr.map((secItem, secIdx) => {
+          const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
           const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
           const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
           const cleanArtist = artist.artistName.replace(/^[^\w]+/, '').trim();
@@ -4660,8 +4945,8 @@
             trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
             slotIndex: secIdx,
             tempo: secIdx === 0 ? state.tempo : null,
-            name: `${secIdx + 1}-${roleObj.id.toUpperCase()}: ${cleanArtist} - ${song.title}`,
-            duration: 16.0,
+            name: `${secIdx + 1}-${roleObj.id.toUpperCase()} (${bars}B): ${cleanArtist} - ${song.title}`,
+            duration: bars * 4.0,
             color: sectionColors[secIdx % sectionColors.length],
             fire: secIdx === 0,
             notes: secNotes
@@ -4669,11 +4954,11 @@
         });
         sendVia204Bridge({ clips });
         if (btn) {
-          btn.textContent = `✅ ${count} Sections → Selected Track (Scenes 1–${count})!`;
+          btn.textContent = `✅ ${count} Blocks → Selected Track (Scenes 1–${count})!`;
           setTimeout(() => (btn.textContent = origText), 2400);
         }
         if (builderBtn) {
-          builderBtn.textContent = `✅ ${count} Sections → Scenes 1–${count}!`;
+          builderBtn.textContent = `✅ ${count} Blocks → Scenes 1–${count}!`;
           setTimeout(() => renderSongBuilderAndClipsUI(), 2400);
         }
       } catch (_) {
@@ -4686,13 +4971,17 @@
   }
 
   // ==========================================================================
-  // 10. 4-Tab Navigation (Compose, Arrange, Arrangements, Settings) & Builders
+  // 10. 4-Tab Navigation (Compose, Arrange, Arrangements, Settings) & Timeline
   // ==========================================================================
   function switchWorkspaceTab(rawTabId) {
     const tabId = normalizeTabId(rawTabId);
     state.activeTab = tabId;
+    if (state.phonePlayer.playing) {
+      state.playbackMode = tabId === 'arrange' ? 'timeline' : 'compose';
+    }
     savePersistedState();
     applyWorkspaceTabVisibility();
+    updatePlayerButtons();
     if (tabId === 'arrange') {
       refreshAbletonTrackClips();
       renderSongBuilderAndClipsUI();
@@ -4703,6 +4992,7 @@
       renderSectionTabs();
       renderMini4BarMap();
       renderSequencerGrid();
+      renderComposeTimelineBanner();
       highlightPlayheadStep(
         state.activeStep,
         state.activeBar,
@@ -4757,7 +5047,7 @@
       cardPads.classList.toggle('perform-focus-mode', Boolean(state.tallPadsInCompose));
     }
 
-    // 2. ARRANGE: Collaborative Section Addition/Removal + Save Arrangement + Scene Launcher
+    // 2. ARRANGE: Visual Song Timeline + Section Review/Add/Remove + Save Arrangement
     if (cardBuilder) cardBuilder.style.display = tab === 'arrange' ? 'flex' : 'none';
 
     // 3. ARRANGEMENTS: Past Arrangements to Load + Saved Beat Crate + Session History + PC Vault
@@ -4769,13 +5059,244 @@
     const toggleEditPadsBtn = document.getElementById('fold-toggle-edit-pads-btn');
     if (toggleEditPadsBtn) {
       toggleEditPadsBtn.classList.toggle('chip-on', state.showInlinePadsInEdit);
-      toggleEditPadsBtn.textContent = `🖐️ Finger Instruments: ${state.showInlinePadsInEdit ? 'SHOWING' : 'HIDDEN'}`;
+      toggleEditPadsBtn.textContent = `🖐️ Finger Pads: ${state.showInlinePadsInEdit ? 'ON' : 'OFF'}`;
+    }
+    const fineTuneWrap = document.getElementById('fold-fine-tune-dials-wrap');
+    const fineTuneBtn = document.getElementById('fold-toggle-fine-dials-btn');
+    if (fineTuneWrap) {
+      fineTuneWrap.style.display = state.showFineTuneDials ? 'grid' : 'none';
+    }
+    if (fineTuneBtn) {
+      fineTuneBtn.classList.toggle('chip-on', Boolean(state.showFineTuneDials));
+      fineTuneBtn.textContent = state.showFineTuneDials
+        ? '⚙️ Hide Fine-Tune Dials'
+        : '⚙️ Fine-Tune (Ghost, Hats, Pocket)';
     }
     const tallPadsBtn = document.getElementById('fold-tall-pads-btn');
     if (tallPadsBtn) {
       tallPadsBtn.classList.toggle('chip-on', Boolean(state.tallPadsInCompose));
       tallPadsBtn.textContent = state.tallPadsInCompose ? '↕ Tall Pads: ON' : '↕ Tall Pads: OFF';
     }
+  }
+
+  function showTimelineToast(msg) {
+    state.timelineToastMessage = msg;
+    const toastEls = document.querySelectorAll('.fold-timeline-toast');
+    toastEls.forEach((el) => {
+      el.style.display = 'inline-flex';
+      el.textContent = msg;
+    });
+    clearTimeout(showTimelineToast._timer);
+    showTimelineToast._timer = setTimeout(() => {
+      state.timelineToastMessage = '';
+      document.querySelectorAll('.fold-timeline-toast').forEach((el) => {
+        el.style.display = 'none';
+      });
+    }, 3200);
+  }
+
+  function renderComposeTimelineBanner() {
+    const bannerEl = document.getElementById('fold-compose-editing-banner');
+    const add1Btn = document.getElementById('fold-compose-add-1bar-btn');
+    const add4Btn = document.getElementById('fold-compose-add-4bar-btn');
+    const add16Btn = document.getElementById('fold-compose-add-16bar-btn');
+    const padsAdd1Btn = document.getElementById('fold-pads-add-1bar-btn');
+    const padsAdd4Btn = document.getElementById('fold-pads-add-4bar-btn');
+    const padsAdd16Btn = document.getElementById('fold-pads-add-16bar-btn');
+    const sec = SONG_SECTIONS[state.activeSection] || SONG_SECTIONS[0];
+    const { song } = findSongById(state.selectedSongId);
+
+    const txt1 = `➕ Add 1 Bar (Bar ${state.zoomedBar + 1}) → Timeline`;
+    const txt4 = `➕ Add 4 Bars (${sec.badge}) → Timeline`;
+    const txt16 = `➕ Add All 16 Bars (${song ? song.title : 'Full Song'}) → Timeline`;
+
+    if (add1Btn) add1Btn.textContent = txt1;
+    if (add4Btn) add4Btn.textContent = txt4;
+    if (add16Btn) add16Btn.textContent = txt16;
+    if (padsAdd1Btn) padsAdd1Btn.textContent = txt1;
+    if (padsAdd4Btn) padsAdd4Btn.textContent = txt4;
+    if (padsAdd16Btn) padsAdd16Btn.textContent = txt16;
+
+    if (!bannerEl) return;
+    if (
+      state.editingTimelineIdx !== null &&
+      state.arrangementSections &&
+      state.arrangementSections[state.editingTimelineIdx]
+    ) {
+      const idx = state.editingTimelineIdx;
+      const secItem = state.arrangementSections[idx];
+      const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
+      const sInfo = findSongById(secItem.songId || state.selectedSongId);
+      bannerEl.style.display = 'flex';
+      bannerEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="background:#e73ff6;color:#fff;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px;">🎬 EDITING TIMELINE BLOCK #${idx + 1}</span>
+          <strong style="font-size:13px;color:#fff;">${roleObj.label} · ${sInfo.song.title} (${secItem.bars || 4} Bar${Number(secItem.bars) === 1 ? '' : 's'})</strong>
+          <span style="font-size:12px;color:#d1d5db;">Every step, dial, or pad edit you make here updates Block #${idx + 1} on your Arrange Timeline automatically!</span>
+        </div>
+        <div class="fold-btn-row">
+          <button type="button" id="fold-return-timeline-btn" class="fold-btn teal">🎬 Done — Review in Arrange Timeline →</button>
+          <button type="button" id="fold-detach-timeline-edit-btn" class="fold-btn">✕ Stop Editing Block</button>
+        </div>`;
+      const retBtn = document.getElementById('fold-return-timeline-btn');
+      if (retBtn) {
+        retBtn.addEventListener('click', () => {
+          syncEditingTimelineBlockFromCompose();
+          switchWorkspaceTab('arrange');
+        });
+      }
+      const detBtn = document.getElementById('fold-detach-timeline-edit-btn');
+      if (detBtn) {
+        detBtn.addEventListener('click', () => {
+          state.editingTimelineIdx = null;
+          renderComposeTimelineBanner();
+        });
+      }
+    } else {
+      bannerEl.style.display = 'none';
+      bannerEl.innerHTML = '';
+    }
+  }
+
+  function addComposeToTimeline(barsToAdd = 4, songIdOverride = null, roleIdOverride = null) {
+    pushUndoState();
+    if (!Array.isArray(state.arrangementSections)) {
+      state.arrangementSections = createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
+    }
+    const bars = barsToAdd === 1 ? 1 : barsToAdd === 16 ? 16 : 4;
+    const targetSongId = songIdOverride || state.selectedSongId;
+    const isCurrentComposeSong = targetSongId === state.selectedSongId;
+    const { song } = findSongById(targetSongId);
+
+    const defaultRoleForBars =
+      roleIdOverride ||
+      (bars === 1
+        ? 'fill'
+        : bars === 16
+        ? 'verse'
+        : ['verse', 'chorus', 'bridge', 'climax'][state.activeSection] || 'chorus');
+    const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === defaultRoleForBars) || ARRANGEMENT_ROLES[1];
+
+    let startStep = 0;
+    let sourceBar = state.zoomedBar || 0;
+    let sourceSlice = state.activeSection || 0;
+    if (bars === 1) {
+      sourceBar = isCurrentComposeSong ? state.zoomedBar : 0;
+      startStep = sourceBar * 16;
+    } else if (bars === 4) {
+      sourceSlice = isCurrentComposeSong ? state.activeSection : roleObj.defaultSlice ?? 0;
+      startStep = sourceSlice * 64;
+    } else {
+      sourceSlice = 0;
+      sourceBar = 0;
+      startStep = 0;
+    }
+
+    const srcGrid = isCurrentComposeSong
+      ? state.grid
+      : generateSongGrooveGrid(
+          targetSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+    const customGrid = extractGridSlice(srcGrid, startStep, bars * 16);
+
+    const newBlock = {
+      id: `sec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      roleId: roleObj.id,
+      songId: targetSongId,
+      sourceSlice,
+      sourceBar,
+      bars,
+      customEdited: isCurrentComposeSong,
+      customGrid,
+      addedBy: state.playerName,
+      addedColor: state.playerColor
+    };
+
+    state.arrangementSections.push(newBlock);
+    state.selectedTimelineIdx = state.arrangementSections.length - 1;
+
+    const totalBars = state.arrangementSections.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
+    const barDesc = bars === 1 ? `1 Bar (Bar ${sourceBar + 1})` : bars === 16 ? 'All 16 Bars' : `4 Bars (${SONG_SECTIONS[sourceSlice]?.badge || 'Section'})`;
+    const msg = `✅ Added ${barDesc} of "${song.title}" → Timeline Block #${state.arrangementSections.length} (${totalBars} Bars Total)`;
+    showTimelineToast(msg);
+
+    recordSessionHistoryEntry(`Added ${barDesc} (${song.title}) to Timeline`);
+    savePersistedState();
+    renderSongBuilderAndClipsUI();
+    renderCrateAndJamUI();
+    updatePlayerButtons();
+    if (!state.suppressJamBroadcast && state.jamMode !== 'independent') {
+      broadcastFullJamState(`Added ${barDesc} (${song.title}) to Timeline`);
+    }
+  }
+
+  function openTimelineBlockInCompose(secIdx) {
+    if (!Array.isArray(state.arrangementSections) || !state.arrangementSections[secIdx]) return;
+    const secItem = state.arrangementSections[secIdx];
+    const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
+    const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
+
+    state.selectedTimelineIdx = secIdx;
+    state.editingTimelineIdx = secIdx;
+    state.selectedArtistId = artist.artistId;
+    state.selectedSongId = song.id;
+
+    // Start with the song's base 16-bar grid, then overlay the timeline block's customGrid into the active bar/section
+    const baseGrid = generateSongGrooveGrid(
+      song.id,
+      state.intensityPct,
+      state.ghostPct,
+      state.hatEnergyPct,
+      state.fillPct
+    );
+    const blockGrid = getTimelineBlockGrid(secItem);
+
+    if (bars === 1) {
+      const targetBar = Math.max(0, Math.min(15, Number(secItem.sourceBar ?? 0)));
+      state.zoomedBar = targetBar;
+      state.activeSection = Math.floor(targetBar / 4);
+      state.viewMode = 'zoom1';
+      state.loopMode = 'section4';
+      for (let v = 0; v < DRUM_VOICES.length; v++) {
+        for (let i = 0; i < 16; i++) {
+          baseGrid[v][targetBar * 16 + i] = { ...blockGrid[v][i] };
+        }
+      }
+    } else if (bars === 16) {
+      state.activeSection = 0;
+      state.viewMode = 'all16';
+      state.loopMode = 'all16';
+      for (let v = 0; v < DRUM_VOICES.length; v++) {
+        for (let i = 0; i < TOTAL_STEPS; i++) {
+          baseGrid[v][i] = { ...(blockGrid[v][i] || baseGrid[v][i]) };
+        }
+      }
+    } else {
+      const targetSlice = Math.max(0, Math.min(3, Number(secItem.sourceSlice ?? 0)));
+      state.activeSection = targetSlice;
+      state.zoomedBar = targetSlice * 4;
+      state.viewMode = 'section4';
+      state.loopMode = 'section4';
+      for (let v = 0; v < DRUM_VOICES.length; v++) {
+        for (let i = 0; i < 64; i++) {
+          baseGrid[v][targetSlice * 64 + i] = { ...(blockGrid[v][i] || baseGrid[v][targetSlice * 64 + i]) };
+        }
+      }
+    }
+
+    state.grid = baseGrid;
+    syncSequencerNotes();
+    updateViewModeButtons();
+    updateDialsUI();
+    switchWorkspaceTab('compose');
+    setTimeout(() => {
+      const seqEl = document.getElementById('card-sequencer');
+      if (seqEl) seqEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   }
 
   function renderArtistTabsAndSongs() {
@@ -4846,13 +5367,13 @@
     const filterCountEl = document.getElementById('fold-song-filter-count');
     if (filterCountEl) {
       filterCountEl.textContent = isFilteringAll
-        ? `Showing ${songsToRender.length} matching groove(s) across all 21 bands`
-        : `Showing 5 signature grooves for ${(ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0]).artistName}`;
+        ? `Showing ${songsToRender.length} matching groove(s) across all 21 bands — tap a card to load & edit, or add 1 / 4 / 16 bars straight to your Timeline`
+        : `${(ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0]).artistName} — Tap any song to load & edit in Compose, or add 1B / 4B / 16B to your Arrange Timeline`;
     }
 
     if (songsToRender.length === 0) {
       songsGridEl.innerHTML = `
-        <div style="grid-column:1/-1;padding:16px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.16);text-align:center;color:#9ca3af;font-size:12px;">
+        <div style="grid-column:1/-1;padding:16px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.16);text-align:center;color:#9ca3af;font-size:13px;">
           🔍 No songs matched your filter. Try clearing the search or selecting <strong>All Tempos</strong>!
         </div>`;
       return;
@@ -4862,58 +5383,60 @@
       .map(({ artist, song: s, idx }) => {
         const active = s.id === state.selectedSongId;
         const artistBadge = isFilteringAll
-          ? `<div style="font-size:10px;font-weight:800;color:#f0abfc;margin-bottom:2px;">${artist.artistName} · <span style="color:#9ca3af;font-weight:600;">${artist.drummer}</span></div>`
+          ? `<div style="font-size:11px;font-weight:800;color:#f0abfc;margin-bottom:2px;">${artist.artistName} · <span style="color:#d1d5db;font-weight:600;">${artist.drummer}</span></div>`
           : '';
         return `
           <div class="fold-song-card ${active ? 'active' : ''}" data-song-id="${s.id}">
             ${artistBadge}
             <div class="song-top-row">
-              <span class="song-tempo-tag">#${idx + 1} · ${s.bpm} BPM (${s.swing}% Swing)</span>
-              <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                ${active ? `<span class="song-active-badge">● LOADED</span>` : ''}
-                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-open-edit-song="${s.id}" title="Load this groove and scroll down to Dials & 16-Bar Grid">🎛️ Tweak</button>
-                <button type="button" class="fold-song-send-btn" data-add-arrange-song="${s.id}" title="Add this song groove as a new section in the Arrange tab">➕ Arrange</button>
-                <button type="button" class="fold-song-send-btn" data-quick-send-song="${s.id}" title="Load and immediately send this groove into the selected track in Ableton Live">🚀 → Ableton</button>
-              </span>
+              <span class="song-tempo-tag">${s.bpm} BPM · ${s.swing}% Swing</span>
+              ${active ? `<span class="song-active-badge">● EDITING</span>` : `<span style="font-size:11px;color:#84dcc6;font-weight:800;">🎛️ Tap to Select & Edit ↓</span>`}
             </div>
             <div class="song-title">${s.title}</div>
             <div class="song-desc">${s.desc}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">
+              <span style="font-size:10px;font-weight:800;color:#84dcc6;">➕ TO TIMELINE:</span>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <button type="button" class="fold-song-send-btn" data-card-add-tl="1" data-card-song="${s.id}" title="Add 1 Bar of ${s.title} to your Arrange Timeline">+ 1 Bar</button>
+                <button type="button" class="fold-song-send-btn" data-card-add-tl="4" data-card-song="${s.id}" title="Add 4 Bars of ${s.title} to your Arrange Timeline">+ 4 Bars</button>
+                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.18);" data-card-add-tl="16" data-card-song="${s.id}" title="Add All 16 Bars of ${s.title} to your Arrange Timeline">+ All 16B</button>
+              </div>
+            </div>
           </div>`;
       })
       .join('');
 
     songsGridEl.querySelectorAll('[data-song-id]').forEach((cardEl) => {
       cardEl.addEventListener('click', (e) => {
-        if (
-          e.target.closest('[data-quick-send-song]') ||
-          e.target.closest('[data-open-edit-song]') ||
-          e.target.closest('[data-add-arrange-song]')
-        ) {
+        if (e.target.closest('[data-card-add-tl]')) {
           return;
         }
         pushUndoState();
         loadSongGroove(cardEl.getAttribute('data-song-id'), true);
-      });
-    });
-
-    songsGridEl.querySelectorAll('[data-open-edit-song]').forEach((editBtn) => {
-      editBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const sid = editBtn.getAttribute('data-open-edit-song');
-        if (sid !== state.selectedSongId) {
-          pushUndoState();
-          loadSongGroove(sid, true);
+        if (state.autoCollapseSongsOnSelect !== false) {
+          const artistsCard = document.getElementById('card-artists');
+          if (artistsCard) {
+            artistsCard.classList.add('collapsed');
+            document
+              .querySelectorAll('.fold-collapse-btn[data-toggle-card="card-artists"]')
+              .forEach((btn) => {
+                btn.textContent = '🎸 Change Song ▼';
+              });
+          }
+          setTimeout(() => {
+            const dialsEl = document.getElementById('card-dials');
+            if (dialsEl) dialsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
         }
-        const dialsEl = document.getElementById('card-dials');
-        if (dialsEl) dialsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
 
-    songsGridEl.querySelectorAll('[data-add-arrange-song]').forEach((addBtn) => {
+    songsGridEl.querySelectorAll('[data-card-add-tl]').forEach((addBtn) => {
       addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const sid = addBtn.getAttribute('data-add-arrange-song');
-        addArrangementSection('chorus', sid);
+        const sid = addBtn.getAttribute('data-card-song');
+        const bars = Number(addBtn.getAttribute('data-card-add-tl')) || 4;
+        addComposeToTimeline(bars, sid, null);
         const orig = addBtn.textContent;
         addBtn.textContent = '✅ Added!';
         setTimeout(() => {
@@ -4921,67 +5444,41 @@
         }, 1200);
       });
     });
-
-    songsGridEl.querySelectorAll('[data-quick-send-song]').forEach((sendBtn) => {
-      sendBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const sid = sendBtn.getAttribute('data-quick-send-song');
-        if (sid !== state.selectedSongId) {
-          pushUndoState();
-          loadSongGroove(sid, true);
-        }
-        const origLabel = sendBtn.textContent;
-        sendBtn.textContent = '⏳ Sending...';
-        await sendCurrentBeatToAbleton(true);
-        sendBtn.textContent = '✅ In Ableton!';
-        setTimeout(() => {
-          sendBtn.textContent = origLabel;
-        }, 1600);
-      });
-    });
   }
 
   // ==========================================================================
-  // Collaborative Arrangement Section Addition, Removal & Reordering
+  // Collaborative Arrangement Timeline Addition, Removal & Reordering
   // ==========================================================================
   function commitArrangementChange(activityDesc) {
-    rebuildGridFromArrangementSections();
     recordSessionHistoryEntry(activityDesc);
-    renderMini4BarMap();
-    renderSequencerGrid();
+    savePersistedState();
     renderSongBuilderAndClipsUI();
     renderCrateAndJamUI();
+    updatePlayerButtons();
     if (!state.suppressJamBroadcast && state.jamMode !== 'independent') {
       broadcastFullJamState(activityDesc);
     }
   }
 
-  function addArrangementSection(roleId = 'chorus', songId = null) {
-    pushUndoState();
-    if (!Array.isArray(state.arrangementSections)) {
-      state.arrangementSections = createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
-    }
+  function addArrangementSection(roleId = 'chorus', songId = null, barsCount = 4) {
     const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === roleId) || ARRANGEMENT_ROLES[1];
-    const targetSongId = songId || state.selectedSongId;
-    const { song } = findSongById(targetSongId);
-    state.arrangementSections.push({
-      id: `sec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-      roleId: roleObj.id,
-      songId: targetSongId,
-      sourceSlice: roleObj.defaultSlice ?? 1,
-      bars: 4,
-      addedBy: state.playerName,
-      addedColor: state.playerColor
-    });
-    commitArrangementChange(`Added ${roleObj.label} (${song.title})`);
+    addComposeToTimeline(barsCount, songId || state.selectedSongId, roleObj.id);
   }
 
   function removeArrangementSection(secIdx) {
     if (!Array.isArray(state.arrangementSections) || state.arrangementSections.length <= 1) return;
     pushUndoState();
     const removed = state.arrangementSections.splice(secIdx, 1)[0];
+    if (state.selectedTimelineIdx >= state.arrangementSections.length) {
+      state.selectedTimelineIdx = Math.max(0, state.arrangementSections.length - 1);
+    }
+    if (state.editingTimelineIdx === secIdx) {
+      state.editingTimelineIdx = null;
+    } else if (state.editingTimelineIdx !== null && state.editingTimelineIdx > secIdx) {
+      state.editingTimelineIdx--;
+    }
     const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === removed?.roleId) || ARRANGEMENT_ROLES[1];
-    commitArrangementChange(`Removed Section #${secIdx + 1} (${roleObj.label})`);
+    commitArrangementChange(`Removed Timeline Block #${secIdx + 1} (${roleObj.label})`);
   }
 
   function moveArrangementSection(secIdx, delta) {
@@ -4992,21 +5489,23 @@
     const temp = state.arrangementSections[secIdx];
     state.arrangementSections[secIdx] = state.arrangementSections[targetIdx];
     state.arrangementSections[targetIdx] = temp;
-    commitArrangementChange(`Moved Section #${secIdx + 1} → #${targetIdx + 1}`);
+    state.selectedTimelineIdx = targetIdx;
+    if (state.editingTimelineIdx === secIdx) state.editingTimelineIdx = targetIdx;
+    else if (state.editingTimelineIdx === targetIdx) state.editingTimelineIdx = secIdx;
+    commitArrangementChange(`Moved Timeline Block #${secIdx + 1} → #${targetIdx + 1}`);
   }
 
   function duplicateArrangementSection(secIdx) {
     if (!Array.isArray(state.arrangementSections) || !state.arrangementSections[secIdx]) return;
     pushUndoState();
     const src = state.arrangementSections[secIdx];
-    const copy = {
-      ...src,
-      id: `sec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-      addedBy: state.playerName,
-      addedColor: state.playerColor
-    };
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.id = `sec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+    copy.addedBy = state.playerName;
+    copy.addedColor = state.playerColor;
     state.arrangementSections.splice(secIdx + 1, 0, copy);
-    commitArrangementChange(`Duplicated Section #${secIdx + 1}`);
+    state.selectedTimelineIdx = secIdx + 1;
+    commitArrangementChange(`Duplicated Timeline Block #${secIdx + 1}`);
   }
 
   function randomize4SectionMashup() {
@@ -5026,19 +5525,23 @@
     for (let i = 0; i < currentLen; i++) {
       const pick = allSongs[Math.floor(Math.random() * allSongs.length)];
       const existingRole = state.arrangementSections?.[i]?.roleId || defaultRoles[i % defaultRoles.length];
+      const existingBars = Number(state.arrangementSections?.[i]?.bars) || 4;
       const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === existingRole) || ARRANGEMENT_ROLES[1];
       nextArr.push({
         id: `sec_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
         roleId: roleObj.id,
         songId: pick.song.id,
         sourceSlice: i % 4,
-        bars: 4,
+        sourceBar: (i % 4) * 4,
+        bars: existingBars,
+        customEdited: false,
+        customGrid: null,
         addedBy: state.playerName,
         addedColor: state.playerColor
       });
     }
     state.arrangementSections = nextArr;
-    commitArrangementChange(`Randomized ${currentLen}-Section Arrangement`);
+    commitArrangementChange(`Randomized ${currentLen}-Block Timeline`);
   }
 
   async function refreshAbletonTrackClips() {
@@ -5058,27 +5561,123 @@
     } catch (_) {}
   }
 
+  function renderBlockMiniWaveformHtml(secItem) {
+    const blockGrid = getTimelineBlockGrid(secItem);
+    const totalSteps = blockGrid[0] ? blockGrid[0].length : 64;
+    const bucketCount = 16;
+    const stepsPerBucket = Math.max(1, Math.floor(totalSteps / bucketCount));
+    let spans = '';
+    for (let b = 0; b < bucketCount; b++) {
+      let density = 0;
+      let hasKick = false;
+      let hasSnare = false;
+      const startS = b * stepsPerBucket;
+      const endS = Math.min(totalSteps, startS + stepsPerBucket);
+      for (let s = startS; s < endS; s++) {
+        for (let v = 0; v < DRUM_VOICES.length; v++) {
+          const cell = blockGrid[v] && blockGrid[v][s];
+          if (cell && cell.state > 0) {
+            density++;
+            if (v === 0) hasKick = true;
+            if (v === 2 || v === 1) hasSnare = true;
+          }
+        }
+      }
+      const norm = Math.min(100, density === 0 ? 14 : Math.round(24 + (density / stepsPerBucket) * 26));
+      const color = hasKick ? '#f43f5e' : hasSnare ? '#fbbf24' : density > 0 ? '#38bdf8' : 'rgba(255,255,255,0.12)';
+      spans += `<span style="height:${norm}%;background:${color};border-radius:2px;display:block;width:100%;"></span>`;
+    }
+    return `<div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px;height:22px;align-items:end;margin-top:4px;">${spans}</div>`;
+  }
+
   function renderSongBuilderAndClipsUI() {
+    const visualTimelineEl = document.getElementById('fold-visual-timeline');
     const mashupGridEl = document.getElementById('fold-mashup-sections-grid');
     if (!Array.isArray(state.arrangementSections) || state.arrangementSections.length === 0) {
       state.arrangementSections = createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
     }
     const arr = state.arrangementSections;
+    if (state.selectedTimelineIdx >= arr.length) {
+      state.selectedTimelineIdx = Math.max(0, arr.length - 1);
+    }
     const totalBars = arr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
 
     const arrangeSummaryEl = document.getElementById('fold-summary-arrange');
     if (arrangeSummaryEl) {
-      arrangeSummaryEl.textContent = `${arr.length} Sections (${totalBars} Bars Total) · Live Collab Sync`;
+      arrangeSummaryEl.textContent = `${arr.length} Blocks · ${totalBars} Bars Total`;
     }
     const arrangeBadgeEl = document.getElementById('fold-tab-badge-arrange');
     if (arrangeBadgeEl) {
-      arrangeBadgeEl.textContent = `${arr.length} Secs`;
+      arrangeBadgeEl.textContent = `${totalBars} Bars`;
     }
     const builderSplitBtn = document.getElementById('fold-builder-split-scenes-btn');
     if (builderSplitBtn) {
-      builderSplitBtn.textContent = `🚀 Send All ${arr.length} Sections → Ableton Scenes 1–${arr.length}`;
+      builderSplitBtn.textContent = `🎛️ Split ${arr.length} Blocks → Scenes 1–${arr.length}`;
+    }
+    const builderSendFullBtn = document.getElementById('fold-builder-send-full-btn');
+    if (builderSendFullBtn) {
+      builderSendFullBtn.textContent = `🚀 Send Full Timeline (${totalBars} Bars) → Ableton`;
+    }
+    updatePlayerButtons();
+
+    // 1. Render Horizontal Proportional Song Arrangement Timeline (#fold-visual-timeline)
+    if (visualTimelineEl) {
+      let runningBar = 1;
+      visualTimelineEl.innerHTML = arr
+        .map((secItem, secIdx) => {
+          const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
+          const startBar = runningBar;
+          const endBar = runningBar + bars - 1;
+          runningBar = endBar + 1;
+          const barLabel = bars === 1 ? `Bar ${startBar}` : `Bars ${startBar}–${endBar}`;
+          const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
+          const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
+          const cleanArtist = artist.artistName.replace(/^[^\w]+/, '').trim();
+          const isSelected = secIdx === state.selectedTimelineIdx;
+          const isPlaying = state.phonePlayer.playing && state.playbackMode === 'timeline' && state.activeTimelineIdx === secIdx;
+          const flexWeight = bars === 1 ? 1.35 : bars === 16 ? 3.6 : 2.1;
+          const minW = bars === 1 ? 128 : bars === 16 ? 230 : 165;
+
+          return `
+            <div class="fold-tl-block ${isSelected ? 'selected-tl-block' : ''} ${isPlaying ? 'playing-tl-block' : ''}"
+                 data-tl-block="${secIdx}"
+                 style="flex:${flexWeight} 1 ${minW}px;min-width:${minW}px;border-top:4px solid ${roleObj.color};position:relative;overflow:hidden;">
+              <div class="fold-tl-needle" style="display:${isPlaying ? 'block' : 'none'};left:0%;"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+                <span style="font-size:11px;font-weight:900;color:#fbbf24;">${barLabel}</span>
+                <span style="font-size:10px;font-weight:900;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.1);color:#fff;">${bars}B</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px;">
+                <strong style="font-size:12px;color:#fff;">#${secIdx + 1} ${roleObj.label}</strong>
+                ${secItem.customEdited ? `<span style="font-size:9px;font-weight:800;background:rgba(231,63,246,0.28);color:#f5d0fe;padding:1px 5px;border-radius:4px;">✏️ EDITED</span>` : ''}
+              </div>
+              <div style="font-size:11px;font-weight:700;color:#84dcc6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${cleanArtist} — ${song.title}">
+                ${song.title} <span style="color:#9ca3af;font-weight:500;">· ${cleanArtist}</span>
+              </div>
+              ${renderBlockMiniWaveformHtml(secItem)}
+            </div>`;
+        })
+        .join('');
+
+      visualTimelineEl.querySelectorAll('[data-tl-block]').forEach((blockEl) => {
+        blockEl.addEventListener('click', () => {
+          const idx = Number(blockEl.getAttribute('data-tl-block'));
+          state.selectedTimelineIdx = idx;
+          renderSongBuilderAndClipsUI();
+          const cardRow = document.querySelector(`.fold-seq-card-row[data-seq-row="${idx}"]`);
+          if (cardRow) {
+            cardRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+          if (state.phonePlayer.playing && state.playbackMode === 'timeline' && state.timelineLoopSingle) {
+            const ctx = getAudioCtx();
+            state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
+            state.phonePlayer.lastStepTime = -0.001;
+          }
+        });
+      });
     }
 
+    // 2. Render Clean Timeline Block Sequence Cards (#fold-mashup-sections-grid)
     if (mashupGridEl) {
       const songOptionsFor = (selectedId) =>
         ARTIST_CATALOG.map(
@@ -5092,10 +5691,10 @@
         ).join('');
 
       const sliceLabels = [
-        'Pattern A: Intro / Verse Groove (Bars 1–4)',
-        'Pattern B: Chorus / Hook Lift (Bars 5–8)',
-        'Pattern C: Bridge / Breakdown Shift (Bars 9–12)',
-        'Pattern D: Climax & Showstopper Fill (Bars 13–16)'
+        'Sec 1: Intro / Verse (Bars 1–4)',
+        'Sec 2: Chorus / Hook (Bars 5–8)',
+        'Sec 3: Bridge / Break (Bars 9–12)',
+        'Sec 4: Climax & Fill (Bars 13–16)'
       ];
 
       let runningBar = 1;
@@ -5104,50 +5703,90 @@
           const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
           const curSongId = secItem.songId || state.selectedSongId;
           const { artist, song } = findSongById(curSongId);
+          const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
           const startBarNum = runningBar;
-          const endBarNum = runningBar + (Number(secItem.bars) || 4) - 1;
+          const endBarNum = runningBar + bars - 1;
           runningBar = endBarNum + 1;
+          const barRangeText = bars === 1 ? `Bar ${startBarNum}` : `Bars ${startBarNum}–${endBarNum}`;
           const sliceIdx = Math.max(0, Math.min(3, Number(secItem.sourceSlice ?? (secIdx % 4))));
+          const sourceBarIdx = Math.max(0, Math.min(15, Number(secItem.sourceBar ?? sliceIdx * 4)));
+          const isSelected = secIdx === state.selectedTimelineIdx;
+
+          let sourceSelectorHtml = '';
+          if (bars === 1) {
+            sourceSelectorHtml = `
+              <select class="fold-select" data-arr-bar-idx="${secIdx}" style="width:100%;height:34px;font-size:12px;border-color:rgba(255,255,255,0.22);color:#e5e7eb;">
+                ${Array.from({ length: 16 }, (_, b) => {
+                  const secNum = Math.floor(b / 4) + 1;
+                  const isFill = (b + 1) % 4 === 0;
+                  return `<option value="${b}" ${b === sourceBarIdx ? 'selected' : ''}>Source: Bar ${b + 1} of 16 (Sec ${secNum}${isFill ? ' · Turnaround Fill' : ''})</option>`;
+                }).join('')}
+              </select>`;
+          } else if (bars === 4) {
+            sourceSelectorHtml = `
+              <select class="fold-select" data-arr-slice="${secIdx}" style="width:100%;height:34px;font-size:12px;border-color:rgba(255,255,255,0.22);color:#e5e7eb;">
+                ${sliceLabels
+                  .map((lbl, sIdx) => `<option value="${sIdx}" ${sIdx === sliceIdx ? 'selected' : ''}>${lbl}</option>`)
+                  .join('')}
+              </select>`;
+          } else {
+            sourceSelectorHtml = `
+              <div style="font-size:12px;color:#d1d5db;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);">
+                📚 Full 16-Bar Song Progression (Intro → Chorus → Bridge → Climax)
+              </div>`;
+          }
 
           return `
-            <div style="background:rgba(0,0,0,0.34);border:1.5px solid rgba(255,255,255,0.13);border-top:4px solid ${roleObj.color};border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+            <div class="fold-seq-card-row ${isSelected ? 'selected-seq-row' : ''}" data-seq-row="${secIdx}" style="background:${
+              isSelected ? 'rgba(231,63,246,0.11)' : 'rgba(0,0,0,0.36)'
+            };border:1.5px solid ${
+              isSelected ? '#e73ff6' : 'rgba(255,255,255,0.14)'
+            };border-top:4px solid ${roleObj.color};border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:9px;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <span style="font-size:11px;font-weight:900;color:#fff;background:rgba(255,255,255,0.1);padding:2px 7px;border-radius:5px;">#${secIdx + 1}</span>
-                  <select class="fold-select" data-arr-role="${secIdx}" style="height:28px;font-size:11px;padding:2px 7px;border-color:${roleObj.color};">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <span style="font-size:12px;font-weight:900;color:#fff;background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">#${secIdx + 1}</span>
+                  <select class="fold-select" data-arr-role="${secIdx}" style="height:32px;font-size:12px;padding:2px 8px;border-color:${roleObj.color};">
                     ${ARRANGEMENT_ROLES.map(
                       (r) => `<option value="${r.id}" ${r.id === roleObj.id ? 'selected' : ''}>${r.label}</option>`
                     ).join('')}
                   </select>
+                  <div style="display:inline-flex;background:#14151e;border:1px solid rgba(255,255,255,0.18);border-radius:7px;overflow:hidden;">
+                    ${[1, 4, 16]
+                      .map(
+                        (bLen) =>
+                          `<button type="button" data-arr-bars="${secIdx}" data-bars-val="${bLen}" style="border:none;padding:4px 8px;font-size:11px;font-weight:800;cursor:pointer;background:${
+                            bars === bLen ? '#e73ff6' : 'transparent'
+                          };color:${bars === bLen ? '#fff' : '#9ca3af'};">${bLen}B</button>`
+                      )
+                      .join('')}
+                  </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:4px;">
-                  <span style="font-size:10px;font-weight:800;color:#fbbf24;background:rgba(251,191,36,0.14);padding:2px 6px;border-radius:4px;">Bars ${startBarNum}–${endBarNum}</span>
-                  <button type="button" class="drum-mini-ctrl" data-arr-up="${secIdx}" title="Move Section Earlier" ${secIdx === 0 ? 'disabled' : ''}>↑</button>
-                  <button type="button" class="drum-mini-ctrl" data-arr-down="${secIdx}" title="Move Section Later" ${secIdx === arr.length - 1 ? 'disabled' : ''}>↓</button>
-                  <button type="button" class="drum-mini-ctrl" data-arr-dup="${secIdx}" title="Duplicate Section">⧉</button>
-                  <button type="button" class="drum-mini-ctrl" style="color:#fda4af;border-color:rgba(244,63,94,0.4);" data-arr-del="${secIdx}" title="Remove Section from Arrangement" ${arr.length <= 1 ? 'disabled' : ''}>🗑️</button>
+                  <span style="font-size:11px;font-weight:800;color:#fbbf24;background:rgba(251,191,36,0.15);padding:3px 7px;border-radius:5px;">${barRangeText}</span>
+                  <button type="button" class="drum-mini-ctrl" data-arr-up="${secIdx}" title="Move Block Earlier" ${secIdx === 0 ? 'disabled' : ''}>←</button>
+                  <button type="button" class="drum-mini-ctrl" data-arr-down="${secIdx}" title="Move Block Later" ${secIdx === arr.length - 1 ? 'disabled' : ''}>→</button>
+                  <button type="button" class="drum-mini-ctrl" data-arr-dup="${secIdx}" title="Duplicate Block">⧉</button>
+                  <button type="button" class="drum-mini-ctrl" style="color:#fda4af;border-color:rgba(244,63,94,0.4);" data-arr-del="${secIdx}" title="Remove Block from Timeline" ${arr.length <= 1 ? 'disabled' : ''}>✕</button>
                 </div>
               </div>
 
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:11px;color:#84dcc6;font-weight:700;">
-                <span>${artist.artistName} — ${song.title} (${song.bpm} BPM)</span>
-                <span style="font-size:9px;color:#9ca3af;">by <strong style="color:${secItem.addedColor || '#84dcc6'};">${secItem.addedBy || 'Producer'}</strong></span>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:12px;color:#84dcc6;font-weight:700;">
+                <span>${artist.artistName} — ${song.title}</span>
+                <span style="font-size:10px;color:#9ca3af;">
+                  ${secItem.customEdited ? `<strong style="color:#f0abfc;">✏️ Custom Edited</strong> · ` : ''}by <strong style="color:${secItem.addedColor || '#84dcc6'};">${secItem.addedBy || 'Producer'}</strong>
+                </span>
               </div>
 
-              <select class="fold-select" data-arr-song="${secIdx}" style="width:100%;height:32px;font-size:11px;">
+              <select class="fold-select" data-arr-song="${secIdx}" style="width:100%;height:34px;font-size:12px;">
                 ${songOptionsFor(curSongId)}
               </select>
 
-              <select class="fold-select" data-arr-slice="${secIdx}" style="width:100%;height:30px;font-size:10px;border-color:rgba(255,255,255,0.2);color:#d1d5db;">
-                ${sliceLabels
-                  .map((lbl, sIdx) => `<option value="${sIdx}" ${sIdx === sliceIdx ? 'selected' : ''}>${lbl}</option>`)
-                  .join('')}
-              </select>
+              ${sourceSelectorHtml}
 
-              <div class="fold-btn-row" style="gap:5px;margin-top:2px;">
-                <button type="button" class="fold-song-send-btn" data-arr-play="${secIdx}">▶ Audition</button>
-                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-arr-edit="${secIdx}">🎛️ Compose</button>
-                <button type="button" class="fold-song-send-btn" data-arr-send="${secIdx}">🚀 → Scene ${secIdx + 1}</button>
+              <div class="fold-btn-row" style="gap:6px;margin-top:2px;">
+                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-play="${secIdx}">▶ Review Block</button>
+                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.18);" data-arr-edit="${secIdx}">🎛️ Edit in Compose</button>
+                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-send="${secIdx}">🚀 → Scene ${secIdx + 1}</button>
               </div>
             </div>`;
         })
@@ -5161,7 +5800,22 @@
           state.arrangementSections[idx].roleId = newRole.id;
           state.arrangementSections[idx].addedBy = state.playerName;
           state.arrangementSections[idx].addedColor = state.playerColor;
-          commitArrangementChange(`Changed Section #${idx + 1} Role → ${newRole.label}`);
+          commitArrangementChange(`Changed Block #${idx + 1} Role → ${newRole.label}`);
+        });
+      });
+
+      mashupGridEl.querySelectorAll('[data-arr-bars]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.getAttribute('data-arr-bars'));
+          const newBars = Number(btn.getAttribute('data-bars-val')) || 4;
+          if (!state.arrangementSections[idx]) return;
+          pushUndoState();
+          state.arrangementSections[idx].bars = newBars;
+          state.arrangementSections[idx].customGrid = null;
+          state.arrangementSections[idx].customEdited = false;
+          state.arrangementSections[idx].addedBy = state.playerName;
+          state.arrangementSections[idx].addedColor = state.playerColor;
+          commitArrangementChange(`Set Block #${idx + 1} Length → ${newBars} Bar(s)`);
         });
       });
 
@@ -5171,10 +5825,12 @@
           if (!state.arrangementSections[idx]) return;
           pushUndoState();
           state.arrangementSections[idx].songId = e.target.value;
+          state.arrangementSections[idx].customGrid = null;
+          state.arrangementSections[idx].customEdited = false;
           state.arrangementSections[idx].addedBy = state.playerName;
           state.arrangementSections[idx].addedColor = state.playerColor;
           const { song } = findSongById(e.target.value);
-          commitArrangementChange(`Section #${idx + 1} Groove → ${song.title}`);
+          commitArrangementChange(`Block #${idx + 1} Groove → ${song.title}`);
         });
       });
 
@@ -5184,9 +5840,25 @@
           if (!state.arrangementSections[idx]) return;
           pushUndoState();
           state.arrangementSections[idx].sourceSlice = Number(e.target.value);
+          state.arrangementSections[idx].customGrid = null;
+          state.arrangementSections[idx].customEdited = false;
           state.arrangementSections[idx].addedBy = state.playerName;
           state.arrangementSections[idx].addedColor = state.playerColor;
-          commitArrangementChange(`Changed Section #${idx + 1} Variation`);
+          commitArrangementChange(`Changed Block #${idx + 1} 4-Bar Section`);
+        });
+      });
+
+      mashupGridEl.querySelectorAll('[data-arr-bar-idx]').forEach((sel) => {
+        sel.addEventListener('change', (e) => {
+          const idx = Number(sel.getAttribute('data-arr-bar-idx'));
+          if (!state.arrangementSections[idx]) return;
+          pushUndoState();
+          state.arrangementSections[idx].sourceBar = Number(e.target.value);
+          state.arrangementSections[idx].customGrid = null;
+          state.arrangementSections[idx].customEdited = false;
+          state.arrangementSections[idx].addedBy = state.playerName;
+          state.arrangementSections[idx].addedColor = state.playerColor;
+          commitArrangementChange(`Changed Block #${idx + 1} Source Bar → Bar ${Number(e.target.value) + 1}`);
         });
       });
 
@@ -5206,48 +5878,17 @@
       mashupGridEl.querySelectorAll('[data-arr-play]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const idx = Number(btn.getAttribute('data-arr-play'));
-          const secItem = state.arrangementSections[idx];
-          if (idx >= 4 && secItem) {
-            // Load this section into slot 4 (index 3) temporarily so it can be auditioned on the phone
-            const secGrid = generateSongGrooveGrid(
-              secItem.songId,
-              state.intensityPct,
-              state.ghostPct,
-              state.hatEnergyPct,
-              state.fillPct
-            );
-            const srcStart = Math.max(0, Math.min(3, Number(secItem.sourceSlice ?? 0))) * 64;
-            for (let v = 0; v < DRUM_VOICES.length; v++) {
-              for (let i = 0; i < 64; i++) {
-                state.grid[v][192 + i] = { ...secGrid[v][srcStart + i] };
-              }
-            }
-            syncSequencerNotes();
-          }
-          state.activeSection = Math.min(3, idx);
-          state.loopMode = 'section4';
-          updatePlayerButtons();
-          updateViewModeButtons();
-          renderSectionTabs();
-          if (!state.phonePlayer.playing) startPhonePlayback();
-          else {
-            const ctx = getAudioCtx();
-            state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
-            state.phonePlayer.lastStepTime = -0.001;
-          }
+          state.selectedTimelineIdx = idx;
+          state.timelineLoopSingle = true;
+          renderSongBuilderAndClipsUI();
+          startPhonePlayback('timeline');
         });
       });
 
       mashupGridEl.querySelectorAll('[data-arr-edit]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const idx = Number(btn.getAttribute('data-arr-edit'));
-          state.activeSection = Math.min(3, idx);
-          state.viewMode = 'section4';
-          switchWorkspaceTab('compose');
-          setTimeout(() => {
-            const seqEl = document.getElementById('card-sequencer');
-            if (seqEl) seqEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 80);
+          openTimelineBlockInCompose(idx);
         });
       });
 
@@ -5255,6 +5896,7 @@
         btn.addEventListener('click', async () => {
           const secIdx = Number(btn.getAttribute('data-arr-send'));
           const secItem = state.arrangementSections[secIdx] || state.arrangementSections[0];
+          const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
           const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
           const secNotes = getNotesForArrangementSectionIndex(secIdx);
           const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
@@ -5269,8 +5911,8 @@
             trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
             slotIndex: secIdx,
             tempo: state.tempo,
-            name: `${secIdx + 1}-${roleObj.id.toUpperCase()}: ${cleanArtist} - ${song.title}`,
-            duration: 16.0,
+            name: `${secIdx + 1}-${roleObj.id.toUpperCase()} (${bars}B): ${cleanArtist} - ${song.title}`,
+            duration: bars * 4.0,
             color: sectionColors[secIdx % sectionColors.length],
             fire: true,
             notes: secNotes
@@ -5326,7 +5968,7 @@
               isSelectedScene ? '#84dcc6' : 'rgba(255,255,255,0.12)'
             };border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-                <span style="font-size:10px;font-weight:800;color:${
+                <span style="font-size:11px;font-weight:800;color:${
                   isSelectedScene ? '#84dcc6' : '#9ca3af'
                 };">🎬 SCENE ${i + 1} ${isSelectedScene ? '(Selected)' : ''}</span>
                 <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:${
@@ -5341,8 +5983,8 @@
                 ${slot.empty ? '— Empty Clip Slot —' : slot.name}
               </div>
               <div class="fold-btn-row" style="gap:5px;margin-top:2px;">
-                <button type="button" class="fold-song-send-btn" data-fire-slot="${i}">▶ Fire Slot</button>
-                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-write-slot="${i}">🚀 Write Groove Here</button>
+                <button type="button" class="fold-song-send-btn" data-fire-slot="${i}">▶ Fire</button>
+                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-write-slot="${i}">🚀 Write Here</button>
               </div>
             </div>`;
         })
@@ -5354,7 +5996,7 @@
           await sendOsc('/live/clip_slot/fire', [tIdx, slotIdx], false);
           btn.textContent = '▶ Fired!';
           setTimeout(() => {
-            btn.textContent = '▶ Fire Slot';
+            btn.textContent = '▶ Fire';
           }, 1200);
         });
       });
@@ -5370,7 +6012,7 @@
           btn.textContent = '✅ Written!';
           refreshAbletonTrackClips();
           setTimeout(() => {
-            btn.textContent = '🚀 Write Groove Here';
+            btn.textContent = '🚀 Write Here';
           }, 1500);
         });
       });
@@ -5440,6 +6082,7 @@
         updatePlayerButtons();
         updateViewModeButtons();
         updateHeaderSummaries();
+        renderComposeTimelineBanner();
         renderSectionTabs();
         renderMini4BarMap();
         renderSequencerGrid();
@@ -5505,6 +6148,7 @@
         updatePlayerButtons();
         updateViewModeButtons();
         updateHeaderSummaries();
+        renderComposeTimelineBanner();
         renderSectionTabs();
         renderMini4BarMap();
         renderSequencerGrid();
@@ -5555,6 +6199,7 @@
       triggerDrumVoice(ctx, DRUM_VOICES[vIdx].pitch, vel, ctx.currentTime);
     }
 
+    syncEditingTimelineBlockFromCompose();
     syncSequencerNotes();
     renderSequencerGrid();
 
@@ -5799,6 +6444,7 @@
       followBtn.classList.toggle('chip-on', state.autoFollowSection);
       followBtn.textContent = `👁️ Auto-Follow Playhead: ${state.autoFollowSection ? 'ON' : 'OFF'}`;
     }
+    renderComposeTimelineBanner();
   }
 
   // ==========================================================================
@@ -5825,6 +6471,7 @@
       const sub = state.noteRepeatRate === 0.125 ? 2 : state.noteRepeatRate === 0.1667 ? 3 : 1;
       const newCell = { state: velocity >= 115 ? 2 : 1, sub };
       state.grid[vIdx][state.activeStep] = newCell;
+      syncEditingTimelineBlockFromCompose();
       syncSequencerNotes();
       renderSequencerGrid();
       if (!state.suppressJamBroadcast && state.jamMode !== 'independent') {
@@ -7431,7 +8078,7 @@
       }
       .fold-mashup-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
         gap: 10px;
       }
       .fold-clips-grid {
@@ -7453,6 +8100,76 @@
         flex-direction: column;
         gap: 8px;
       }
+
+      /* Horizontal Visual Song Arrangement Timeline & Capture Bar */
+      .fold-tl-track {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 10px 6px 12px 6px;
+        background: rgba(8, 9, 14, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 10px;
+      }
+      .fold-tl-block {
+        background: linear-gradient(160deg, #222432, #161822);
+        border: 1.5px solid rgba(255, 255, 255, 0.16);
+        border-radius: 10px;
+        padding: 9px 11px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        transition: transform 0.1s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+        user-select: none;
+      }
+      .fold-tl-block:hover {
+        border-color: rgba(132, 220, 198, 0.7);
+      }
+      .fold-tl-block.selected-tl-block {
+        background: linear-gradient(160deg, rgba(231, 63, 246, 0.24), rgba(13, 148, 136, 0.18));
+        border-color: #e73ff6;
+        box-shadow: 0 0 14px rgba(231, 63, 246, 0.36);
+      }
+      .fold-tl-block.playing-tl-block {
+        border-color: #84dcc6;
+        box-shadow: 0 0 18px rgba(132, 220, 198, 0.55), inset 0 0 0 1px #84dcc6;
+      }
+      .fold-tl-needle {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: #84dcc6;
+        box-shadow: 0 0 10px #84dcc6;
+        pointer-events: none;
+        z-index: 4;
+      }
+      .fold-timeline-capture-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+        background: linear-gradient(135deg, rgba(13, 148, 136, 0.22), rgba(231, 63, 246, 0.18));
+        border: 1.5px solid rgba(132, 220, 198, 0.45);
+        border-radius: 10px;
+        padding: 9px 12px;
+      }
+      .fold-timeline-toast {
+        display: none;
+        width: 100%;
+        font-size: 12px;
+        font-weight: 800;
+        color: #6ee7b7;
+        background: rgba(16, 185, 129, 0.18);
+        border: 1px solid rgba(16, 185, 129, 0.45);
+        border-radius: 7px;
+        padding: 6px 10px;
+        margin-top: 4px;
+      }
+
       @media (max-width: 780px) {
         #fold-section-tabs { grid-template-columns: repeat(2, 1fr); }
         #fold-4bar-minimap { grid-template-columns: repeat(4, 1fr); }
@@ -7474,19 +8191,19 @@
             <span id="fold-jam-pill" class="fold-badge online" style="cursor:pointer;border-color:rgba(231,63,246,0.55);color:#f5d0fe;background:rgba(231,63,246,0.16);" title="Tap to open Settings & Collab Tab">⚙️ Settings & Collab</span>
           </div>
           <div class="fold-btn-row">
-            <button id="fold-play-phone-btn" class="fold-btn primary">▶ Play 16-Bar Song on Phone</button>
+            <button id="fold-play-phone-btn" class="fold-btn primary">▶ Play (16 Bars)</button>
             <select id="fold-target-track-select" class="fold-top-select" title="Target Ableton MIDI Track (Default: follows whichever track is currently selected in Ableton Live)">
               <option value="selected">🎯 Selected Track in Ableton</option>
             </select>
-            <select id="fold-target-slot-select" class="fold-top-select" title="Target Ableton Clip Slot / Scene (Default: follows whichever clip slot row is selected in Ableton Live)">
+            <select id="fold-target-slot-select" class="fold-top-select" style="display:none;" title="Target Ableton Clip Slot / Scene">
               <option value="selected">🎯 Selected Slot in Ableton</option>
               <option value="artist">🗂️ Auto Slot by Artist</option>
             </select>
-            <button id="fold-send-ableton-btn" class="fold-btn teal" title="Write and fire this groove directly into the selected track & clip slot in Ableton Live">🚀 Send to 🎯 Selected Track</button>
-            <button id="fold-split-scenes-btn" class="fold-btn amber" title="Write all arrangement sections as separate clips in sequential Scenes of the selected track">🎛️ Split Sections → Scenes</button>
+            <button id="fold-send-ableton-btn" class="fold-btn teal" title="Write and fire the active groove or Arrange Timeline directly into the selected track in Ableton Live">🚀 Send to 🎯 Selected Track</button>
+            <button id="fold-split-scenes-btn" class="fold-btn amber" title="Write all Arrange Timeline blocks as separate clips in sequential Scenes of the selected track">🎛️ Split Blocks → Scenes</button>
             <button id="fold-save-crate-top-btn" class="fold-btn" title="Save this arrangement to your Saved Arrangements vault">💾 Save Arrangement</button>
             <button id="fold-top-outbox-btn" class="fold-btn amber" style="display:none;" title="Push all queued offline arrangements in your Outbox straight into Ableton Live">📦 Push Outbox → Ableton</button>
-            <button id="fold-download-midi-btn" class="fold-btn">⬇ .mid</button>
+            <button id="fold-download-midi-btn" class="fold-btn" title="Download standard .mid file">⬇ .mid</button>
             <button id="fold-install-btn" class="fold-btn amber" style="display:none;">📲 Install App</button>
           </div>
         </div>
@@ -7499,16 +8216,16 @@
           <button type="button" class="fold-ws-tab-btn active" data-ws-tab="compose">
             <div class="fold-ws-tab-main">
               <span class="fold-ws-tab-label">🎛️ Compose</span>
-              <span class="fold-ws-tab-sub">Select, edit, tweak & pads</span>
+              <span class="fold-ws-tab-sub">Select, edit, tweak & play over</span>
             </div>
             <span class="fold-ws-tab-badge">105 Songs</span>
           </button>
           <button type="button" class="fold-ws-tab-btn" data-ws-tab="arrange">
             <div class="fold-ws-tab-main">
               <span class="fold-ws-tab-label">🎬 Arrange</span>
-              <span class="fold-ws-tab-sub">Add/remove sections & save</span>
+              <span class="fold-ws-tab-sub">Timeline review, play & Ableton</span>
             </div>
-            <span id="fold-tab-badge-arrange" class="fold-ws-tab-badge">4 Secs</span>
+            <span id="fold-tab-badge-arrange" class="fold-ws-tab-badge">16 Bars</span>
           </button>
           <button type="button" class="fold-ws-tab-btn" data-ws-tab="arrangements">
             <div class="fold-ws-tab-main">
@@ -7532,18 +8249,18 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (PART 1): SELECT BAND & ICONIC GROOVE               -->
+      <!-- TAB: COMPOSE (STEP 1): SELECT SONG & COLLAPSE TO EDIT            -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-artists">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-artists">
-            <h3>🎸 Select Band & Iconic Song Groove (21 Bands · 105 Songs)</h3>
+            <h3>🎸 1. Select Song Groove (21 Bands · 105 Songs)</h3>
             <span id="fold-summary-artist" class="fold-panel-summary">🔨 Led Zeppelin · When the Levee Breaks (71 BPM · 16 Bars)</span>
           </div>
           <div class="fold-btn-row">
-            <button type="button" id="fold-random-groove-btn" class="fold-btn amber" title="Pick a random iconic groove from all 105 songs">🎲 Random Groove</button>
-            <button type="button" id="fold-go-edit-from-artists-btn" class="fold-btn primary">🎛️ Scroll to Dials & Grid ↓</button>
-            <button class="fold-collapse-btn" data-toggle-card="card-artists">▼ Collapse</button>
+            <button type="button" id="fold-auto-collapse-songs-btn" class="fold-btn chip-on" title="Automatically collapse this song picker when you tap a song so you can immediately tweak, edit & play over it">⚡ Auto-Collapse on Select: ON</button>
+            <button type="button" id="fold-random-groove-btn" class="fold-btn amber" title="Pick a random iconic groove from all 105 songs">🎲 Random Song</button>
+            <button class="fold-collapse-btn" data-toggle-card="card-artists">▲ Collapse & Edit</button>
           </div>
         </div>
         <div class="fold-card-body">
@@ -7559,7 +8276,7 @@
               <button type="button" id="fold-clear-song-filter-btn" class="fold-btn">✕ Clear</button>
             </div>
           </div>
-          <div id="fold-song-filter-count" style="font-size:11px;color:#9ca3af;font-weight:700;">Showing 5 signature grooves</div>
+          <div id="fold-song-filter-count" style="font-size:11px;color:#9ca3af;font-weight:700;">Showing 5 signature grooves — tap any song to collapse this picker & start editing!</div>
 
           <!-- 21 Artist Pills -->
           <div id="fold-artist-tabs"></div>
@@ -7569,32 +8286,49 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (PART 2): TWEAK SESSION DRUMMER DIALS & DRUM KIT    -->
+      <!-- TAB: COMPOSE (STEP 2): TWEAK DRUMMER DIALS & DRUM KIT            -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-dials">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-dials">
-            <h3>🎛️ Tweak Drummer Dials & Swappable Drum Kit</h3>
+            <h3>🎛️ 2. Tweak Drummer Feel & Drum Kit</h3>
             <span id="fold-summary-dials" class="fold-panel-summary">Intensity 70% · Swing 8% · Fill 65%</span>
           </div>
           <div class="fold-btn-row">
-            <label for="fold-kit-select" style="font-size:11px;font-weight:800;color:#84dcc6;">SWAP KIT:</label>
+            <label for="fold-kit-select" style="font-size:11px;font-weight:800;color:#84dcc6;">DRUM KIT:</label>
             <select id="fold-kit-select" class="fold-select">
               ${DRUM_KITS.map((k) => `<option value="${k.id}">${k.name}</option>`).join('')}
             </select>
+            <button type="button" id="fold-toggle-fine-dials-btn" class="fold-btn" title="Show or hide Fine-Tune dials (Ghost Notes, Hat Energy, Snare Layback)">⚙️ Fine-Tune Dials</button>
             <button type="button" id="fold-toggle-edit-pads-btn" class="fold-btn chip-on" title="Show or hide Finger Instruments directly on the Compose tab">🖐️ Finger Instruments: SHOWING</button>
-            <button type="button" id="fold-jump-perform-btn" class="fold-btn" title="Jump down to Finger Instruments">🖐️ Scroll to Finger Instruments ↓</button>
             <button class="fold-collapse-btn" data-toggle-card="card-dials">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
+          <!-- 4 Primary Drummer Dials -->
           <div class="fold-dials-grid">
+            <div class="fold-dial-box">
+              <label><span>⏱️ Tempo (BPM)</span><span id="val-bpm" class="dial-val">71 BPM</span></label>
+              <input id="dial-bpm" type="range" min="50" max="200" step="1" value="71">
+            </div>
             <div class="fold-dial-box">
               <label><span>🔥 Drummer Intensity</span><span id="val-intensity" class="dial-val">70%</span></label>
               <input id="dial-intensity" type="range" min="10" max="100" step="5" value="70">
             </div>
             <div class="fold-dial-box">
-              <label><span>👻 Ghost Notes & Pocket</span><span id="val-ghost" class="dial-val">45%</span></label>
+              <label><span>🥁 Turnaround Fills</span><span id="val-fill" class="dial-val">65%</span></label>
+              <input id="dial-fill" type="range" min="0" max="100" step="5" value="65">
+            </div>
+            <div class="fold-dial-box">
+              <label><span>🕰️ Groove Swing</span><span id="val-swing" class="dial-val">8%</span></label>
+              <input id="dial-swing" type="range" min="0" max="65" step="1" value="8">
+            </div>
+          </div>
+
+          <!-- Optional Fine-Tune Dials (Ghost Notes, Hats, Snare Pocket) -->
+          <div id="fold-fine-tune-dials-wrap" class="fold-dials-grid" style="display:none;margin-top:4px;border-color:rgba(231,63,246,0.3);">
+            <div class="fold-dial-box">
+              <label><span>👻 Ghost Notes & Detail</span><span id="val-ghost" class="dial-val">45%</span></label>
               <input id="dial-ghost" type="range" min="0" max="100" step="5" value="45">
             </div>
             <div class="fold-dial-box">
@@ -7602,95 +8336,100 @@
               <input id="dial-hats" type="range" min="10" max="100" step="5" value="60">
             </div>
             <div class="fold-dial-box">
-              <label><span>🥁 Section Turnaround Fills</span><span id="val-fill" class="dial-val">65%</span></label>
-              <input id="dial-fill" type="range" min="0" max="100" step="5" value="65">
-            </div>
-            <div class="fold-dial-box">
-              <label><span>🕰️ MPC 16th Swing</span><span id="val-swing" class="dial-val">8%</span></label>
-              <input id="dial-swing" type="range" min="0" max="65" step="1" value="8">
-            </div>
-            <div class="fold-dial-box">
-              <label><span>🍯 Snare Layback / Humanize</span><span id="val-pocket" class="dial-val">25%</span></label>
+              <label><span>🍯 Snare Layback / Pocket</span><span id="val-pocket" class="dial-val">25%</span></label>
               <input id="dial-pocket" type="range" min="0" max="100" step="2" value="25">
-            </div>
-            <div class="fold-dial-box">
-              <label><span>⏱️ Tempo (BPM)</span><span id="val-bpm" class="dial-val">71 BPM</span></label>
-              <input id="dial-bpm" type="range" min="50" max="200" step="1" value="71">
             </div>
           </div>
         </div>
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (PART 3): EDIT 16-BAR STEP SEQUENCER GRID           -->
+      <!-- TAB: COMPOSE (STEP 3): EDIT SEQUENCER & ADD TO ARRANGE TIMELINE  -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-sequencer">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-sequencer">
-            <h3>📊 Edit 16-Bar Sequencer Grid (4 Sections · 256 Steps)</h3>
+            <h3>📊 3. Edit Step Sequencer & Add to Arrange Timeline</h3>
             <span id="fold-summary-seq" class="fold-panel-summary">Intro / Verse (Bars 1–4) · Loop: 16 Bars</span>
           </div>
           <div class="fold-btn-row">
-            <button id="fold-view-sec4-btn" class="fold-btn chip-on">🔭 4-Bar Section (🟢 SEC 1: Bars 1–4)</button>
-            <button id="fold-view-all16-btn" class="fold-btn">📚 All 16 Bars Stacked (256 Steps)</button>
-            <button id="fold-view-zoom1-btn" class="fold-btn">🔍 Zoom 1 Bar (Bar 1 of 16)</button>
-            <button id="fold-copy-bar-btn" class="fold-btn" style="display:none;">📋 Copy Bar 1 → Section</button>
-            <button id="fold-reset-groove-btn" class="fold-btn" title="Restore factory 16-bar song pattern">🔄 Reset Groove</button>
+            <button id="fold-view-sec4-btn" class="fold-btn chip-on">🔭 4-Bar Section</button>
+            <button id="fold-view-zoom1-btn" class="fold-btn">🔍 Zoom 1 Bar</button>
+            <button id="fold-view-all16-btn" class="fold-btn">📚 All 16 Bars</button>
+            <button id="fold-copy-bar-btn" class="fold-btn" style="display:none;">📋 Copy Bar → Section</button>
+            <button id="fold-reset-groove-btn" class="fold-btn" title="Restore factory 16-bar song pattern">🔄 Reset</button>
             <button id="fold-undo-btn" class="fold-btn" disabled>↩ Undo</button>
             <button id="fold-clear-all-btn" class="fold-btn">🗑️ Clear</button>
             <button class="fold-collapse-btn" data-toggle-card="card-sequencer">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
+          <!-- Banner shown when editing a specific Timeline Block from the Arrange tab -->
+          <div id="fold-compose-editing-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:rgba(231,63,246,0.16);border:1.5px solid #e73ff6;border-radius:10px;padding:9px 12px;"></div>
+
+          <!-- Prominent Action Bar: Add 1 Bar, 4 Bars, or All 16 Bars of Your Edited Groove to Arrange Timeline -->
+          <div class="fold-timeline-capture-bar">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <strong style="font-size:12px;color:#fff;">🎬 Add Edited Groove to Arrange Timeline</strong>
+              <span style="font-size:11px;color:#d1d5db;">Captures your dial tweaks, step edits & pad overdubs into the Arrange Timeline:</span>
+            </div>
+            <div class="fold-btn-row">
+              <button type="button" id="fold-compose-add-1bar-btn" class="fold-btn teal">➕ Add 1 Bar (Bar 1) → Timeline</button>
+              <button type="button" id="fold-compose-add-4bar-btn" class="fold-btn primary">➕ Add 4 Bars (🟢 SEC 1) → Timeline</button>
+              <button type="button" id="fold-compose-add-16bar-btn" class="fold-btn amber">➕ Add All 16 Bars → Timeline</button>
+              <button type="button" id="fold-compose-go-arrange-btn" class="fold-btn" style="border-color:#84dcc6;color:#84dcc6;">🎬 Go to Arrange Timeline →</button>
+            </div>
+            <div class="fold-timeline-toast"></div>
+          </div>
+
           <!-- 4 Song Section Cards: Intro/Verse, Chorus/Hook, Bridge/Break, Climax/Fill -->
           <div id="fold-section-tabs"></div>
 
-          <!-- Loop Mode & Playhead Follow Controls -->
+          <!-- Loop Mode, Step Brush & Playhead Follow Controls -->
           <div class="fold-btn-row" style="justify-content:space-between;background:rgba(0,0,0,0.26);padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
             <div class="fold-btn-row">
-              <span style="font-size:11px;font-weight:800;color:#84dcc6;">LOOP RANGE:</span>
-              <button class="fold-btn chip-on" data-loop-mode="all16">🔁 Full 16-Bar Song (Bars 1–16)</button>
-              <button class="fold-btn" data-loop-mode="bars8">🔁 8 Bars (Verse + Chorus, Bars 1–8)</button>
-              <button class="fold-btn" data-loop-mode="section4">🔒 Lock Active 4-Bar Section Only</button>
+              <span style="font-size:11px;font-weight:800;color:#84dcc6;">LOOP:</span>
+              <button class="fold-btn chip-on" data-loop-mode="all16">🔁 16 Bars</button>
+              <button class="fold-btn" data-loop-mode="bars8">🔁 8 Bars</button>
+              <button class="fold-btn" data-loop-mode="section4">🔒 4-Bar Section</button>
+              <button id="fold-autofollow-btn" class="fold-btn chip-on">👁️ Auto-Follow: ON</button>
             </div>
             <div class="fold-btn-row">
-              <button id="fold-autofollow-btn" class="fold-btn chip-on">👁️ Auto-Follow Playhead: ON</button>
+              <span style="font-size:11px;font-weight:800;color:#9ca3af;">BRUSH:</span>
+              <button class="fold-btn chip-on" data-brush="normal">● Normal</button>
+              <button class="fold-btn" data-brush="accent">🔥 Accent</button>
+              <button class="fold-btn" data-brush="ghost">👻 Ghost</button>
+              <button class="fold-btn" data-brush="roll2">⚡ 32nd (2x)</button>
+              <button class="fold-btn" data-brush="roll3">⚡ Triplet (3x)</button>
             </div>
           </div>
 
           <!-- 16-Bar Mini-Map -->
           <div id="fold-4bar-minimap"></div>
 
-          <div class="fold-btn-row">
-            <span style="font-size:11px;font-weight:800;color:#9ca3af;">STEP BRUSH:</span>
-            <button class="fold-btn chip-on" data-brush="normal">● Normal</button>
-            <button class="fold-btn" data-brush="accent">🔥 Accent</button>
-            <button class="fold-btn" data-brush="ghost">👻 Ghost</button>
-            <button class="fold-btn" data-brush="roll2">⚡ 32nd Roll (2x)</button>
-            <button class="fold-btn" data-brush="roll3">⚡ Triplet Roll (3x)</button>
-          </div>
-
+          <!-- Step Grid -->
           <div id="fold-sequencer-grid"></div>
         </div>
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (PART 4): FINGER INSTRUMENTS & LIVE OVERDUB PADS    -->
+      <!-- TAB: COMPOSE (STEP 4): PLAY OVER IT WITH FINGER INSTRUMENTS      -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-pads">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-pads">
-            <h3>🖐️ Finger Instruments & Live Overdub Pads (Touch or Keys 1–8)</h3>
+            <h3>🖐️ 4. Play Over It — Finger Instruments & Live Overdub (Keys 1–8)</h3>
             <span id="fold-perform-hud-pill" class="fold-panel-summary" style="border:1px solid rgba(255,255,255,0.2);">⏸ Ready (🟢 SEC 1: Intro / Verse)</span>
           </div>
           <div class="fold-btn-row">
-            <span style="font-size:11px;font-weight:700;color:#9ca3af;">HOLD REPEAT:</span>
+            <button type="button" id="fold-pads-play-btn" class="fold-btn primary">▶ Play Groove to Jam Over</button>
+            <button id="fold-overdub-btn" class="fold-btn">⏺ Record Pads into Loop: OFF</button>
+            <span style="font-size:11px;font-weight:700;color:#9ca3af;">REPEAT:</span>
             <button class="fold-btn chip-on" data-repeat="0">Off</button>
             <button class="fold-btn" data-repeat="0.5">1/8</button>
             <button class="fold-btn" data-repeat="0.25">1/16</button>
             <button class="fold-btn" data-repeat="0.1667">1/16T</button>
-            <button class="fold-btn" data-repeat="0.125">1/32 Roll</button>
-            <button id="fold-overdub-btn" class="fold-btn">⏺ Record Pads into Loop: OFF</button>
+            <button class="fold-btn" data-repeat="0.125">1/32</button>
             <button type="button" id="fold-tall-pads-btn" class="fold-btn" title="Expand pad height for two-handed finger drumming">↕ Tall Pads: OFF</button>
             <button class="fold-collapse-btn" data-toggle-card="card-pads">▼ Collapse</button>
           </div>
@@ -7700,7 +8439,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.25);padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
             <div class="fold-btn-row" id="fold-perform-sec-tabs"></div>
             <div class="fold-btn-row">
-              <button type="button" id="fold-perform-open-grid-btn" class="fold-btn">📊 Scroll Up to 16-Bar Grid ↑</button>
+              <button type="button" id="fold-change-song-from-pads-btn" class="fold-btn">🎸 Pick Another Song ↑</button>
             </div>
           </div>
 
@@ -7713,57 +8452,100 @@
               </div>`
             ).join('')}
           </div>
+
+          <!-- Bottom Capture Bar: Add Overdubbed Groove to Arrange Timeline & Open Arrange -->
+          <div class="fold-timeline-capture-bar">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <strong style="font-size:12px;color:#fff;">🎬 Done Playing Over It? Add to Arrange Timeline:</strong>
+              <span style="font-size:11px;color:#d1d5db;">Add 1 bar, 4 bars, or all 16 bars of this groove to your Arrange Timeline, then review & send to Ableton:</span>
+            </div>
+            <div class="fold-btn-row">
+              <button type="button" id="fold-pads-add-1bar-btn" class="fold-btn teal">➕ Add 1 Bar (Bar 1) → Timeline</button>
+              <button type="button" id="fold-pads-add-4bar-btn" class="fold-btn primary">➕ Add 4 Bars (🟢 SEC 1) → Timeline</button>
+              <button type="button" id="fold-pads-add-16bar-btn" class="fold-btn amber">➕ Add All 16 Bars → Timeline</button>
+              <button type="button" id="fold-pads-go-arrange-btn" class="fold-btn" style="border-color:#84dcc6;color:#84dcc6;">🎬 Go to Arrange Timeline →</button>
+            </div>
+            <div class="fold-timeline-toast"></div>
+          </div>
         </div>
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: ARRANGE: COLLABORATIVE SECTION ADD/REMOVE + SAVE ARRANGEMENT -->
+      <!-- TAB: ARRANGE: VISUAL SONG TIMELINE, PLAYBACK & SEND TO ABLETON   -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-builder">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-builder">
-            <h3>🎬 Arrange — Collaborative Section Addition, Removal & Save Arrangement</h3>
-            <span id="fold-summary-arrange" class="fold-panel-summary">4 Sections (16 Bars Total) · Live Collab Sync</span>
+            <h3>🎬 Arrange — Song Timeline Review, Playback & Send to Ableton</h3>
+            <span id="fold-summary-arrange" class="fold-panel-summary">4 Blocks · 16 Bars Total</span>
           </div>
           <div class="fold-btn-row">
-            <button type="button" id="fold-random-mashup-btn" class="fold-btn amber" title="Randomize songs across all sections in the current arrangement">🎲 Randomize Sections</button>
-            <button type="button" id="fold-builder-split-scenes-btn" class="fold-btn teal">🚀 Send All Sections → Ableton Scenes</button>
+            <button type="button" id="fold-arrange-back-compose-btn" class="fold-btn">🎸 + Pick & Edit Another Song in Compose</button>
+            <button type="button" id="fold-random-mashup-btn" class="fold-btn amber" title="Randomize songs across all blocks in the current timeline">🎲 Randomize Timeline</button>
+            <button type="button" id="fold-timeline-clear-btn" class="fold-btn" title="Reset timeline to 1 block so you can build from scratch">🧹 Start Fresh (1 Block)</button>
             <button class="fold-collapse-btn" data-toggle-card="card-builder">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
-          <!-- Save Arrangement & Collaborative Add Section Bar -->
-          <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:10px;">
+          <!-- Timeline Transport, Review & Send to Ableton Bar -->
+          <div style="background:linear-gradient(135deg, rgba(231,63,246,0.18), rgba(13,148,136,0.18));border:1.5px solid rgba(231,63,246,0.45);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:9px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <input id="fold-arrange-title-input" class="fold-crate-input" type="text" placeholder="Arrangement Name (optional — e.g. Late Night Psych Arrangement)">
               <div class="fold-btn-row">
-                <button type="button" id="fold-builder-save-crate-btn" class="fold-btn primary">💾 Save Arrangement</button>
-                <button type="button" id="fold-builder-queue-outbox-btn" class="fold-btn amber" title="Save & queue this arrangement in your Studio Outbox to push to Ableton when back on Wi-Fi">📥 Save & Queue in Outbox</button>
-                <button type="button" id="fold-builder-beam-btn" class="fold-btn teal" title="Beam this arrangement live to collaborators on the same Wi-Fi">📡 Beam Arrangement to Peers</button>
+                <button type="button" id="fold-timeline-play-btn" class="fold-btn primary" style="font-size:13px;padding:8px 14px;">▶ Play Full Timeline (16 Bars)</button>
+                <button type="button" id="fold-timeline-loop-mode-btn" class="fold-btn">🔁 Loop: Full Timeline (4 Blocks)</button>
+                <span id="fold-timeline-hud-pill" class="fold-panel-summary" style="border:1px solid rgba(255,255,255,0.2);font-size:12px;">⏸ Ready (4 Blocks · 16 Bars Total)</span>
               </div>
-            </div>
-
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">
-              <span style="font-size:11px;font-weight:800;color:#84dcc6;">➕ ADD SECTION TO ARRANGEMENT:</span>
               <div class="fold-btn-row">
-                ${ARRANGEMENT_ROLES.map(
-                  (r) =>
-                    `<button type="button" class="fold-btn" data-add-sec-role="${r.id}" style="border-color:${r.color};">+ ${r.label}</button>`
-                ).join('')}
+                <button type="button" id="fold-builder-send-full-btn" class="fold-btn teal" style="font-size:13px;padding:8px 14px;" title="Write the entire arranged timeline as one continuous multi-bar MIDI clip into your selected Ableton track">🚀 Send Full Timeline (16 Bars) → Ableton</button>
+                <button type="button" id="fold-builder-split-scenes-btn" class="fold-btn amber" title="Write each block in your timeline into sequential Ableton Scenes (Scene 1, Scene 2, Scene 3...)">🎛️ Split 4 Blocks → Scenes 1–4</button>
               </div>
             </div>
           </div>
 
-          <!-- Dynamic Collaborative Arrangement Section Chain -->
+          <!-- 1. Horizontal Proportional Song Arrangement Timeline -->
+          <div style="background:rgba(0,0,0,0.32);border:1px solid rgba(255,255,255,0.11);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <div>
+                <strong style="font-size:13px;color:#fff;">📏 Horizontal Song Arrangement Timeline (Tap any Block to Focus or Loop)</strong>
+                <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Proportional 1-Bar, 4-Bar & 16-Bar blocks with live playhead needle</span>
+              </div>
+              <div class="fold-btn-row">
+                <span style="font-size:11px;font-weight:800;color:#84dcc6;">QUICK ADD CURRENT SONG:</span>
+                <button type="button" class="fold-btn" data-quick-tl-bars="1" data-quick-tl-role="fill">+ 1B Fill</button>
+                <button type="button" class="fold-btn" data-quick-tl-bars="4" data-quick-tl-role="verse">+ 4B Verse</button>
+                <button type="button" class="fold-btn" data-quick-tl-bars="4" data-quick-tl-role="chorus">+ 4B Chorus</button>
+                <button type="button" class="fold-btn" data-quick-tl-bars="4" data-quick-tl-role="bridge">+ 4B Bridge</button>
+                <button type="button" class="fold-btn" data-quick-tl-bars="16" data-quick-tl-role="verse">+ All 16B</button>
+              </div>
+            </div>
+            <div id="fold-visual-timeline" class="fold-tl-track"></div>
+          </div>
+
+          <!-- 2. Detailed Timeline Block Sequence Cards (Reorder, Resize 1B/4B/16B, Swap Song/Bar, or Edit in Compose) -->
           <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <strong style="font-size:12px;color:#f5d0fe;">🧬 Collaborative Arrangement Sections (Add, Remove, Reorder & Swap Songs)</strong>
-              <span style="font-size:11px;color:#9ca3af;">Sections added, removed, or reordered here sync live with peers on the same Wi-Fi!</span>
+              <strong style="font-size:12px;color:#f5d0fe;">🧬 Timeline Blocks — Reorder (←/→), Set Length (1B / 4B / 16B), Swap Song or Tweak in Compose</strong>
+              <div class="fold-btn-row">
+                ${ARRANGEMENT_ROLES.map(
+                  (r) =>
+                    `<button type="button" class="fold-btn" data-add-sec-role="${r.id}" style="border-color:${r.color};padding:4px 8px;font-size:11px;">+ ${r.label}</button>`
+                ).join('')}
+              </div>
             </div>
             <div id="fold-mashup-sections-grid" class="fold-mashup-grid"></div>
           </div>
 
-          <!-- Live Ableton Track Clip & Scene Launcher -->
+          <!-- 3. Save Arrangement, Queue in Outbox & Beam to Peers -->
+          <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <input id="fold-arrange-title-input" class="fold-crate-input" type="text" placeholder="Save Arrangement Name (optional — e.g. Levee + Tame Impala Timeline)">
+            <div class="fold-btn-row">
+              <button type="button" id="fold-builder-save-crate-btn" class="fold-btn primary">💾 Save Arrangement</button>
+              <button type="button" id="fold-builder-queue-outbox-btn" class="fold-btn amber" title="Save & queue this arrangement in your Studio Outbox to push to Ableton when back on Wi-Fi">📥 Save & Queue in Outbox</button>
+              <button type="button" id="fold-builder-beam-btn" class="fold-btn teal" title="Beam this arrangement live to collaborators on the same Wi-Fi">📡 Beam to Peers</button>
+            </div>
+          </div>
+
+          <!-- 4. Live Ableton Track Clip & Scene Launcher -->
           <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <strong style="font-size:12px;color:#84dcc6;">🎛️ Live Ableton Track Clip & Scene Launcher (Scenes 1–8)</strong>
@@ -7954,7 +8736,21 @@
       });
     }
 
-    // Wire Up Search, Tempo Filter & Random Groove in Compose Tab
+    // Wire Up Search, Tempo Filter, Auto-Collapse & Random Groove in Compose Tab
+    if (state.autoCollapseSongsOnSelect === undefined) {
+      state.autoCollapseSongsOnSelect = true;
+    }
+    const autoCollapseSongsBtn = document.getElementById('fold-auto-collapse-songs-btn');
+    if (autoCollapseSongsBtn) {
+      autoCollapseSongsBtn.classList.toggle('chip-on', state.autoCollapseSongsOnSelect !== false);
+      autoCollapseSongsBtn.textContent = `⚡ Auto-Collapse on Select: ${state.autoCollapseSongsOnSelect !== false ? 'ON' : 'OFF'}`;
+      autoCollapseSongsBtn.addEventListener('click', () => {
+        state.autoCollapseSongsOnSelect = state.autoCollapseSongsOnSelect === false;
+        autoCollapseSongsBtn.classList.toggle('chip-on', state.autoCollapseSongsOnSelect);
+        autoCollapseSongsBtn.textContent = `⚡ Auto-Collapse on Select: ${state.autoCollapseSongsOnSelect ? 'ON' : 'OFF'}`;
+      });
+    }
+
     const songSearchInput = document.getElementById('fold-song-search-input');
     if (songSearchInput) {
       songSearchInput.addEventListener('input', (e) => {
@@ -7990,14 +8786,19 @@
         const pick = allSongs[Math.floor(Math.random() * allSongs.length)];
         pushUndoState();
         loadSongGroove(pick, true);
+        if (state.autoCollapseSongsOnSelect !== false) {
+          setCardCollapsed(document.getElementById('card-artists'), true);
+        }
       });
     }
 
-    const goEditFromArtistsBtn = document.getElementById('fold-go-edit-from-artists-btn');
-    if (goEditFromArtistsBtn) {
-      goEditFromArtistsBtn.addEventListener('click', () => {
-        const dialsEl = document.getElementById('card-dials');
-        if (dialsEl) dialsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const toggleFineDialsBtn = document.getElementById('fold-toggle-fine-dials-btn');
+    const fineTuneWrap = document.getElementById('fold-fine-tune-dials-wrap');
+    if (toggleFineDialsBtn && fineTuneWrap) {
+      toggleFineDialsBtn.addEventListener('click', () => {
+        state.showFineTuneDials = !state.showFineTuneDials;
+        fineTuneWrap.style.display = state.showFineTuneDials ? 'grid' : 'none';
+        toggleFineDialsBtn.classList.toggle('chip-on', state.showFineTuneDials);
       });
     }
 
@@ -8018,25 +8819,102 @@
       });
     }
 
-    const jumpPerformBtn = document.getElementById('fold-jump-perform-btn');
-    if (jumpPerformBtn) {
-      jumpPerformBtn.addEventListener('click', () => {
-        state.showInlinePadsInEdit = true;
-        applyWorkspaceTabVisibility();
-        const padsEl = document.getElementById('card-pads');
-        if (padsEl) padsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const changeSongFromPadsBtn = document.getElementById('fold-change-song-from-pads-btn');
+    if (changeSongFromPadsBtn) {
+      changeSongFromPadsBtn.addEventListener('click', () => {
+        const artistsCard = document.getElementById('card-artists');
+        if (artistsCard) {
+          setCardCollapsed(artistsCard, false);
+          artistsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
     }
 
-    const performOpenGridBtn = document.getElementById('fold-perform-open-grid-btn');
-    if (performOpenGridBtn) {
-      performOpenGridBtn.addEventListener('click', () => {
-        const seqEl = document.getElementById('card-sequencer');
-        if (seqEl) seqEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Wire Up Compose -> Arrange Timeline Capture Buttons (in both Sequencer and Pads)
+    const bindAddTimelineBtn = (btnId, barsCount) => {
+      const el = document.getElementById(btnId);
+      if (el) {
+        el.addEventListener('click', () => {
+          addComposeToTimeline(barsCount);
+        });
+      }
+    };
+    bindAddTimelineBtn('fold-compose-add-1bar-btn', 1);
+    bindAddTimelineBtn('fold-compose-add-4bar-btn', 4);
+    bindAddTimelineBtn('fold-compose-add-16bar-btn', 16);
+    bindAddTimelineBtn('fold-pads-add-1bar-btn', 1);
+    bindAddTimelineBtn('fold-pads-add-4bar-btn', 4);
+    bindAddTimelineBtn('fold-pads-add-16bar-btn', 16);
+
+    const goArrangeFromCompose = () => {
+      syncEditingTimelineBlockFromCompose();
+      switchWorkspaceTab('arrange');
+    };
+    const composeGoArrangeBtn = document.getElementById('fold-compose-go-arrange-btn');
+    if (composeGoArrangeBtn) composeGoArrangeBtn.addEventListener('click', goArrangeFromCompose);
+    const padsGoArrangeBtn = document.getElementById('fold-pads-go-arrange-btn');
+    if (padsGoArrangeBtn) padsGoArrangeBtn.addEventListener('click', goArrangeFromCompose);
+
+    // Wire Up Arrange Tab: Timeline Playback, Loop Mode, Quick Add, Full Send & Scene Split
+    const timelinePlayBtn = document.getElementById('fold-timeline-play-btn');
+    if (timelinePlayBtn) {
+      timelinePlayBtn.addEventListener('click', () => {
+        if (state.phonePlayer.playing && state.playbackMode === 'timeline') {
+          stopPhonePlayback();
+        } else {
+          startPhonePlayback('timeline');
+        }
       });
     }
 
-    // Wire Up Arrange Tab: Collaborative Section Addition, Save Arrangement & Scene Launch
+    const timelineLoopModeBtn = document.getElementById('fold-timeline-loop-mode-btn');
+    if (timelineLoopModeBtn) {
+      timelineLoopModeBtn.addEventListener('click', () => {
+        state.timelineLoopSingle = !state.timelineLoopSingle;
+        if (state.phonePlayer.playing && state.playbackMode === 'timeline') {
+          const ctx = getAudioCtx();
+          state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
+          state.phonePlayer.lastStepTime = -0.001;
+        }
+        updatePlayerButtons();
+      });
+    }
+
+    const arrangeBackComposeBtn = document.getElementById('fold-arrange-back-compose-btn');
+    if (arrangeBackComposeBtn) {
+      arrangeBackComposeBtn.addEventListener('click', () => {
+        switchWorkspaceTab('compose');
+        const artistsCard = document.getElementById('card-artists');
+        if (artistsCard) {
+          setCardCollapsed(artistsCard, false);
+          artistsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+
+    const timelineClearBtn = document.getElementById('fold-timeline-clear-btn');
+    if (timelineClearBtn) {
+      timelineClearBtn.addEventListener('click', () => {
+        pushUndoState();
+        const firstBlock =
+          Array.isArray(state.arrangementSections) && state.arrangementSections[0]
+            ? state.arrangementSections[0]
+            : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor)[0];
+        state.arrangementSections = [firstBlock];
+        state.selectedTimelineIdx = 0;
+        state.editingTimelineIdx = null;
+        commitArrangementChange('Reset Arrange Timeline to 1 Block');
+      });
+    }
+
+    dock.querySelectorAll('[data-quick-tl-bars]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const bars = Number(btn.getAttribute('data-quick-tl-bars')) || 4;
+        const roleId = btn.getAttribute('data-quick-tl-role') || 'chorus';
+        addComposeToTimeline(bars, state.selectedSongId, roleId);
+      });
+    });
+
     dock.querySelectorAll('[data-add-sec-role]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const roleId = btn.getAttribute('data-add-sec-role');
@@ -8048,6 +8926,19 @@
     if (randomMashupBtn) {
       randomMashupBtn.addEventListener('click', () => {
         randomize4SectionMashup();
+      });
+    }
+
+    const builderSendFullBtn = document.getElementById('fold-builder-send-full-btn');
+    if (builderSendFullBtn) {
+      builderSendFullBtn.addEventListener('click', async () => {
+        const orig = builderSendFullBtn.textContent;
+        builderSendFullBtn.textContent = '⏳ Sending Full Timeline...';
+        await sendCurrentBeatToAbleton(true, true);
+        builderSendFullBtn.textContent = '✅ Full Timeline Sent to Ableton!';
+        setTimeout(() => {
+          renderSongBuilderAndClipsUI();
+        }, 1800);
       });
     }
 
@@ -8065,7 +8956,7 @@
         const customTitle =
           titleInput && titleInput.value.trim()
             ? titleInput.value.trim()
-            : `Arrangement (${(state.arrangementSections || []).length} Secs · ${state.tempo} BPM)`;
+            : `Arrangement (${(state.arrangementSections || []).length} Blocks · ${state.tempo} BPM)`;
         await saveCurrentIdeaToCrate({
           customTitle,
           queuedForOutbox: false
@@ -8085,7 +8976,7 @@
         const customTitle =
           titleInput && titleInput.value.trim()
             ? titleInput.value.trim()
-            : `Arrangement (${(state.arrangementSections || []).length} Secs · ${state.tempo} BPM)`;
+            : `Arrangement (${(state.arrangementSections || []).length} Blocks · ${state.tempo} BPM)`;
         await saveCurrentIdeaToCrate({
           customTitle,
           queuedForOutbox: true
@@ -8109,7 +9000,7 @@
         });
         builderBeamBtn.textContent = '✅ Beamed to Peers!';
         setTimeout(() => {
-          builderBeamBtn.textContent = '📡 Beam Arrangement to Peers';
+          builderBeamBtn.textContent = '📡 Beam to Peers';
         }, 1600);
       });
     }
@@ -8224,7 +9115,11 @@
       cardEl.classList.toggle('collapsed', collapsed);
       const cardId = cardEl.id;
       dock.querySelectorAll(`.fold-collapse-btn[data-toggle-card="${cardId}"]`).forEach((btn) => {
-        btn.textContent = collapsed ? '▶ Expand' : '▼ Collapse';
+        if (cardId === 'card-artists') {
+          btn.textContent = collapsed ? '🎸 Change Song ▼' : '▲ Collapse & Edit';
+        } else {
+          btn.textContent = collapsed ? '▶ Expand' : '▼ Collapse';
+        }
       });
     }
 
@@ -8253,6 +9148,17 @@
       if (state.phonePlayer.playing) stopPhonePlayback();
       else startPhonePlayback();
     });
+
+    const padsPlayBtnEl = document.getElementById('fold-pads-play-btn');
+    if (padsPlayBtnEl) {
+      padsPlayBtnEl.addEventListener('click', () => {
+        if (state.phonePlayer.playing && state.playbackMode !== 'timeline') {
+          stopPhonePlayback();
+        } else {
+          startPhonePlayback('compose');
+        }
+      });
+    }
 
     document.getElementById('fold-send-ableton-btn').addEventListener('click', () => {
       sendCurrentBeatToAbleton(true);
@@ -8381,6 +9287,7 @@
           }
         }
       }
+      syncEditingTimelineBlockFromCompose();
       syncSequencerNotes();
       renderSequencerGrid();
     });
@@ -8389,6 +9296,7 @@
       if (state.undoHistory.length > 0) {
         state.grid = state.undoHistory.pop();
         if (state.undoHistory.length === 0) e.currentTarget.disabled = true;
+        syncEditingTimelineBlockFromCompose();
         syncSequencerNotes();
         renderSequencerGrid();
       }
@@ -8402,6 +9310,7 @@
           state.grid[v][s] = { state: 0, sub: 1 };
         }
       }
+      syncEditingTimelineBlockFromCompose();
       syncSequencerNotes();
       renderSequencerGrid();
     });
@@ -8653,6 +9562,7 @@
       }
     } catch (_) {}
     updateViewModeButtons();
+    renderComposeTimelineBanner();
     renderCrateAndJamUI();
     applyWorkspaceTabVisibility();
     refreshAbletonStatus();
