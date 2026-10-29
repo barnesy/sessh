@@ -2833,7 +2833,17 @@
   const STORAGE_KEY = 'sessh_state_v1';
   const BRIDGE_URL_KEY = 'sessh_bridge_url';
   const CRATE_STORAGE_KEY = 'sessh_crate_v1';
+  const HISTORY_STORAGE_KEY = 'sessh_history_v1';
   const PLAYER_PROFILE_KEY = 'sessh_player_v1';
+
+  const WORKSPACE_TABS = [
+    { id: 'selections', icon: '🎸', label: '1. Selections', sub: '18 Bands · 90 Songs' },
+    { id: 'edit', icon: '🎛️', label: '2. Tweak & Edit', sub: 'Dials · 16-Bar Grid' },
+    { id: 'perform', icon: '🖐️', label: '3. Perform & Record', sub: 'Finger Pads · Overdub' },
+    { id: 'builder', icon: '🎬', label: '4. Song Builder & Clips', sub: '4-Sec Mashup · Scenes' },
+    { id: 'crate', icon: '📦', label: '5. Old Stuff & Crate', sub: 'Outbox · History · Vault' },
+    { id: 'collab', icon: '👥', label: '6. Live Collab', sub: 'Same-Wi-Fi Jam Room' }
+  ];
 
   const PLAYER_COLORS = [
     { id: '#10b981', label: '🟢 Emerald' },
@@ -2902,6 +2912,23 @@
     } catch (_) {}
   }
 
+  function loadSessionHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveSessionHistory() {
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify((state.sessionHistory || []).slice(0, 25)));
+    } catch (_) {}
+  }
+
   const initialProfile = loadPlayerProfile();
   try {
     const urlParams = new URLSearchParams(window.location.search);
@@ -2917,6 +2944,16 @@
     /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(window.location.hostname);
 
   const state = {
+    // Multi-Tab & Multi-Zone Workspace State
+    activeTab: 'selections',        // 'selections' | 'edit' | 'perform' | 'builder' | 'crate' | 'collab'
+    workspaceLayoutMode: 'tabs',    // 'tabs' (focused zone view) | 'all' (show all zones stacked)
+    showInlinePadsInEdit: true,     // Show finger drum pads directly below sequencer in Tweak & Edit tab
+    showSharedGridInCollab: false,  // Optionally show sequencer + pads directly inside Live Collab tab
+    songSearchQuery: '',
+    songTempoFilter: 'all',         // 'all' | 'slow' | 'mid' | 'fast'
+    crateVaultFilter: 'all',        // 'all' | 'outbox' | 'crate' | 'history' | 'pcfiles'
+    sectionSources: ['zep_levee', 'zep_levee', 'zep_levee', 'zep_levee'],
+
     abletonConnected: false,
     bridgeReachable: false,
     bridgeUrl: isLocalBridgeOrigin
@@ -2928,10 +2965,13 @@
     abletonSelectedTrackName: 'Selected Track',
     abletonSelectedSceneIndex: 0,
     abletonTracks: [],
+    abletonClipSlots: [],
+    localMidiFiles: [],
 
-    // Offline Beat Crate & Studio Outbox
+    // Offline Beat Crate, Studio Outbox & Auto-Saved Session History ("Old Stuff")
     localCrate: loadLocalCrate(),
     studioCrate: [],
+    sessionHistory: loadSessionHistory(),
 
     // Same-Network Multi-Player Collaboration ("LAN Jam Room")
     clientId: initialProfile.clientId,
@@ -2993,6 +3033,10 @@
   function savePersistedState() {
     try {
       const payload = {
+        activeTab: state.activeTab,
+        workspaceLayoutMode: state.workspaceLayoutMode,
+        showInlinePadsInEdit: state.showInlinePadsInEdit,
+        sectionSources: state.sectionSources,
         selectedArtistId: state.selectedArtistId,
         selectedSongId: state.selectedSongId,
         kitId: state.kitId,
@@ -3019,8 +3063,21 @@
       const saved = JSON.parse(raw);
       if (!saved || !saved.selectedSongId) return false;
       const { artist, song } = findSongById(saved.selectedSongId);
+      if (saved.activeTab && WORKSPACE_TABS.some((t) => t.id === saved.activeTab)) {
+        state.activeTab = saved.activeTab;
+      }
+      if (saved.workspaceLayoutMode === 'all' || saved.workspaceLayoutMode === 'tabs') {
+        state.workspaceLayoutMode = saved.workspaceLayoutMode;
+      }
+      if (typeof saved.showInlinePadsInEdit === 'boolean') {
+        state.showInlinePadsInEdit = saved.showInlinePadsInEdit;
+      }
       state.selectedArtistId = artist.artistId;
       state.selectedSongId = song.id;
+      state.sectionSources =
+        Array.isArray(saved.sectionSources) && saved.sectionSources.length === 4
+          ? saved.sectionSources
+          : [song.id, song.id, song.id, song.id];
       state.kitId = saved.kitId || song.kit || artist.defaultKit;
       state.tempo = Number(saved.tempo) || song.bpm;
       state.intensityPct = Number(saved.intensityPct ?? 70);
@@ -3055,6 +3112,54 @@
     }
   }
 
+  function recordSessionHistoryEntry(reasonLabel = 'Session Groove') {
+    try {
+      const { artist, song } = findSongById(state.selectedSongId);
+      const cleanArtist = artist ? artist.artistName.replace(/^[^\w]+/, '').trim() : 'Session';
+      const title = `${cleanArtist} — ${song ? song.title : 'Groove'} (${state.tempo} BPM)`;
+      const top = state.sessionHistory && state.sessionHistory[0];
+      if (
+        top &&
+        top.songId === state.selectedSongId &&
+        top.tempo === state.tempo &&
+        top.reason === reasonLabel
+      ) {
+        top.createdAt = new Date().toISOString();
+        top.intensityPct = state.intensityPct;
+        top.ghostPct = state.ghostPct;
+        top.hatEnergyPct = state.hatEnergyPct;
+        top.fillPct = state.fillPct;
+        top.swingPct = state.swingPct;
+        top.pocketPct = state.pocketPct;
+        top.kitId = state.kitId;
+        top.sectionSources = [...(state.sectionSources || [])];
+        top.grid = cloneGrid256(state.grid);
+        saveSessionHistory();
+        return;
+      }
+      const entry = {
+        id: `hist_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+        title,
+        reason: reasonLabel,
+        artistId: state.selectedArtistId,
+        songId: state.selectedSongId,
+        kitId: state.kitId,
+        tempo: state.tempo,
+        intensityPct: state.intensityPct,
+        ghostPct: state.ghostPct,
+        hatEnergyPct: state.hatEnergyPct,
+        fillPct: state.fillPct,
+        swingPct: state.swingPct,
+        pocketPct: state.pocketPct,
+        sectionSources: [...(state.sectionSources || [])],
+        createdAt: new Date().toISOString(),
+        grid: cloneGrid256(state.grid)
+      };
+      state.sessionHistory = [entry, ...(state.sessionHistory || [])].slice(0, 25);
+      saveSessionHistory();
+    } catch (_) {}
+  }
+
   function getActiveLoopStepBounds() {
     if (state.loopMode === 'section4') {
       const startStep = state.activeSection * 64;
@@ -3077,6 +3182,7 @@
     const { artist, song } = findSongById(songId);
     state.selectedArtistId = artist.artistId;
     state.selectedSongId = song.id;
+    state.sectionSources = [song.id, song.id, song.id, song.id];
     if (resetDials) {
       state.tempo = song.bpm;
       state.swingPct = song.swing;
@@ -3090,10 +3196,13 @@
       state.fillPct
     );
     syncSequencerNotes();
+    recordSessionHistoryEntry('Loaded Song Groove');
     renderArtistTabsAndSongs();
     renderSectionTabs();
     renderMini4BarMap();
     renderSequencerGrid();
+    renderSongBuilderAndClipsUI();
+    renderCrateAndJamUI();
     updateDialsUI();
     updatePlayerButtons();
     const titleInput = document.getElementById('fold-crate-title-input');
@@ -3106,14 +3215,41 @@
   }
 
   function regenerateFromDials() {
-    state.grid = generateSongGrooveGrid(
-      state.selectedSongId,
-      state.intensityPct,
-      state.ghostPct,
-      state.hatEnergyPct,
-      state.fillPct
-    );
+    const sources =
+      Array.isArray(state.sectionSources) && state.sectionSources.length === 4
+        ? state.sectionSources
+        : [state.selectedSongId, state.selectedSongId, state.selectedSongId, state.selectedSongId];
+    const allSame = sources.every((sid) => sid === sources[0]);
+
+    if (allSame) {
+      state.grid = generateSongGrooveGrid(
+        sources[0] || state.selectedSongId,
+        state.intensityPct,
+        state.ghostPct,
+        state.hatEnergyPct,
+        state.fillPct
+      );
+    } else {
+      const merged = createEmptyGrid256();
+      for (let secIdx = 0; secIdx < 4; secIdx++) {
+        const secGrid = generateSongGrooveGrid(
+          sources[secIdx] || state.selectedSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+        const startStep = secIdx * 64;
+        for (let v = 0; v < DRUM_VOICES.length; v++) {
+          for (let s = startStep; s < startStep + 64; s++) {
+            merged[v][s] = { ...secGrid[v][s] };
+          }
+        }
+      }
+      state.grid = merged;
+    }
     syncSequencerNotes();
+    recordSessionHistoryEntry('Tweaked Drummer Dials');
     renderSectionTabs();
     renderMini4BarMap();
     renderSequencerGrid();
@@ -3326,6 +3462,21 @@
       const idx = Number(el.getAttribute('data-sec-idx'));
       el.classList.toggle('playing-sec', idx === secIdx);
     });
+    const performHudEl = document.getElementById('fold-perform-hud-pill');
+    if (performHudEl) {
+      if (stepIdx >= 0 && barIdx >= 0 && secIdx >= 0) {
+        const sec = SONG_SECTIONS[secIdx] || SONG_SECTIONS[0];
+        const beatInBar = Math.floor((stepIdx % 16) / 4) + 1;
+        performHudEl.textContent = `▶ ${sec.name} · Bar ${barIdx + 1} of 16 · Beat ${beatInBar}`;
+        performHudEl.style.borderColor = sec.color;
+        performHudEl.style.color = '#fff';
+      } else {
+        const sec = SONG_SECTIONS[state.activeSection] || SONG_SECTIONS[0];
+        performHudEl.textContent = `⏸ Ready (${sec.name} · ${state.tempo} BPM)`;
+        performHudEl.style.borderColor = 'rgba(255,255,255,0.2)';
+        performHudEl.style.color = '#d1d5db';
+      }
+    }
   }
 
   function updatePlayerButtons() {
@@ -3412,6 +3563,7 @@
       title: customTitle,
       artistId: state.selectedArtistId,
       songId: state.selectedSongId,
+      sectionSources: [...(state.sectionSources || [state.selectedSongId, state.selectedSongId, state.selectedSongId, state.selectedSongId])],
       kitId: state.kitId,
       tempo: state.tempo,
       duration: 64.0,
@@ -3472,6 +3624,10 @@
     const { artist, song } = findSongById(idea.songId || 'zep_levee');
     state.selectedArtistId = idea.artistId || artist.artistId;
     state.selectedSongId = idea.songId || song.id;
+    state.sectionSources =
+      Array.isArray(idea.sectionSources) && idea.sectionSources.length === 4
+        ? [...idea.sectionSources]
+        : [state.selectedSongId, state.selectedSongId, state.selectedSongId, state.selectedSongId];
     state.kitId = idea.kitId || song.kit || artist.defaultKit;
     state.tempo = Number(idea.tempo) || song.bpm;
     state.intensityPct = Number(idea.intensityPct ?? 70);
@@ -3498,10 +3654,13 @@
       );
     }
     syncSequencerNotes();
+    recordSessionHistoryEntry(`Restored "${idea.title || song.title}"`);
     renderArtistTabsAndSongs();
     renderSectionTabs();
     renderMini4BarMap();
     renderSequencerGrid();
+    renderSongBuilderAndClipsUI();
+    renderCrateAndJamUI();
     updateDialsUI();
     updatePlayerButtons();
     if (broadcastIfShared && !state.suppressJamBroadcast && state.jamMode === 'shared') {
@@ -3977,13 +4136,113 @@
   // ==========================================================================
   // 10. Render Artist Pills, 5 Songs, 4 Song Sections & 16-Bar Mini-Map
   // ==========================================================================
+  function switchWorkspaceTab(tabId) {
+    if (!WORKSPACE_TABS.some((t) => t.id === tabId)) return;
+    state.activeTab = tabId;
+    savePersistedState();
+    applyWorkspaceTabVisibility();
+    if (tabId === 'builder') {
+      refreshAbletonTrackClips();
+      renderSongBuilderAndClipsUI();
+    } else if (tabId === 'crate' || tabId === 'collab') {
+      renderCrateAndJamUI();
+    } else if (tabId === 'edit') {
+      renderSectionTabs();
+      renderMini4BarMap();
+      renderSequencerGrid();
+    } else if (tabId === 'perform') {
+      renderSectionTabs();
+      highlightPlayheadStep(state.activeStep, state.activeBar, state.activeBar >= 0 ? Math.floor(state.activeBar / 4) : -1);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function applyWorkspaceTabVisibility() {
+    const dock = document.getElementById('fold-studio-dock');
+    if (!dock) return;
+
+    // Highlight active tab button in #fold-workspace-tabs
+    dock.querySelectorAll('[data-ws-tab]').forEach((btn) => {
+      const tid = btn.getAttribute('data-ws-tab');
+      btn.classList.toggle('active', state.workspaceLayoutMode === 'tabs' && tid === state.activeTab);
+    });
+
+    const layoutBtn = document.getElementById('fold-layout-mode-btn');
+    if (layoutBtn) {
+      layoutBtn.classList.toggle('chip-on', state.workspaceLayoutMode === 'all');
+      layoutBtn.textContent =
+        state.workspaceLayoutMode === 'all' ? '🗂️ Switch to Tabbed Zones' : '⊞ Show All Zones';
+    }
+
+    const cardArtists = document.getElementById('card-artists');
+    const cardDials = document.getElementById('card-dials');
+    const cardSeq = document.getElementById('card-sequencer');
+    const cardPads = document.getElementById('card-pads');
+    const cardBuilder = document.getElementById('card-builder');
+    const cardCrate = document.getElementById('card-crate');
+    const cardCollab = document.getElementById('card-collab');
+
+    if (state.workspaceLayoutMode === 'all') {
+      [cardArtists, cardDials, cardSeq, cardPads, cardBuilder, cardCrate, cardCollab].forEach((el) => {
+        if (el) el.style.display = 'flex';
+      });
+      return;
+    }
+
+    const tab = state.activeTab || 'selections';
+    if (cardArtists) cardArtists.style.display = tab === 'selections' ? 'flex' : 'none';
+    if (cardDials) {
+      cardDials.style.display =
+        tab === 'edit' || (tab === 'collab' && state.showSharedGridInCollab) ? 'flex' : 'none';
+    }
+    if (cardSeq) {
+      cardSeq.style.display =
+        tab === 'edit' || (tab === 'collab' && state.showSharedGridInCollab) ? 'flex' : 'none';
+    }
+    if (cardPads) {
+      cardPads.style.display =
+        tab === 'perform' ||
+        (tab === 'edit' && state.showInlinePadsInEdit) ||
+        (tab === 'collab' && state.showSharedGridInCollab)
+          ? 'flex'
+          : 'none';
+      cardPads.classList.toggle('perform-focus-mode', tab === 'perform');
+    }
+    if (cardBuilder) cardBuilder.style.display = tab === 'builder' ? 'flex' : 'none';
+    if (cardCrate) cardCrate.style.display = tab === 'crate' ? 'flex' : 'none';
+    if (cardCollab) cardCollab.style.display = tab === 'collab' ? 'flex' : 'none';
+
+    const toggleEditPadsBtn = document.getElementById('fold-toggle-edit-pads-btn');
+    if (toggleEditPadsBtn) {
+      toggleEditPadsBtn.classList.toggle('chip-on', state.showInlinePadsInEdit);
+      toggleEditPadsBtn.textContent = `🖐️ Inline Overdub Pads: ${state.showInlinePadsInEdit ? 'SHOWING' : 'HIDDEN'}`;
+    }
+
+    const toggleCollabGridBtn = document.getElementById('fold-collab-toggle-grid-btn');
+    if (toggleCollabGridBtn) {
+      toggleCollabGridBtn.classList.toggle('chip-on', state.showSharedGridInCollab);
+      toggleCollabGridBtn.textContent = state.showSharedGridInCollab
+        ? '🎛️ Hide Shared Sequencer & Pads Below'
+        : '🎛️ Show Shared 16-Bar Grid & Pads Here';
+    }
+  }
+
   function renderArtistTabsAndSongs() {
     const artistTabsEl = document.getElementById('fold-artist-tabs');
     const songsGridEl = document.getElementById('fold-artist-songs');
     if (!artistTabsEl || !songsGridEl) return;
 
+    const q = (state.songSearchQuery || '').trim().toLowerCase();
+    const tf = state.songTempoFilter || 'all';
+    const isFilteringAll = q.length > 0 || tf !== 'all';
+
+    // Update tempo filter chip states
+    document.querySelectorAll('[data-tempo-filter]').forEach((btn) => {
+      btn.classList.toggle('chip-on', btn.getAttribute('data-tempo-filter') === tf);
+    });
+
     artistTabsEl.innerHTML = ARTIST_CATALOG.map((a) => {
-      const active = a.artistId === state.selectedArtistId;
+      const active = !isFilteringAll && a.artistId === state.selectedArtistId;
       return `
         <button class="fold-artist-pill ${active ? 'active' : ''}" data-artist-tab="${a.artistId}">
           <span>${a.artistName}</span>
@@ -3994,6 +4253,10 @@
     artistTabsEl.querySelectorAll('[data-artist-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const aid = btn.getAttribute('data-artist-tab');
+        state.songSearchQuery = '';
+        state.songTempoFilter = 'all';
+        const searchInput = document.getElementById('fold-song-search-input');
+        if (searchInput) searchInput.value = '';
         const foundArtist = ARTIST_CATALOG.find((a) => a.artistId === aid);
         if (foundArtist && foundArtist.songs[0]) {
           pushUndoState();
@@ -4002,16 +4265,62 @@
       });
     });
 
-    const activeArtist = ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0];
-    songsGridEl.innerHTML = activeArtist.songs
-      .map((s, idx) => {
+    let songsToRender = [];
+    if (isFilteringAll) {
+      for (const a of ARTIST_CATALOG) {
+        for (let idx = 0; idx < a.songs.length; idx++) {
+          const s = a.songs[idx];
+          const matchesQuery =
+            !q ||
+            s.title.toLowerCase().includes(q) ||
+            s.desc.toLowerCase().includes(q) ||
+            a.artistName.toLowerCase().includes(q) ||
+            a.drummer.toLowerCase().includes(q);
+          const matchesTempo =
+            tf === 'all' ||
+            (tf === 'slow' && s.bpm < 95) ||
+            (tf === 'mid' && s.bpm >= 95 && s.bpm < 125) ||
+            (tf === 'fast' && s.bpm >= 125);
+          if (matchesQuery && matchesTempo) {
+            songsToRender.push({ artist: a, song: s, idx });
+          }
+        }
+      }
+    } else {
+      const activeArtist =
+        ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0];
+      songsToRender = activeArtist.songs.map((s, idx) => ({ artist: activeArtist, song: s, idx }));
+    }
+
+    const filterCountEl = document.getElementById('fold-song-filter-count');
+    if (filterCountEl) {
+      filterCountEl.textContent = isFilteringAll
+        ? `Showing ${songsToRender.length} matching groove(s) across all 18 bands`
+        : `Showing 5 signature grooves for ${(ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0]).artistName}`;
+    }
+
+    if (songsToRender.length === 0) {
+      songsGridEl.innerHTML = `
+        <div style="grid-column:1/-1;padding:16px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.16);text-align:center;color:#9ca3af;font-size:12px;">
+          🔍 No songs matched your filter. Try clearing the search or selecting <strong>All Tempos</strong>!
+        </div>`;
+      return;
+    }
+
+    songsGridEl.innerHTML = songsToRender
+      .map(({ artist, song: s, idx }) => {
         const active = s.id === state.selectedSongId;
+        const artistBadge = isFilteringAll
+          ? `<div style="font-size:10px;font-weight:800;color:#f0abfc;margin-bottom:2px;">${artist.artistName} · <span style="color:#9ca3af;font-weight:600;">${artist.drummer}</span></div>`
+          : '';
         return `
           <div class="fold-song-card ${active ? 'active' : ''}" data-song-id="${s.id}">
+            ${artistBadge}
             <div class="song-top-row">
-              <span class="song-tempo-tag">#${idx + 1} · ${s.bpm} BPM (${s.swing}% Swing) · 16 Bars</span>
-              <span style="display:flex;align-items:center;gap:6px;">
+              <span class="song-tempo-tag">#${idx + 1} · ${s.bpm} BPM (${s.swing}% Swing)</span>
+              <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
                 ${active ? `<span class="song-active-badge">● LOADED</span>` : ''}
+                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-open-edit-song="${s.id}" title="Load this groove and open it in the Tweak & Edit tab">🎛️ Edit</button>
                 <button type="button" class="fold-song-send-btn" data-quick-send-song="${s.id}" title="Load and immediately send this groove into the selected track in Ableton Live">🚀 → Ableton</button>
               </span>
             </div>
@@ -4023,9 +4332,21 @@
 
     songsGridEl.querySelectorAll('[data-song-id]').forEach((cardEl) => {
       cardEl.addEventListener('click', (e) => {
-        if (e.target.closest('[data-quick-send-song]')) return;
+        if (e.target.closest('[data-quick-send-song]') || e.target.closest('[data-open-edit-song]')) return;
         pushUndoState();
         loadSongGroove(cardEl.getAttribute('data-song-id'), true);
+      });
+    });
+
+    songsGridEl.querySelectorAll('[data-open-edit-song]').forEach((editBtn) => {
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sid = editBtn.getAttribute('data-open-edit-song');
+        if (sid !== state.selectedSongId) {
+          pushUndoState();
+          loadSongGroove(sid, true);
+        }
+        switchWorkspaceTab('edit');
       });
     });
 
@@ -4048,11 +4369,327 @@
     });
   }
 
+  function applySectionMashupSong(secIdx, songId) {
+    if (secIdx < 0 || secIdx >= 4) return;
+    pushUndoState();
+    if (!Array.isArray(state.sectionSources) || state.sectionSources.length !== 4) {
+      state.sectionSources = [state.selectedSongId, state.selectedSongId, state.selectedSongId, state.selectedSongId];
+    }
+    state.sectionSources[secIdx] = songId;
+    const secGrid = generateSongGrooveGrid(
+      songId,
+      state.intensityPct,
+      state.ghostPct,
+      state.hatEnergyPct,
+      state.fillPct
+    );
+    const startStep = secIdx * 64;
+    for (let v = 0; v < DRUM_VOICES.length; v++) {
+      for (let s = startStep; s < startStep + 64; s++) {
+        state.grid[v][s] = { ...secGrid[v][s] };
+      }
+    }
+    syncSequencerNotes();
+    const { artist, song } = findSongById(songId);
+    recordSessionHistoryEntry(`Mashup ${SONG_SECTIONS[secIdx]?.badge || 'Section'} → ${song.title}`);
+    renderMini4BarMap();
+    renderSequencerGrid();
+    renderSongBuilderAndClipsUI();
+    renderCrateAndJamUI();
+    if (!state.suppressJamBroadcast && state.jamMode === 'shared') {
+      broadcastFullJamState(`Mashup ${SONG_SECTIONS[secIdx]?.badge}: ${artist.artistName} - ${song.title}`);
+    }
+  }
+
+  function randomize4SectionMashup() {
+    pushUndoState();
+    const allSongs = [];
+    for (const a of ARTIST_CATALOG) {
+      for (const s of a.songs) {
+        allSongs.push({ artist: a, song: s });
+      }
+    }
+    const chosenIds = [];
+    for (let secIdx = 0; secIdx < 4; secIdx++) {
+      const pick = allSongs[Math.floor(Math.random() * allSongs.length)];
+      chosenIds.push(pick.song.id);
+      const secGrid = generateSongGrooveGrid(
+        pick.song.id,
+        state.intensityPct,
+        state.ghostPct,
+        state.hatEnergyPct,
+        state.fillPct
+      );
+      const startStep = secIdx * 64;
+      for (let v = 0; v < DRUM_VOICES.length; v++) {
+        for (let s = startStep; s < startStep + 64; s++) {
+          state.grid[v][s] = { ...secGrid[v][s] };
+        }
+      }
+    }
+    state.sectionSources = chosenIds;
+    syncSequencerNotes();
+    recordSessionHistoryEntry('Randomized 4-Section Mashup');
+    renderMini4BarMap();
+    renderSequencerGrid();
+    renderSongBuilderAndClipsUI();
+    renderCrateAndJamUI();
+    if (!state.suppressJamBroadcast && state.jamMode === 'shared') {
+      broadcastFullJamState('Randomized 4-Section Mashup');
+    }
+  }
+
+  async function refreshAbletonTrackClips() {
+    if (!state.bridgeReachable) return;
+    const tIdx =
+      state.targetTrack === 'selected'
+        ? state.abletonSelectedTrackIndex || 0
+        : Number(state.targetTrack) || 0;
+    try {
+      const res = await fetch(getApiUrl(`/api/clips-overview?trackIndex=${tIdx}`));
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data.slots)) {
+        state.abletonClipSlots = data.slots;
+        renderSongBuilderAndClipsUI();
+      }
+    } catch (_) {}
+  }
+
+  function renderSongBuilderAndClipsUI() {
+    const mashupGridEl = document.getElementById('fold-mashup-sections-grid');
+    if (mashupGridEl) {
+      const sources =
+        Array.isArray(state.sectionSources) && state.sectionSources.length === 4
+          ? state.sectionSources
+          : [state.selectedSongId, state.selectedSongId, state.selectedSongId, state.selectedSongId];
+
+      mashupGridEl.innerHTML = SONG_SECTIONS.map((sec, secIdx) => {
+        const curSongId = sources[secIdx] || state.selectedSongId;
+        const { artist, song } = findSongById(curSongId);
+        const optionsHtml = ARTIST_CATALOG.map(
+          (a) =>
+            `<optgroup label="${a.artistName} (${a.drummer})">${a.songs
+              .map(
+                (s) =>
+                  `<option value="${s.id}" ${s.id === curSongId ? 'selected' : ''}>${s.title} (${s.bpm} BPM)</option>`
+              )
+              .join('')}</optgroup>`
+        ).join('');
+
+        return `
+          <div style="background:rgba(0,0,0,0.32);border:1.5px solid rgba(255,255,255,0.12);border-top:4px solid ${sec.color};border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
+              <strong style="font-size:12px;color:#fff;">${sec.name}</strong>
+              <span style="font-size:10px;font-weight:800;color:#fbbf24;background:rgba(251,191,36,0.14);padding:2px 6px;border-radius:4px;">Bars ${sec.startBar + 1}–${sec.endBar + 1}</span>
+            </div>
+            <div style="font-size:11px;color:#84dcc6;font-weight:700;">
+              Source Groove: ${artist.artistName} — ${song.title} (${song.bpm} BPM)
+            </div>
+            <select class="fold-select" data-mashup-sec="${secIdx}" style="width:100%;height:34px;font-size:11px;">
+              ${optionsHtml}
+            </select>
+            <div class="fold-btn-row" style="gap:6px;margin-top:2px;">
+              <button type="button" class="fold-song-send-btn" data-mashup-play="${secIdx}">▶ Loop 4 Bars</button>
+              <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-mashup-edit="${secIdx}">🎛️ Edit Grid</button>
+              <button type="button" class="fold-song-send-btn" data-mashup-send="${secIdx}">🚀 → Scene ${secIdx + 1}</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      mashupGridEl.querySelectorAll('[data-mashup-sec]').forEach((sel) => {
+        sel.addEventListener('change', (e) => {
+          const secIdx = Number(sel.getAttribute('data-mashup-sec'));
+          applySectionMashupSong(secIdx, e.target.value);
+        });
+      });
+
+      mashupGridEl.querySelectorAll('[data-mashup-play]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const secIdx = Number(btn.getAttribute('data-mashup-play'));
+          state.activeSection = secIdx;
+          state.loopMode = 'section4';
+          updatePlayerButtons();
+          updateViewModeButtons();
+          renderSectionTabs();
+          if (!state.phonePlayer.playing) startPhonePlayback();
+          else {
+            const ctx = getAudioCtx();
+            state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
+            state.phonePlayer.lastStepTime = -0.001;
+          }
+        });
+      });
+
+      mashupGridEl.querySelectorAll('[data-mashup-edit]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const secIdx = Number(btn.getAttribute('data-mashup-edit'));
+          state.activeSection = secIdx;
+          state.viewMode = 'section4';
+          switchWorkspaceTab('edit');
+        });
+      });
+
+      mashupGridEl.querySelectorAll('[data-mashup-send]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const secIdx = Number(btn.getAttribute('data-mashup-send'));
+          const sec = SONG_SECTIONS[secIdx];
+          const secNotes = buildNotesFromSequencer(sec.startStep, sec.endStep + 1);
+          const curSongId = (state.sectionSources && state.sectionSources[secIdx]) || state.selectedSongId;
+          const { artist, song } = findSongById(curSongId);
+          const cleanArtist = artist.artistName.replace(/^[^\w]+/, '').trim();
+          const useSelectedTrack = state.targetTrack === 'selected';
+          const sectionColors = [0x10b981, 0xf59e0b, 0x38bdf8, 0xe73ff6];
+          const orig = btn.textContent;
+          btn.textContent = '⏳...';
+          const payload = {
+            useSelectedTrack,
+            useSelectedScene: false,
+            trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
+            slotIndex: secIdx,
+            tempo: state.tempo,
+            name: `${secIdx + 1}-${sec.id.toUpperCase()}: ${cleanArtist} - ${song.title}`,
+            duration: 16.0,
+            color: sectionColors[secIdx],
+            fire: true,
+            notes: secNotes
+          };
+          try {
+            const res = await fetch(getApiUrl('/api/write-clip'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error('err');
+            btn.textContent = `✅ Scene ${secIdx + 1}!`;
+            refreshAbletonTrackClips();
+          } catch (_) {
+            sendVia204Bridge({
+              ...payload,
+              notes: secNotes.map((n) => [
+                n.pitch,
+                Number(n.startTime.toFixed(3)),
+                Number(n.duration.toFixed(3)),
+                n.velocity
+              ])
+            });
+            btn.textContent = `✅ Scene ${secIdx + 1}!`;
+          }
+          setTimeout(() => {
+            btn.textContent = orig;
+          }, 1600);
+        });
+      });
+    }
+
+    const clipsGridEl = document.getElementById('fold-ableton-clips-grid');
+    if (clipsGridEl) {
+      const tIdx =
+        state.targetTrack === 'selected'
+          ? state.abletonSelectedTrackIndex || 0
+          : Number(state.targetTrack) || 0;
+      const slots =
+        Array.isArray(state.abletonClipSlots) && state.abletonClipSlots.length > 0
+          ? state.abletonClipSlots.slice(0, 8)
+          : Array.from({ length: 8 }, (_, i) => ({
+              slotIndex: i,
+              empty: true,
+              name: ''
+            }));
+
+      clipsGridEl.innerHTML = slots
+        .map((slot, i) => {
+          const isSelectedScene = i === state.abletonSelectedSceneIndex;
+          return `
+            <div style="background:rgba(20,22,32,0.88);border:1.5px solid ${
+              isSelectedScene ? '#84dcc6' : 'rgba(255,255,255,0.12)'
+            };border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                <span style="font-size:10px;font-weight:800;color:${
+                  isSelectedScene ? '#84dcc6' : '#9ca3af'
+                };">🎬 SCENE ${i + 1} ${isSelectedScene ? '(Selected)' : ''}</span>
+                <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:${
+                  slot.empty ? 'rgba(255,255,255,0.06)' : 'rgba(16,185,129,0.2)'
+                };color:${slot.empty ? '#6b7280' : '#6ee7b7'};font-weight:800;">${
+                  slot.empty ? 'EMPTY' : 'CLIP READY'
+                }</span>
+              </div>
+              <div style="font-size:12px;font-weight:800;color:${
+                slot.empty ? '#6b7280' : '#fff'
+              };white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${slot.empty ? '— Empty Clip Slot —' : slot.name}
+              </div>
+              <div class="fold-btn-row" style="gap:5px;margin-top:2px;">
+                <button type="button" class="fold-song-send-btn" data-fire-slot="${i}" ${
+                  slot.empty && state.abletonConnected ? '' : ''
+                }>▶ Fire Slot</button>
+                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-write-slot="${i}">🚀 Write Groove Here</button>
+              </div>
+            </div>`;
+        })
+        .join('');
+
+      clipsGridEl.querySelectorAll('[data-fire-slot]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const slotIdx = Number(btn.getAttribute('data-fire-slot'));
+          await sendOsc('/live/clip_slot/fire', [tIdx, slotIdx], false);
+          btn.textContent = '▶ Fired!';
+          setTimeout(() => {
+            btn.textContent = '▶ Fire Slot';
+          }, 1200);
+        });
+      });
+
+      clipsGridEl.querySelectorAll('[data-write-slot]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const slotIdx = Number(btn.getAttribute('data-write-slot'));
+          const prevSlot = state.targetSlot;
+          state.targetSlot = String(slotIdx);
+          btn.textContent = '⏳ Writing...';
+          await sendCurrentBeatToAbleton(true);
+          state.targetSlot = prevSlot;
+          btn.textContent = '✅ Written!';
+          refreshAbletonTrackClips();
+          setTimeout(() => {
+            btn.textContent = '🚀 Write Groove Here';
+          }, 1500);
+        });
+      });
+    }
+  }
+
   function renderSectionTabs() {
     const secTabsEl = document.getElementById('fold-section-tabs');
+    const performSecTabsEl = document.getElementById('fold-perform-sec-tabs');
+    const playingSec = state.activeBar >= 0 ? Math.floor(state.activeBar / 4) : -1;
+
+    if (performSecTabsEl) {
+      performSecTabsEl.innerHTML = SONG_SECTIONS.map((sec) => {
+        const isSelected = state.activeSection === sec.index;
+        return `<button type="button" class="fold-btn ${isSelected ? 'chip-on' : ''}" data-perf-sec-idx="${sec.index}" style="border-color:${sec.color};">
+          ${sec.name} (Bars ${sec.startBar + 1}–${sec.endBar + 1})
+        </button>`;
+      }).join('');
+      performSecTabsEl.querySelectorAll('[data-perf-sec-idx]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.activeSection = Number(btn.getAttribute('data-perf-sec-idx'));
+          if (state.phonePlayer.playing && state.loopMode === 'section4') {
+            const ctx = getAudioCtx();
+            state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
+            state.phonePlayer.lastStepTime = -0.001;
+          }
+          updatePlayerButtons();
+          updateViewModeButtons();
+          updateHeaderSummaries();
+          renderSectionTabs();
+          renderMini4BarMap();
+          renderSequencerGrid();
+        });
+      });
+    }
+
     if (!secTabsEl) return;
 
-    const playingSec = state.activeBar >= 0 ? Math.floor(state.activeBar / 4) : -1;
     secTabsEl.innerHTML = SONG_SECTIONS.map((sec) => {
       const isSelected = state.activeSection === sec.index;
       const isPlaying = playingSec === sec.index;
@@ -4637,6 +5274,9 @@
       const data = await res.json();
       state.bridgeReachable = true;
       state.abletonConnected = Boolean(data.abletonOscConnected);
+      if (Array.isArray(data.localMidiFiles)) {
+        state.localMidiFiles = data.localMidiFiles;
+      }
       if (data.session) {
         state.abletonSelectedTrackIndex = Number(data.session.selectedTrackIndex ?? 0);
         state.abletonSelectedTrackName =
@@ -4651,6 +5291,9 @@
         badge.className = state.abletonConnected ? 'fold-badge online' : 'fold-badge offline';
       }
       renderAbletonTargetSelectors();
+      if (state.activeTab === 'builder' || state.workspaceLayoutMode === 'all') {
+        refreshAbletonTrackClips();
+      }
       sendJamHeartbeat();
       if (!state.jamConnected) {
         connectLanJamStream();
@@ -4707,8 +5350,10 @@
     const combined = getCombinedCrateList();
     const outboxItems = (state.localCrate || []).filter((x) => x.queuedForOutbox);
     const outboxCount = outboxItems.length;
+    const historyItems = state.sessionHistory || [];
+    const pcMidiItems = state.localMidiFiles || [];
 
-    // 1. Update Top Bar Outbox Button & Jam Presence Pill
+    // 1. Update Top Bar Outbox Button, Workspace Tab Badges & Jam Presence Pill
     const topOutboxBtn = document.getElementById('fold-top-outbox-btn');
     if (topOutboxBtn) {
       if (outboxCount > 0) {
@@ -4716,6 +5361,19 @@
         topOutboxBtn.textContent = `📦 Push Outbox (${outboxCount}) → Ableton`;
       } else {
         topOutboxBtn.style.display = 'none';
+      }
+    }
+
+    const crateBadgeEl = document.getElementById('fold-tab-badge-crate');
+    if (crateBadgeEl) {
+      if (outboxCount > 0) {
+        crateBadgeEl.textContent = `${outboxCount} Outbox`;
+        crateBadgeEl.style.background = 'rgba(245,158,11,0.28)';
+        crateBadgeEl.style.color = '#fde68a';
+      } else {
+        crateBadgeEl.textContent = `${combined.length + historyItems.length} Vault`;
+        crateBadgeEl.style.background = 'rgba(132,220,198,0.18)';
+        crateBadgeEl.style.color = '#84dcc6';
       }
     }
 
@@ -4743,9 +5401,27 @@
           : `👥 Jam Room (${peers.length} Online: ${peerNames})`;
     }
 
-    const sumCrateJamEl = document.getElementById('fold-summary-crate-jam');
-    if (sumCrateJamEl) {
-      sumCrateJamEl.textContent = `${combined.length} Saved Beats (${outboxCount} in Outbox) · ${peers.length} Player(s) on LAN`;
+    const collabBadgeEl = document.getElementById('fold-tab-badge-collab');
+    if (collabBadgeEl) {
+      collabBadgeEl.textContent = `${peers.length} Online`;
+      collabBadgeEl.style.background =
+        peers.length > 1 ? 'rgba(16,185,129,0.26)' : 'rgba(231,63,246,0.2)';
+      collabBadgeEl.style.color = peers.length > 1 ? '#6ee7b7' : '#f5d0fe';
+    }
+
+    const sumCrateEl = document.getElementById('fold-summary-crate');
+    if (sumCrateEl) {
+      sumCrateEl.textContent = `${combined.length} Saved Crate · ${outboxCount} Outbox · ${historyItems.length} Session History · ${pcMidiItems.length} PC MIDI`;
+    }
+    const sumCollabEl = document.getElementById('fold-summary-collab');
+    if (sumCollabEl) {
+      sumCollabEl.textContent = `${peers.length} Player(s) on LAN · Mode: ${
+        state.jamMode === 'shared'
+          ? 'Shared Grid'
+          : state.jamMode === 'split_roles'
+          ? `Split Roles (${state.jamRole})`
+          : 'Independent + Beam'
+      }`;
     }
 
     const pushOutboxBtn = document.getElementById('fold-push-outbox-btn');
@@ -4756,7 +5432,7 @@
           : `🚀 Push Current / Crate → Ableton Scenes`;
     }
 
-    // 2. Render LAN Jam Peers & Status
+    // 2. Render LAN Jam Peers & Status inside #card-collab
     const peersListEl = document.getElementById('fold-jam-peers-list');
     if (peersListEl) {
       const isHttpsRemoteOrigin =
@@ -4829,128 +5505,273 @@
       hearBtn.textContent = `🔊 Hear Partner Pads: ${state.hearPartnerPads ? 'ON' : 'OFF'}`;
     }
 
-    // 3. Render Saved Crate & Outbox Items
-    const crateListEl = document.getElementById('fold-crate-items-list');
-    if (!crateListEl) return;
+    // 3. Update Crate Vault Filter Buttons & Render Sections inside #card-crate
+    const vf = state.crateVaultFilter || 'all';
+    document.querySelectorAll('[data-vault-filter]').forEach((btn) => {
+      const f = btn.getAttribute('data-vault-filter');
+      btn.classList.toggle('chip-on', f === vf);
+      if (f === 'all') btn.textContent = `🗂️ All Vault (${combined.length + historyItems.length + pcMidiItems.length})`;
+      if (f === 'outbox') btn.textContent = `⏳ Studio Outbox (${outboxCount})`;
+      if (f === 'crate') btn.textContent = `💾 Saved Beat Crate (${combined.length})`;
+      if (f === 'history') btn.textContent = `🕒 Recent Session History (${historyItems.length})`;
+      if (f === 'pcfiles') btn.textContent = `📂 PC MIDI Clips (${pcMidiItems.length})`;
+    });
 
-    if (combined.length === 0) {
-      crateListEl.innerHTML = `
-        <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15);font-size:12px;color:#9ca3af;text-align:center;">
-          📦 Your Offline Beat Crate & Studio Outbox is empty. Tweak any 16-bar groove and tap <strong>💾 Save Idea to Crate</strong> or <strong>📥 Queue in Outbox</strong>!
-        </div>`;
-      return;
+    const crateSectionWrap = document.getElementById('fold-vault-crate-section');
+    const historySectionWrap = document.getElementById('fold-vault-history-section');
+    const pcFilesSectionWrap = document.getElementById('fold-vault-pcfiles-section');
+    if (crateSectionWrap) {
+      crateSectionWrap.style.display = vf === 'all' || vf === 'outbox' || vf === 'crate' ? 'flex' : 'none';
+    }
+    if (historySectionWrap) {
+      historySectionWrap.style.display = vf === 'all' || vf === 'history' ? 'flex' : 'none';
+    }
+    if (pcFilesSectionWrap) {
+      pcFilesSectionWrap.style.display = vf === 'all' || vf === 'pcfiles' ? 'flex' : 'none';
     }
 
-    crateListEl.innerHTML = combined
-      .map((item) => {
-        const statusBadge = item.queuedForOutbox
-          ? `<span style="background:rgba(245,158,11,0.22);color:#fcd34d;border:1px solid #f59e0b;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">⏳ OUTBOX QUEUED</span>`
-          : item.pushedToAbleton
-          ? `<span style="background:rgba(16,185,129,0.22);color:#6ee7b7;border:1px solid #10b981;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">✅ IN ABLETON</span>`
-          : item.syncedToStudio
-          ? `<span style="background:rgba(56,189,248,0.2);color:#7dd3fc;border:1px solid #38bdf8;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">💻 ON STUDIO PC</span>`
-          : `<span style="background:rgba(231,63,246,0.2);color:#f5d0fe;border:1px solid #e73ff6;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">📱 SAVED OFFLINE</span>`;
+    const crateListEl = document.getElementById('fold-crate-items-list');
+    if (crateListEl) {
+      const visibleCrate =
+        vf === 'outbox' ? combined.filter((x) => x.queuedForOutbox) : combined;
 
-        return `
-          <div class="fold-crate-card" data-crate-id="${item.id}">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                <strong style="font-size:12px;color:#fff;">${item.title}</strong>
-                ${statusBadge}
-                <span style="font-size:10px;color:#9ca3af;">by <span style="color:${item.authorColor || '#84dcc6'};font-weight:700;">${item.authorName || 'Producer'}</span></span>
-              </div>
-              <div class="fold-btn-row" style="gap:5px;">
-                <button type="button" class="fold-song-send-btn" data-crate-load="${item.id}">▶ Load</button>
-                <button type="button" class="fold-song-send-btn" data-crate-send="${item.id}">🚀 → Ableton</button>
-                <button type="button" class="fold-song-send-btn" data-crate-beam="${item.id}" title="Beam this groove to everyone in the LAN Jam Room">📡 Beam</button>
-                <button type="button" class="fold-song-send-btn" data-crate-mid="${item.id}">⬇ .mid</button>
-                <button type="button" class="fold-song-send-btn" style="border-color:#f43f5e;color:#fda4af;background:rgba(244,63,94,0.15);" data-crate-del="${item.id}">🗑️</button>
-              </div>
-            </div>
-            <div style="font-size:10px;color:#9ca3af;margin-top:4px;">
-              ${item.tempo || 120} BPM · Kit: ${item.kitId || 'bonham'} · Intensity ${item.intensityPct ?? 70}% · Swing ${item.swingPct ?? 12}%
-            </div>
+      if (visibleCrate.length === 0) {
+        crateListEl.innerHTML = `
+          <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15);font-size:12px;color:#9ca3af;text-align:center;">
+            ${
+              vf === 'outbox'
+                ? '⏳ No beats are currently queued in your Studio Outbox. Tap <strong>📥 Queue in Outbox</strong> on any groove to stage it for Ableton!'
+                : '📦 Your Offline Beat Crate is empty. Tweak any 16-bar groove and tap <strong>💾 Save Idea to Crate</strong> or <strong>📥 Queue in Outbox</strong>!'
+            }
           </div>`;
-      })
-      .join('');
+      } else {
+        crateListEl.innerHTML = visibleCrate
+          .map((item) => {
+            const statusBadge = item.queuedForOutbox
+              ? `<span style="background:rgba(245,158,11,0.22);color:#fcd34d;border:1px solid #f59e0b;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">⏳ OUTBOX QUEUED</span>`
+              : item.pushedToAbleton
+              ? `<span style="background:rgba(16,185,129,0.22);color:#6ee7b7;border:1px solid #10b981;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">✅ IN ABLETON</span>`
+              : item.syncedToStudio
+              ? `<span style="background:rgba(56,189,248,0.2);color:#7dd3fc;border:1px solid #38bdf8;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">💻 ON STUDIO PC</span>`
+              : `<span style="background:rgba(231,63,246,0.2);color:#f5d0fe;border:1px solid #e73ff6;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">📱 SAVED OFFLINE</span>`;
 
-    crateListEl.querySelectorAll('[data-crate-load]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-crate-load');
-        const found = getCombinedCrateList().find((x) => x.id === id);
-        if (found) loadIdeaObjectIntoWorkstation(found, true);
-      });
-    });
+            return `
+              <div class="fold-crate-card" data-crate-id="${item.id}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <strong style="font-size:12px;color:#fff;">${item.title}</strong>
+                    ${statusBadge}
+                    <span style="font-size:10px;color:#9ca3af;">by <span style="color:${item.authorColor || '#84dcc6'};font-weight:700;">${item.authorName || 'Producer'}</span></span>
+                  </div>
+                  <div class="fold-btn-row" style="gap:5px;">
+                    <button type="button" class="fold-song-send-btn" data-crate-load="${item.id}">▶ Load</button>
+                    <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-crate-edit="${item.id}">🎛️ Edit</button>
+                    <button type="button" class="fold-song-send-btn" data-crate-send="${item.id}">🚀 → Ableton</button>
+                    <button type="button" class="fold-song-send-btn" data-crate-beam="${item.id}" title="Beam this groove to everyone in the LAN Jam Room">📡 Beam</button>
+                    <button type="button" class="fold-song-send-btn" data-crate-mid="${item.id}">⬇ .mid</button>
+                    <button type="button" class="fold-song-send-btn" style="border-color:#f43f5e;color:#fda4af;background:rgba(244,63,94,0.15);" data-crate-del="${item.id}">🗑️</button>
+                  </div>
+                </div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:4px;">
+                  ${item.tempo || 120} BPM · Kit: ${item.kitId || 'bonham'} · Intensity ${item.intensityPct ?? 70}% · Swing ${item.swingPct ?? 12}%
+                </div>
+              </div>`;
+          })
+          .join('');
 
-    crateListEl.querySelectorAll('[data-crate-send]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-crate-send');
-        const found = getCombinedCrateList().find((x) => x.id === id);
-        if (!found) return;
-        loadIdeaObjectIntoWorkstation(found, false);
-        btn.textContent = '⏳...';
-        await sendCurrentBeatToAbleton(true);
-        const loc = state.localCrate.find((x) => x.id === id);
-        if (loc) {
-          loc.queuedForOutbox = false;
-          loc.pushedToAbleton = true;
-          saveLocalCrate();
-        }
-        btn.textContent = '✅ Sent!';
-        setTimeout(() => renderCrateAndJamUI(), 1200);
-      });
-    });
-
-    crateListEl.querySelectorAll('[data-crate-beam]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-crate-beam');
-        const found = getCombinedCrateList().find((x) => x.id === id);
-        if (!found) return;
-        btn.textContent = '📡 Beaming...';
-        await emitJamEvent({
-          type: 'beam_groove',
-          idea: found
+        crateListEl.querySelectorAll('[data-crate-load]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-crate-load');
+            const found = getCombinedCrateList().find((x) => x.id === id);
+            if (found) loadIdeaObjectIntoWorkstation(found, true);
+          });
         });
-        btn.textContent = '✅ Beamed!';
-        setTimeout(() => renderCrateAndJamUI(), 1200);
-      });
-    });
 
-    crateListEl.querySelectorAll('[data-crate-mid]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-crate-mid');
-        const found = getCombinedCrateList().find((x) => x.id === id);
-        if (!found) return;
-        loadIdeaObjectIntoWorkstation(found, false);
-        const notes = buildNotesFromSequencer(0, TOTAL_STEPS);
-        const blob = buildMidiBlob(notes, 64.0, found.tempo || state.tempo);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${(found.title || 'SessionDrummer').replace(/[^a-zA-Z0-9_\-+]/g, '_')}.mid`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-      });
-    });
+        crateListEl.querySelectorAll('[data-crate-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-crate-edit');
+            const found = getCombinedCrateList().find((x) => x.id === id);
+            if (found) {
+              loadIdeaObjectIntoWorkstation(found, true);
+              switchWorkspaceTab('edit');
+            }
+          });
+        });
 
-    crateListEl.querySelectorAll('[data-crate-del]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-crate-del');
-        state.localCrate = (state.localCrate || []).filter((x) => x.id !== id);
-        state.studioCrate = (state.studioCrate || []).filter((x) => x.id !== id);
-        saveLocalCrate();
-        renderCrateAndJamUI();
-        if (state.bridgeReachable) {
-          fetch(getApiUrl('/api/crate/delete'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id })
-          }).catch(() => {});
-        }
-      });
-    });
+        crateListEl.querySelectorAll('[data-crate-send]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-crate-send');
+            const found = getCombinedCrateList().find((x) => x.id === id);
+            if (!found) return;
+            loadIdeaObjectIntoWorkstation(found, false);
+            btn.textContent = '⏳...';
+            await sendCurrentBeatToAbleton(true);
+            const loc = state.localCrate.find((x) => x.id === id);
+            if (loc) {
+              loc.queuedForOutbox = false;
+              loc.pushedToAbleton = true;
+              saveLocalCrate();
+            }
+            btn.textContent = '✅ Sent!';
+            setTimeout(() => renderCrateAndJamUI(), 1200);
+          });
+        });
+
+        crateListEl.querySelectorAll('[data-crate-beam]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-crate-beam');
+            const found = getCombinedCrateList().find((x) => x.id === id);
+            if (!found) return;
+            btn.textContent = '📡 Beaming...';
+            await emitJamEvent({
+              type: 'beam_groove',
+              idea: found
+            });
+            btn.textContent = '✅ Beamed!';
+            setTimeout(() => renderCrateAndJamUI(), 1200);
+          });
+        });
+
+        crateListEl.querySelectorAll('[data-crate-mid]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-crate-mid');
+            const found = getCombinedCrateList().find((x) => x.id === id);
+            if (!found) return;
+            loadIdeaObjectIntoWorkstation(found, false);
+            const notes = buildNotesFromSequencer(0, TOTAL_STEPS);
+            const blob = buildMidiBlob(notes, 64.0, found.tempo || state.tempo);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(found.title || 'SessionDrummer').replace(/[^a-zA-Z0-9_\-+]/g, '_')}.mid`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+          });
+        });
+
+        crateListEl.querySelectorAll('[data-crate-del]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-crate-del');
+            state.localCrate = (state.localCrate || []).filter((x) => x.id !== id);
+            state.studioCrate = (state.studioCrate || []).filter((x) => x.id !== id);
+            saveLocalCrate();
+            renderCrateAndJamUI();
+            if (state.bridgeReachable) {
+              fetch(getApiUrl('/api/crate/delete'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+              }).catch(() => {});
+            }
+          });
+        });
+      }
+    }
+
+    // 4. Render Recent Session History ("Old Stuff" Auto-Saved from Your Session)
+    const historyListEl = document.getElementById('fold-history-items-list');
+    if (historyListEl) {
+      if (historyItems.length === 0) {
+        historyListEl.innerHTML = `
+          <div style="padding:10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.14);font-size:11px;color:#9ca3af;text-align:center;">
+            🕒 Grooves you audition, tweak, or mash up during your session will automatically appear here so you can jump back to earlier ideas anytime!
+          </div>`;
+      } else {
+        historyListEl.innerHTML = historyItems
+          .map((h) => {
+            const timeStr = h.createdAt
+              ? new Date(h.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : '';
+            return `
+              <div class="fold-crate-card" style="border-left: 3px solid #38bdf8;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <strong style="font-size:12px;color:#fff;">${h.title}</strong>
+                    <span style="background:rgba(56,189,248,0.18);color:#7dd3fc;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">🕒 ${h.reason || 'Session'} · ${timeStr}</span>
+                  </div>
+                  <div class="fold-btn-row" style="gap:5px;">
+                    <button type="button" class="fold-song-send-btn" data-hist-restore="${h.id}">▶ Restore</button>
+                    <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-hist-edit="${h.id}">🎛️ Edit</button>
+                    <button type="button" class="fold-song-send-btn" data-hist-save="${h.id}">💾 Save to Crate</button>
+                    <button type="button" class="fold-song-send-btn" data-hist-send="${h.id}">🚀 → Ableton</button>
+                  </div>
+                </div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:3px;">
+                  ${h.tempo || 120} BPM · Kit: ${h.kitId || 'bonham'} · Intensity ${h.intensityPct ?? 70}% · Swing ${h.swingPct ?? 12}%
+                </div>
+              </div>`;
+          })
+          .join('');
+
+        historyListEl.querySelectorAll('[data-hist-restore]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-hist-restore');
+            const found = (state.sessionHistory || []).find((x) => x.id === id);
+            if (found) loadIdeaObjectIntoWorkstation(found, true);
+          });
+        });
+
+        historyListEl.querySelectorAll('[data-hist-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-hist-edit');
+            const found = (state.sessionHistory || []).find((x) => x.id === id);
+            if (found) {
+              loadIdeaObjectIntoWorkstation(found, true);
+              switchWorkspaceTab('edit');
+            }
+          });
+        });
+
+        historyListEl.querySelectorAll('[data-hist-save]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-hist-save');
+            const found = (state.sessionHistory || []).find((x) => x.id === id);
+            if (!found) return;
+            loadIdeaObjectIntoWorkstation(found, false);
+            await saveCurrentIdeaToCrate({ customTitle: found.title, queuedForOutbox: false });
+            btn.textContent = '✅ Saved!';
+            setTimeout(() => renderCrateAndJamUI(), 1200);
+          });
+        });
+
+        historyListEl.querySelectorAll('[data-hist-send]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-hist-send');
+            const found = (state.sessionHistory || []).find((x) => x.id === id);
+            if (!found) return;
+            loadIdeaObjectIntoWorkstation(found, false);
+            btn.textContent = '⏳...';
+            await sendCurrentBeatToAbleton(true);
+            btn.textContent = '✅ Sent!';
+            setTimeout(() => renderCrateAndJamUI(), 1200);
+          });
+        });
+      }
+    }
+
+    // 5. Render Studio PC MIDI Clips Vault
+    const pcFilesListEl = document.getElementById('fold-pc-midi-files-list');
+    if (pcFilesListEl) {
+      if (pcMidiItems.length === 0) {
+        pcFilesListEl.innerHTML = `
+          <div style="padding:10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.14);font-size:11px;color:#9ca3af;text-align:center;">
+            📂 Connect to your Studio PC Bridge to browse <code>MIDI Clips/</code> files saved on your computer.
+          </div>`;
+      } else {
+        pcFilesListEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;">${pcMidiItems
+          .slice(0, 24)
+          .map(
+            (fname) => `
+            <div style="background:rgba(20,22,32,0.85);border:1px solid rgba(255,255,255,0.11);border-radius:8px;padding:7px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
+              <span style="font-size:11px;color:#e5e7eb;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${fname}">🎵 ${fname}</span>
+              <span style="font-size:9px;color:#84dcc6;background:rgba(132,220,198,0.14);padding:2px 5px;border-radius:4px;white-space:nowrap;">PC Vault</span>
+            </div>`
+          )
+          .join('')}</div>`;
+      }
+    }
   }
 
   // ==========================================================================
@@ -5527,7 +6348,7 @@
         gap: 8px;
       }
       .fold-drum-pad {
-        height: 62px;
+        height: 64px;
         border-radius: 10px;
         background: linear-gradient(145deg, #252733, #191a22);
         border: 2px solid rgba(255,255,255,0.15);
@@ -5538,9 +6359,15 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 2px;
+        gap: 3px;
         cursor: pointer;
         touch-action: none;
+        transition: height 0.14s ease, transform 0.06s ease;
+      }
+      #card-pads.perform-focus-mode .fold-drum-pad {
+        height: 112px;
+        font-size: 15px;
+        border-radius: 14px;
       }
       .fold-drum-pad span.sub-note { font-size: 10px; color: #9ca3af; font-weight: 500; }
       .fold-drum-pad.pressed {
@@ -5563,7 +6390,7 @@
         background: rgba(132, 220, 198, 0.35);
       }
       .fold-top-select {
-        height: 36px;
+        height: 34px;
         background: #14151e;
         color: #84dcc6;
         border: 1px solid rgba(132, 220, 198, 0.55);
@@ -5573,6 +6400,57 @@
         font-weight: 800;
         cursor: pointer;
         max-width: 235px;
+      }
+      /* Workstation Zone Tabs Bar (Row 2 of Pinned Header) */
+      #fold-workspace-tabs {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        overflow-x: auto;
+      }
+      .fold-ws-tab-list {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .fold-ws-tab-btn {
+        background: #181a24;
+        border: 1.5px solid rgba(255, 255, 255, 0.15);
+        border-radius: 9px;
+        padding: 6px 11px;
+        color: #d1d5db;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        touch-action: manipulation;
+        transition: all 0.12s ease;
+      }
+      .fold-ws-tab-btn:hover {
+        border-color: rgba(132, 220, 198, 0.6);
+        color: #fff;
+      }
+      .fold-ws-tab-btn.active {
+        background: linear-gradient(145deg, rgba(231, 63, 246, 0.28), rgba(13, 148, 136, 0.24));
+        border-color: #e73ff6;
+        color: #fff;
+        box-shadow: 0 0 14px rgba(231, 63, 246, 0.38);
+      }
+      .fold-ws-tab-badge {
+        font-size: 9px;
+        font-weight: 900;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: rgba(132, 220, 198, 0.18);
+        color: #84dcc6;
       }
       .fold-peers-grid {
         display: grid;
@@ -5603,9 +6481,20 @@
         min-width: 220px;
         flex: 1;
       }
+      .fold-mashup-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+        gap: 10px;
+      }
+      .fold-clips-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+        gap: 8px;
+      }
       @media (max-width: 780px) {
         #fold-section-tabs { grid-template-columns: repeat(2, 1fr); }
         #fold-4bar-minimap { grid-template-columns: repeat(4, 1fr); }
+        .fold-pads-grid { grid-template-columns: repeat(2, 1fr); }
       }
     `;
     document.head.appendChild(style);
@@ -5613,62 +6502,113 @@
     const dock = document.createElement('section');
     dock.id = 'fold-studio-dock';
     dock.innerHTML = `
-      <!-- Pinned Top Transport Bar -->
-      <div class="fold-top-bar" id="fold-top-bar">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <strong style="font-size:14px;color:#fff;">🥁 Session Drummer</strong>
-          <span id="fold-now-playing-pill" class="fold-now-playing">🔨 Led Zeppelin — When the Levee Breaks (71 BPM · 🟢 SEC 1)</span>
-          <span id="fold-conn-badge" class="fold-badge online" title="Tap to configure Studio Bridge IP">🟢 Ready</span>
-          <span id="fold-jam-pill" class="fold-badge online" style="cursor:pointer;border-color:rgba(231,63,246,0.55);color:#f5d0fe;background:rgba(231,63,246,0.16);" title="Tap to open LAN Jam Room & Offline Beat Crate">👥 Jam Room</span>
+      <!-- Pinned 2-Row Top Studio Header: Row 1 = Transport & Ableton Bridge, Row 2 = 6 Workstation Zone Tabs -->
+      <div class="fold-top-bar" id="fold-top-bar" style="flex-direction:column;align-items:stretch;gap:6px;padding:8px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <strong style="font-size:14px;color:#fff;">🥁 Session Drummer</strong>
+            <span id="fold-now-playing-pill" class="fold-now-playing">🔨 Led Zeppelin — When the Levee Breaks (71 BPM · 🟢 SEC 1)</span>
+            <span id="fold-conn-badge" class="fold-badge online" title="Tap to configure Studio Bridge IP">🟢 Ready</span>
+            <span id="fold-jam-pill" class="fold-badge online" style="cursor:pointer;border-color:rgba(231,63,246,0.55);color:#f5d0fe;background:rgba(231,63,246,0.16);" title="Tap to open Live Collab Tab">👥 Jam Room</span>
+          </div>
+          <div class="fold-btn-row">
+            <button id="fold-play-phone-btn" class="fold-btn primary">▶ Play 16-Bar Song on Phone</button>
+            <select id="fold-target-track-select" class="fold-top-select" title="Target Ableton MIDI Track (Default: follows whichever track is currently selected in Ableton Live)">
+              <option value="selected">🎯 Selected Track in Ableton</option>
+            </select>
+            <select id="fold-target-slot-select" class="fold-top-select" title="Target Ableton Clip Slot / Scene (Default: follows whichever clip slot row is selected in Ableton Live)">
+              <option value="selected">🎯 Selected Slot in Ableton</option>
+              <option value="artist">🗂️ Auto Slot by Artist</option>
+            </select>
+            <button id="fold-send-ableton-btn" class="fold-btn teal" title="Write and fire this groove directly into the selected track & clip slot in Ableton Live">🚀 Send to 🎯 Selected Track</button>
+            <button id="fold-split-scenes-btn" class="fold-btn amber" title="Write Intro/Verse, Chorus, Bridge, and Climax as 4 separate clips in Scenes 1–4 of the selected track">🎛️ Split 4 Sections → Scenes 1–4</button>
+            <button id="fold-save-crate-top-btn" class="fold-btn" title="Save this 16-Bar Groove to your Offline Beat Crate">💾 Save Crate</button>
+            <button id="fold-top-outbox-btn" class="fold-btn amber" style="display:none;" title="Push all queued offline beats in your Outbox straight into Ableton Live">📦 Push Outbox → Ableton</button>
+            <button id="fold-download-midi-btn" class="fold-btn">⬇ .mid</button>
+            <button id="fold-install-btn" class="fold-btn amber" style="display:none;">📲 Install App</button>
+          </div>
         </div>
-        <div class="fold-btn-row">
-          <button id="fold-play-phone-btn" class="fold-btn primary">▶ Play 16-Bar Song on Phone</button>
-          <select id="fold-target-track-select" class="fold-top-select" title="Target Ableton MIDI Track (Default: follows whichever track is currently selected in Ableton Live)">
-            <option value="selected">🎯 Selected Track in Ableton</option>
-          </select>
-          <select id="fold-target-slot-select" class="fold-top-select" title="Target Ableton Clip Slot / Scene (Default: follows whichever clip slot row is selected in Ableton Live)">
-            <option value="selected">🎯 Selected Slot in Ableton</option>
-            <option value="artist">🗂️ Auto Slot by Artist</option>
-          </select>
-          <button id="fold-send-ableton-btn" class="fold-btn teal" title="Write and fire this groove directly into the selected track & clip slot in Ableton Live">🚀 Send to 🎯 Selected Track</button>
-          <button id="fold-split-scenes-btn" class="fold-btn amber" title="Write Intro/Verse, Chorus, Bridge, and Climax as 4 separate clips in Scenes 1–4 of the selected track">🎛️ Split 4 Sections → Scenes 1–4</button>
-          <button id="fold-save-crate-top-btn" class="fold-btn" title="Save this 16-Bar Groove to your Offline Beat Crate">💾 Save Crate</button>
-          <button id="fold-top-outbox-btn" class="fold-btn amber" style="display:none;" title="Push all queued offline beats in your Outbox straight into Ableton Live">📦 Push Outbox → Ableton</button>
-          <button id="fold-download-midi-btn" class="fold-btn">⬇ .mid</button>
-          <button id="fold-collapse-all-btn" class="fold-btn" title="Collapse or Expand All Panels">↕ Collapse All</button>
-          <button id="fold-install-btn" class="fold-btn amber" style="display:none;">📲 Install App</button>
+
+        <!-- Row 2: Dedicated Workstation Zone Tabs -->
+        <div id="fold-workspace-tabs">
+          <div class="fold-ws-tab-list">
+            <button type="button" class="fold-ws-tab-btn active" data-ws-tab="selections">
+              <span>🎸 1. Selections</span>
+              <span class="fold-ws-tab-badge">90 Songs</span>
+            </button>
+            <button type="button" class="fold-ws-tab-btn" data-ws-tab="edit">
+              <span>🎛️ 2. Tweak & Edit</span>
+              <span class="fold-ws-tab-badge">Dials + 16-Bar Grid</span>
+            </button>
+            <button type="button" class="fold-ws-tab-btn" data-ws-tab="perform">
+              <span>🖐️ 3. Perform & Record</span>
+              <span class="fold-ws-tab-badge">MPC Pads</span>
+            </button>
+            <button type="button" class="fold-ws-tab-btn" data-ws-tab="builder">
+              <span>🎬 4. Song Builder & Clips</span>
+              <span class="fold-ws-tab-badge">Mashup + Scenes</span>
+            </button>
+            <button type="button" class="fold-ws-tab-btn" data-ws-tab="crate">
+              <span>📦 5. Old Stuff & Crate</span>
+              <span id="fold-tab-badge-crate" class="fold-ws-tab-badge">0 Vault</span>
+            </button>
+            <button type="button" class="fold-ws-tab-btn" data-ws-tab="collab">
+              <span>👥 6. Live Collab</span>
+              <span id="fold-tab-badge-collab" class="fold-ws-tab-badge">1 Online</span>
+            </button>
+          </div>
+          <div class="fold-btn-row">
+            <button type="button" id="fold-layout-mode-btn" class="fold-btn" title="Switch between focused Tabbed Zones or showing All Zones stacked on one page">⊞ Show All Zones</button>
+            <button type="button" id="fold-collapse-all-btn" class="fold-btn" title="Collapse or Expand All Panels">↕ Collapse All</button>
+          </div>
         </div>
       </div>
       <div id="fold-top-bar-spacer"></div>
 
       <!-- ================================================================ -->
-      <!-- 1. ARTIST BAND SELECTOR + 5 ICONIC GROOVES AT ORIGINAL BPM       -->
+      <!-- ZONE 1 (TAB: SELECTIONS): ARTIST BAND SELECTOR + 90 SONG GROOVES -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-artists">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-artists">
-            <h3>🎸 1. Band / Drummer & Song Groove (18 Artists · 90 Songs · 16-Bar Arrangements)</h3>
+            <h3>🎸 1. Session Selections (18 Bands · 90 Iconic Grooves · Search & Tempo Filter)</h3>
             <span id="fold-summary-artist" class="fold-panel-summary">🔨 Led Zeppelin · When the Levee Breaks (71 BPM · 16 Bars)</span>
           </div>
           <div class="fold-btn-row">
+            <button type="button" id="fold-random-groove-btn" class="fold-btn amber" title="Pick a random iconic groove from all 90 songs">🎲 Random Groove</button>
+            <button type="button" id="fold-go-edit-from-artists-btn" class="fold-btn primary">🎛️ Open in Tweak & Edit →</button>
             <button class="fold-collapse-btn" data-toggle-card="card-artists">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
+          <!-- Search & Tempo Filter Bar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.28);padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);">
+            <input id="fold-song-search-input" class="fold-crate-input" type="text" placeholder="🔍 Search 90 songs, bands, or drummers (e.g. Bonham, Blink, Collins, Disco, 112)...">
+            <div class="fold-btn-row">
+              <span style="font-size:11px;font-weight:800;color:#84dcc6;">TEMPO:</span>
+              <button type="button" class="fold-btn chip-on" data-tempo-filter="all">All (90)</button>
+              <button type="button" class="fold-btn" data-tempo-filter="slow">🐢 Slow &lt;95</button>
+              <button type="button" class="fold-btn" data-tempo-filter="mid">🚶 Mid 95–124</button>
+              <button type="button" class="fold-btn" data-tempo-filter="fast">⚡ Fast 125+</button>
+              <button type="button" id="fold-clear-song-filter-btn" class="fold-btn">✕ Clear</button>
+            </div>
+          </div>
+          <div id="fold-song-filter-count" style="font-size:11px;color:#9ca3af;font-weight:700;">Showing 5 signature grooves</div>
+
           <!-- 18 Artist Pills -->
           <div id="fold-artist-tabs"></div>
-          <!-- 5 Song Grooves for Selected Artist -->
+          <!-- Song Groove Cards -->
           <div id="fold-artist-songs"></div>
         </div>
       </div>
 
       <!-- ================================================================ -->
-      <!-- 2. SESSION DRUMMER DIALS & SWAPPABLE DRUM KIT                    -->
+      <!-- ZONE 2A (TAB: TWEAK & EDIT): SESSION DRUMMER DIALS & DRUM KIT    -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-dials">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-dials">
-            <h3>🎛️ 2. Session Drummer Dials & Swappable Drum Kit</h3>
+            <h3>🎛️ 2A. Session Drummer Dials & Swappable Drum Kit</h3>
             <span id="fold-summary-dials" class="fold-panel-summary">Intensity 70% · Swing 8% · Fill 65%</span>
           </div>
           <div class="fold-btn-row">
@@ -5676,6 +6616,8 @@
             <select id="fold-kit-select" class="fold-select">
               ${DRUM_KITS.map((k) => `<option value="${k.id}">${k.name}</option>`).join('')}
             </select>
+            <button type="button" id="fold-toggle-edit-pads-btn" class="fold-btn chip-on" title="Show or hide the Finger Drum Pad strip directly below the 16-bar sequencer">🖐️ Inline Overdub Pads: SHOWING</button>
+            <button type="button" id="fold-jump-perform-btn" class="fold-btn" title="Open the dedicated full-screen Perform & Record pad view">🖐️ Full Pad Mode →</button>
             <button class="fold-collapse-btn" data-toggle-card="card-dials">▼ Collapse</button>
           </div>
         </div>
@@ -5714,12 +6656,12 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- 3. 16-BAR (4-SECTION) SONG ARRANGEMENT & MULTI-VIEW SEQUENCER    -->
+      <!-- ZONE 2B (TAB: TWEAK & EDIT): 16-BAR (4-SECTION) STEP SEQUENCER   -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-sequencer">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-sequencer">
-            <h3>📊 3. 16-Bar Song Arrangement (4 Song Sections · 256 Steps)</h3>
+            <h3>📊 2B. 16-Bar Song Arrangement (4 Song Sections · 256 Steps)</h3>
             <span id="fold-summary-seq" class="fold-panel-summary">Intro / Verse (Bars 1–4) · Loop: 16 Bars</span>
           </div>
           <div class="fold-btn-row">
@@ -5767,12 +6709,13 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- 4. PLAY-ALONG FINGER DRUM PADS & NOTE REPEAT                     -->
+      <!-- ZONE 3 (TAB: PERFORM & RECORD): MPC FINGER DRUM PADS & OVERDUB   -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-pads">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-pads">
-            <h3>🖐️ 4. Play-Along Finger Pads (Uses Selected Drum Kit!)</h3>
+            <h3>🖐️ 3. Perform & Record Finger Drum Pads (Touch or Keys 1–8)</h3>
+            <span id="fold-perform-hud-pill" class="fold-panel-summary" style="border:1px solid rgba(255,255,255,0.2);">⏸ Ready (🟢 SEC 1: Intro / Verse)</span>
           </div>
           <div class="fold-btn-row">
             <span style="font-size:11px;font-weight:700;color:#9ca3af;">HOLD REPEAT:</span>
@@ -5786,12 +6729,20 @@
           </div>
         </div>
         <div class="fold-card-body">
+          <!-- Quick Section Jump Strip for Live Performance -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.25);padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+            <div class="fold-btn-row" id="fold-perform-sec-tabs"></div>
+            <div class="fold-btn-row">
+              <button type="button" id="fold-perform-open-grid-btn" class="fold-btn">🎛️ View Recorded Steps in Grid →</button>
+            </div>
+          </div>
+
           <div id="fold-mpc-pads" class="fold-pads-grid">
             ${DRUM_VOICES.map(
               (v, idx) => `
               <div class="fold-drum-pad" data-pad-idx="${idx}" style="border-bottom: 4px solid ${v.color};">
                 <span>${v.name}</span>
-                <span class="sub-note">Play Along / Overdub</span>
+                <span class="sub-note">Key [${idx + 1}] · Tap / Hold Roll</span>
               </div>`
             ).join('')}
           </div>
@@ -5799,20 +6750,119 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- 5. OFFLINE BEAT CRATE, STUDIO OUTBOX & SAME-NETWORK LAN JAM ROOM -->
+      <!-- ZONE 4 (TAB: SONG BUILDER & CLIPS): 4-SEC MASHUP + SCENE LAUNCH  -->
       <!-- ================================================================ -->
-      <div class="fold-card" id="card-crate-jam">
+      <div class="fold-card" id="card-builder">
         <div class="fold-card-header">
-          <div class="fold-card-title-wrap" data-toggle-card="card-crate-jam">
-            <h3>📦 5. Offline Beat Crate, Studio Outbox & 👥 Same-Network Live Jam</h3>
-            <span id="fold-summary-crate-jam" class="fold-panel-summary">0 Saved Beats · 1 Player on LAN</span>
+          <div class="fold-card-title-wrap" data-toggle-card="card-builder">
+            <h3>🎬 4. Song Mashup Builder & Live Ableton Scene Launcher</h3>
+            <span class="fold-panel-summary">Combine any 4 songs into 1 arrangement + Fire Ableton Clips</span>
           </div>
           <div class="fold-btn-row">
-            <button class="fold-collapse-btn" data-toggle-card="card-crate-jam">▼ Collapse</button>
+            <button type="button" id="fold-random-mashup-btn" class="fold-btn amber" title="Pick 4 random iconic songs for Verse, Chorus, Bridge, and Climax">🎲 Randomize 4-Section Mashup</button>
+            <button type="button" id="fold-builder-split-scenes-btn" class="fold-btn teal">🎛️ Split All 4 Sections → Ableton Scenes 1–4</button>
+            <button type="button" id="fold-builder-save-crate-btn" class="fold-btn primary">💾 Save Mashup to Crate</button>
+            <button class="fold-collapse-btn" data-toggle-card="card-builder">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
-          <!-- A. Same-Network Multi-Player Collaboration ("LAN Jam Room") -->
+          <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <strong style="font-size:12px;color:#f5d0fe;">🧬 4-Section "Frankenstein" Groove Mashup Builder</strong>
+              <span style="font-size:11px;color:#9ca3af;">Mix & match any of the 90 iconic songs for your Intro/Verse, Chorus, Bridge, and Climax!</span>
+            </div>
+            <div id="fold-mashup-sections-grid" class="fold-mashup-grid"></div>
+          </div>
+
+          <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <strong style="font-size:12px;color:#84dcc6;">🎛️ Live Ableton Track Clip & Scene Launcher (Scenes 1–8)</strong>
+              <div class="fold-btn-row">
+                <button type="button" id="fold-refresh-clips-btn" class="fold-btn">🔄 Refresh Track Clips</button>
+                <button type="button" id="fold-stop-ableton-clips-btn" class="fold-btn">⏹ Stop Track Clips</button>
+              </div>
+            </div>
+            <div id="fold-ableton-clips-grid" class="fold-clips-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- ZONE 5 (TAB: OLD STUFF & CRATE): OUTBOX, SAVED CRATE & HISTORY   -->
+      <!-- ================================================================ -->
+      <div class="fold-card" id="card-crate">
+        <div class="fold-card-header">
+          <div class="fold-card-title-wrap" data-toggle-card="card-crate">
+            <h3>📦 5. Old Stuff Vault: Studio Outbox, Saved Crate & Session History</h3>
+            <span id="fold-summary-crate" class="fold-panel-summary">0 Saved Crate · 0 Outbox · 0 History</span>
+          </div>
+          <div class="fold-btn-row">
+            <button type="button" class="fold-btn chip-on" data-vault-filter="all">🗂️ All Vault</button>
+            <button type="button" class="fold-btn" data-vault-filter="outbox">⏳ Studio Outbox</button>
+            <button type="button" class="fold-btn" data-vault-filter="crate">💾 Saved Beat Crate</button>
+            <button type="button" class="fold-btn" data-vault-filter="history">🕒 Recent Session History</button>
+            <button type="button" class="fold-btn" data-vault-filter="pcfiles">📂 PC MIDI Clips</button>
+            <button class="fold-collapse-btn" data-toggle-card="card-crate">▼ Collapse</button>
+          </div>
+        </div>
+        <div class="fold-card-body">
+          <!-- Sub-zone A: Offline Beat Crate & Studio Outbox -->
+          <div id="fold-vault-crate-section" style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <strong style="font-size:12px;color:#84dcc6;">📦 Offline Beat Crate & Studio Outbox Queue</strong>
+              <span style="font-size:11px;color:#9ca3af;">Compose anywhere offline — then push queued ideas to Ableton Scenes or your Studio PC when back on Wi-Fi!</span>
+            </div>
+
+            <div class="fold-btn-row" style="gap:8px;">
+              <input id="fold-crate-title-input" class="fold-crate-input" type="text" placeholder="Custom Idea Name (optional — defaults to Artist + Song + BPM)">
+              <button type="button" id="fold-save-crate-btn" class="fold-btn primary">💾 Save Idea to Crate</button>
+              <button type="button" id="fold-queue-outbox-btn" class="fold-btn amber" title="Queue this 16-bar arrangement in your Studio Outbox to push to Ableton when back on Wi-Fi">📥 Queue in Outbox</button>
+              <button type="button" id="fold-push-outbox-btn" class="fold-btn teal" title="Push queued Outbox beats straight into sequential Scenes on your selected Ableton track">🚀 Push Outbox → Ableton Scenes</button>
+              <button type="button" id="fold-sync-studio-only-btn" class="fold-btn" title="Sync all Offline Crate beats to your Studio PC library without overwriting active Ableton clips">🗂️ Sync Crate → Studio PC Only</button>
+            </div>
+
+            <div id="fold-crate-items-list"></div>
+          </div>
+
+          <!-- Sub-zone B: Auto-Saved Recent Session History ("Old Stuff") -->
+          <div id="fold-vault-history-section" style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <div>
+                <strong style="font-size:12px;color:#38bdf8;">🕒 Recent Session History (Auto-Saved "Old Stuff")</strong>
+                <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Every groove you play, tweak, or mash up is automatically logged here so you can bring back earlier ideas with 1 tap!</span>
+              </div>
+              <button type="button" id="fold-clear-history-btn" class="fold-btn">🧹 Clear History</button>
+            </div>
+            <div id="fold-history-items-list"></div>
+          </div>
+
+          <!-- Sub-zone C: Studio PC MIDI Clips Folder -->
+          <div id="fold-vault-pcfiles-section" style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <strong style="font-size:12px;color:#fcd34d;">📂 Studio PC <code>MIDI Clips/</code> Vault</strong>
+              <span style="font-size:11px;color:#9ca3af;">Standard <code>.mid</code> files stored in your computer's <code>MIDI Clips/</code> directory</span>
+            </div>
+            <div id="fold-pc-midi-files-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- ZONE 6 (TAB: LIVE COLLAB): SAME-NETWORK MULTI-PLAYER JAM ROOM    -->
+      <!-- ================================================================ -->
+      <div class="fold-card" id="card-collab">
+        <div class="fold-card-header">
+          <div class="fold-card-title-wrap" data-toggle-card="card-collab">
+            <h3>👥 6. Same-Network Multi-Player Live Collab (LAN Jam Room)</h3>
+            <span id="fold-summary-collab" class="fold-panel-summary">1 Player(s) on LAN · Mode: Shared Grid</span>
+          </div>
+          <div class="fold-btn-row">
+            <button type="button" id="fold-collab-toggle-grid-btn" class="fold-btn" title="Display the 16-Bar Sequencer and Finger Pads directly below this Jam Room card">🎛️ Show Shared 16-Bar Grid & Pads Here</button>
+            <button type="button" id="fold-collab-go-edit-btn" class="fold-btn primary">🎛️ Open Tweak & Edit →</button>
+            <button class="fold-collapse-btn" data-toggle-card="card-collab">▼ Collapse</button>
+          </div>
+        </div>
+        <div class="fold-card-body">
           <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -5844,24 +6894,6 @@
 
             <div id="fold-jam-peers-list"></div>
           </div>
-
-          <!-- B. Offline Beat Crate & Studio Outbox -->
-          <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <strong style="font-size:12px;color:#84dcc6;">📦 Offline Beat Crate & Studio Outbox Queue</strong>
-              <span style="font-size:11px;color:#9ca3af;">Compose anywhere offline — then push queued ideas to Ableton Scenes or your Studio PC when back on Wi-Fi!</span>
-            </div>
-
-            <div class="fold-btn-row" style="gap:8px;">
-              <input id="fold-crate-title-input" class="fold-crate-input" type="text" placeholder="Custom Idea Name (optional — defaults to Artist + Song + BPM)">
-              <button type="button" id="fold-save-crate-btn" class="fold-btn primary">💾 Save Idea to Crate</button>
-              <button type="button" id="fold-queue-outbox-btn" class="fold-btn amber" title="Queue this 16-bar arrangement in your Studio Outbox to push to Ableton when back on Wi-Fi">📥 Queue in Outbox</button>
-              <button type="button" id="fold-push-outbox-btn" class="fold-btn teal" title="Push queued Outbox beats straight into sequential Scenes on your selected Ableton track">🚀 Push Outbox → Ableton Scenes</button>
-              <button type="button" id="fold-sync-studio-only-btn" class="fold-btn" title="Sync all Offline Crate beats to your Studio PC library without overwriting active Ableton clips">🗂️ Sync Crate → Studio PC Only</button>
-            </div>
-
-            <div id="fold-crate-items-list"></div>
-          </div>
         </div>
       </div>
     `;
@@ -5872,7 +6904,7 @@
     const topSpacerEl = document.getElementById('fold-top-bar-spacer');
     const syncTopBarSpacer = () => {
       if (topBarEl && topSpacerEl) {
-        topSpacerEl.style.height = `${Math.max(54, topBarEl.offsetHeight + 4)}px`;
+        topSpacerEl.style.height = `${Math.max(88, topBarEl.offsetHeight + 6)}px`;
       }
     };
     syncTopBarSpacer();
@@ -5880,6 +6912,198 @@
       new ResizeObserver(syncTopBarSpacer).observe(topBarEl);
     }
     window.addEventListener('resize', syncTopBarSpacer);
+
+    // ========================================================================
+    // Wire Up Workspace Zone Tabs & Layout Mode Toggle
+    // ========================================================================
+    dock.querySelectorAll('[data-ws-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tid = btn.getAttribute('data-ws-tab');
+        if (state.workspaceLayoutMode === 'all') {
+          state.workspaceLayoutMode = 'tabs';
+        }
+        switchWorkspaceTab(tid);
+      });
+    });
+
+    const layoutModeBtn = document.getElementById('fold-layout-mode-btn');
+    if (layoutModeBtn) {
+      layoutModeBtn.addEventListener('click', () => {
+        state.workspaceLayoutMode = state.workspaceLayoutMode === 'all' ? 'tabs' : 'all';
+        savePersistedState();
+        applyWorkspaceTabVisibility();
+      });
+    }
+
+    // Wire Up Search, Tempo Filter & Random Groove in Session Selections Tab
+    const songSearchInput = document.getElementById('fold-song-search-input');
+    if (songSearchInput) {
+      songSearchInput.addEventListener('input', (e) => {
+        state.songSearchQuery = e.target.value;
+        renderArtistTabsAndSongs();
+      });
+    }
+
+    dock.querySelectorAll('[data-tempo-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.songTempoFilter = btn.getAttribute('data-tempo-filter');
+        renderArtistTabsAndSongs();
+      });
+    });
+
+    const clearSongFilterBtn = document.getElementById('fold-clear-song-filter-btn');
+    if (clearSongFilterBtn) {
+      clearSongFilterBtn.addEventListener('click', () => {
+        state.songSearchQuery = '';
+        state.songTempoFilter = 'all';
+        if (songSearchInput) songSearchInput.value = '';
+        renderArtistTabsAndSongs();
+      });
+    }
+
+    const randomGrooveBtn = document.getElementById('fold-random-groove-btn');
+    if (randomGrooveBtn) {
+      randomGrooveBtn.addEventListener('click', () => {
+        const allSongs = [];
+        for (const a of ARTIST_CATALOG) {
+          for (const s of a.songs) allSongs.push(s.id);
+        }
+        const pick = allSongs[Math.floor(Math.random() * allSongs.length)];
+        pushUndoState();
+        loadSongGroove(pick, true);
+      });
+    }
+
+    const goEditFromArtistsBtn = document.getElementById('fold-go-edit-from-artists-btn');
+    if (goEditFromArtistsBtn) {
+      goEditFromArtistsBtn.addEventListener('click', () => {
+        switchWorkspaceTab('edit');
+      });
+    }
+
+    const toggleEditPadsBtn = document.getElementById('fold-toggle-edit-pads-btn');
+    if (toggleEditPadsBtn) {
+      toggleEditPadsBtn.addEventListener('click', () => {
+        state.showInlinePadsInEdit = !state.showInlinePadsInEdit;
+        savePersistedState();
+        applyWorkspaceTabVisibility();
+      });
+    }
+
+    const jumpPerformBtn = document.getElementById('fold-jump-perform-btn');
+    if (jumpPerformBtn) {
+      jumpPerformBtn.addEventListener('click', () => {
+        switchWorkspaceTab('perform');
+      });
+    }
+
+    const performOpenGridBtn = document.getElementById('fold-perform-open-grid-btn');
+    if (performOpenGridBtn) {
+      performOpenGridBtn.addEventListener('click', () => {
+        switchWorkspaceTab('edit');
+      });
+    }
+
+    // Wire Up Song Builder & Clips Controls
+    const randomMashupBtn = document.getElementById('fold-random-mashup-btn');
+    if (randomMashupBtn) {
+      randomMashupBtn.addEventListener('click', () => {
+        randomize4SectionMashup();
+      });
+    }
+
+    const builderSplitScenesBtn = document.getElementById('fold-builder-split-scenes-btn');
+    if (builderSplitScenesBtn) {
+      builderSplitScenesBtn.addEventListener('click', () => {
+        sendSplitSectionsToAbletonScenes();
+      });
+    }
+
+    const builderSaveCrateBtn = document.getElementById('fold-builder-save-crate-btn');
+    if (builderSaveCrateBtn) {
+      builderSaveCrateBtn.addEventListener('click', async () => {
+        await saveCurrentIdeaToCrate({
+          customTitle: `Mashup (${state.tempo} BPM)`,
+          queuedForOutbox: false
+        });
+        builderSaveCrateBtn.textContent = '✅ Mashup Saved to Crate!';
+        setTimeout(() => {
+          builderSaveCrateBtn.textContent = '💾 Save Mashup to Crate';
+        }, 1600);
+      });
+    }
+
+    const refreshClipsBtn = document.getElementById('fold-refresh-clips-btn');
+    if (refreshClipsBtn) {
+      refreshClipsBtn.addEventListener('click', () => {
+        refreshAbletonTrackClips();
+      });
+    }
+
+    const stopAbletonClipsBtn = document.getElementById('fold-stop-ableton-clips-btn');
+    if (stopAbletonClipsBtn) {
+      stopAbletonClipsBtn.addEventListener('click', async () => {
+        const tIdx =
+          state.targetTrack === 'selected'
+            ? state.abletonSelectedTrackIndex || 0
+            : Number(state.targetTrack) || 0;
+        await sendOsc('/live/track/stop_all_clips', [tIdx], false);
+      });
+    }
+
+    // Wire Up Vault Filters & History Clear
+    dock.querySelectorAll('[data-vault-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.crateVaultFilter = btn.getAttribute('data-vault-filter');
+        renderCrateAndJamUI();
+      });
+    });
+
+    const clearHistoryBtn = document.getElementById('fold-clear-history-btn');
+    if (clearHistoryBtn) {
+      clearHistoryBtn.addEventListener('click', () => {
+        state.sessionHistory = [];
+        saveSessionHistory();
+        renderCrateAndJamUI();
+      });
+    }
+
+    // Wire Up Live Collab Extra Controls
+    const collabToggleGridBtn = document.getElementById('fold-collab-toggle-grid-btn');
+    if (collabToggleGridBtn) {
+      collabToggleGridBtn.addEventListener('click', () => {
+        state.showSharedGridInCollab = !state.showSharedGridInCollab;
+        applyWorkspaceTabVisibility();
+      });
+    }
+
+    const collabGoEditBtn = document.getElementById('fold-collab-go-edit-btn');
+    if (collabGoEditBtn) {
+      collabGoEditBtn.addEventListener('click', () => {
+        switchWorkspaceTab('edit');
+      });
+    }
+
+    // PC Keyboard Shortcuts (Keys 1–8) to play the 8 MPC Finger Drum Pads when not typing in an input
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key >= '1' && e.key <= '8') {
+        const vIdx = Number(e.key) - 1;
+        const padEl = dock.querySelector(`.fold-drum-pad[data-pad-idx="${vIdx}"]`);
+        if (padEl) startPadPress(vIdx, padEl);
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key >= '1' && e.key <= '8') {
+        const vIdx = Number(e.key) - 1;
+        const padEl = dock.querySelector(`.fold-drum-pad[data-pad-idx="${vIdx}"]`);
+        if (padEl) stopPadPress(vIdx, padEl);
+      }
+    });
 
     // ========================================================================
     // Wire Up Collapsible Panels & Collapse/Expand All
@@ -6169,11 +7393,7 @@
     const jamPillTop = document.getElementById('fold-jam-pill');
     if (jamPillTop) {
       jamPillTop.addEventListener('click', () => {
-        const cardEl = document.getElementById('card-crate-jam');
-        if (cardEl) {
-          setCardCollapsed(cardEl, false);
-          cardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        switchWorkspaceTab('collab');
       });
     }
 
@@ -6309,13 +7529,21 @@
       renderSectionTabs();
       renderMini4BarMap();
       renderSequencerGrid();
+      renderSongBuilderAndClipsUI();
       updateDialsUI();
       updatePlayerButtons();
     } else {
       loadSongGroove('zep_levee', true);
     }
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('jam') === '1') {
+        state.activeTab = 'collab';
+      }
+    } catch (_) {}
     updateViewModeButtons();
     renderCrateAndJamUI();
+    applyWorkspaceTabVisibility();
     refreshAbletonStatus();
     setInterval(refreshAbletonStatus, 4000);
   }

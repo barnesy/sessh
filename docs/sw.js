@@ -1,5 +1,5 @@
 // Session Drummer ("sessh") WebAPK / PWA Service Worker
-const CACHE_NAME = 'sessh-pwa-v19';
+const CACHE_NAME = 'sessh-pwa-v20';
 const PRECACHE_URLS = [
   './',
   './index.html',
