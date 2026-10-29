@@ -162,7 +162,7 @@ for (const dir of [DOCS_DIR, PUBLIC_DIR]) {
 const manifestObj = {
   name: 'Session Drummer',
   short_name: 'sessh',
-  description: '16-Bar Session Drummer & Artist Groove Workstation (15 Legendary Drummers, 75 Songs, 15 Drum Kits)',
+  description: '16-Bar Session Drummer & Artist Groove Workstation (18 Legendary Drummers, 90 Songs, 18 Drum Kits)',
   start_url: './',
   scope: './',
   display: 'standalone',
@@ -235,7 +235,7 @@ fs.writeFileSync(path.join(DOCS_DIR, 'index.html'), standaloneHtml, 'utf8');
 fs.writeFileSync(path.join(DOCS_DIR, '404.html'), standaloneHtml, 'utf8');
 fs.writeFileSync(path.join(DOCS_DIR, '.nojekyll'), '', 'utf8');
 
-const standaloneSw = `const CACHE_NAME = 'sessh-pwa-v14';
+const standaloneSw = `const CACHE_NAME = 'sessh-pwa-v15';
 const PRECACHE_URLS = [
   './',
   './index.html',

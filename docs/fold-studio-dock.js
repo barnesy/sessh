@@ -135,6 +135,27 @@
       hatHp: 6700, hatDecay: 0.045, openHatDecay: 0.29, tomBase: 112, laybackMs: 2
     },
     {
+      id: 'philcollins',
+      name: '🥁 Townhouse SSL Gated-Reverb Concert-Tom Kit (Phil Collins)',
+      kickStart: 162, kickEnd: 45, kickDecay: 0.34, kickClick: 0.62,
+      snareTone: 186, snareHp: 220, snareDecay: 0.32, rimMix: 1.25,
+      hatHp: 6800, hatDecay: 0.055, openHatDecay: 0.36, tomBase: 132, laybackMs: 2
+    },
+    {
+      id: 'hotchip',
+      name: '🎹 Modular 707/808 & Live Indie-Disco Kit (Hot Chip)',
+      kickStart: 152, kickEnd: 41, kickDecay: 0.31, kickClick: 0.52,
+      snareTone: 204, snareHp: 420, snareDecay: 0.16, rimMix: 1.45,
+      hatHp: 7600, hatDecay: 0.042, openHatDecay: 0.28, tomBase: 126, laybackMs: 2
+    },
+    {
+      id: 'blink182',
+      name: '🛹 OCDP Vent-Snare & Zildjian Pop-Punk Kit (Travis Barker)',
+      kickStart: 172, kickEnd: 49, kickDecay: 0.22, kickClick: 0.68,
+      snareTone: 244, snareHp: 450, snareDecay: 0.16, rimMix: 1.15,
+      hatHp: 7500, hatDecay: 0.048, openHatDecay: 0.38, tomBase: 104, laybackMs: 0
+    },
+    {
       id: 'trap808',
       name: '🔊 Modern 808 Sub-Trap Kit',
       kickStart: 150, kickEnd: 31, kickDecay: 0.52, kickClick: 0.35,
@@ -1621,6 +1642,302 @@
           fillStyle: 'selway'
         }
       ]
+    },
+    {
+      artistId: 'philcollins',
+      artistName: '🥁 Phil Collins',
+      drummer: 'Phil Collins (Genesis / Townhouse Gated Kit)',
+      defaultKit: 'philcollins',
+      songs: [
+        {
+          id: 'pc_intheair',
+          title: 'In the Air Tonight',
+          bpm: 95,
+          swing: 0,
+          kit: 'philcollins',
+          desc: 'Hypnotic Roland CR-78 pulse in Sections 1–3, erupting at Bar 12 into the legendary 10-note concert-tom fill & massive gated Climax!',
+          kicks: [0, 10],
+          kicksBar2: [0, 6, 10, 14],
+          snares: [4, 12],
+          rims: [4, 6, 12, 14],
+          claps: [],
+          ghostSnares: [7, 15],
+          openHats: [2, 10],
+          tomsBar2: [12, 13, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'phil_collins'
+        },
+        {
+          id: 'pc_sussudio',
+          title: 'Sussudio',
+          bpm: 121,
+          swing: 8,
+          kit: 'philcollins',
+          desc: 'Oberheim DMX + live Townhouse gated-reverb funk-pop pocket: syncopated kick (0, 3, 6, 10, 14), snapping snare+clap & concert-tom fills',
+          kicks: [0, 3, 6, 10, 14],
+          kicksBar2: [0, 3, 6, 8, 11, 14],
+          snares: [4, 12],
+          rims: [2, 6, 10, 14],
+          claps: [4, 12],
+          ghostSnares: [7, 9, 15],
+          openHats: [2, 14],
+          tomsBar2: [13, 14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'phil_collins'
+        },
+        {
+          id: 'pc_easylover',
+          title: 'Easy Lover',
+          bpm: 131,
+          swing: 0,
+          kit: 'philcollins',
+          desc: 'High-energy rock-fusion duet groove: driving kick (0, 2, 6, 8, 10, 14), cracking gated snare pickups & blazing concert-tom cascades',
+          kicks: [0, 2, 6, 8, 10, 14],
+          kicksBar2: [0, 2, 6, 8, 10, 11, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 7, 12, 15],
+          rims: [4, 12],
+          claps: [],
+          ghostSnares: [1, 9, 15],
+          openHats: [2, 10, 14],
+          tomsBar2: [12, 13, 14, 15],
+          hatMode: '16th_drive',
+          fillStyle: 'phil_collins'
+        },
+        {
+          id: 'pc_mama',
+          title: 'Mama (Genesis)',
+          bpm: 96,
+          swing: 4,
+          kit: 'philcollins',
+          desc: 'Industrial LinnDrum LM-1 stomp in Intro/Verse (0, 4, 6, 10, 11, 14) exploding into thunderous gated Townhouse drums in Chorus & Climax',
+          kicks: [0, 4, 6, 10, 11, 14],
+          kicksBar2: [0, 3, 4, 6, 8, 10, 14],
+          snares: [4, 12],
+          rims: [2, 4, 8, 12, 14],
+          claps: [4, 12],
+          ghostSnares: [7, 15],
+          openHats: [6, 14],
+          tomsBar2: [12, 14, 15],
+          hatMode: '16th_drive',
+          fillStyle: 'phil_collins'
+        },
+        {
+          id: 'pc_invisibletouch',
+          title: 'Invisible Touch',
+          bpm: 130,
+          swing: 4,
+          kit: 'philcollins',
+          desc: '80s stadium synth-pop pocket: tight kick (0, 3, 8, 10, 14), gated snare+clap backbeat & Simmons/concert-tom melodic hooks',
+          kicks: [0, 3, 8, 10, 14],
+          kicksBar2: [0, 3, 6, 8, 10, 14],
+          snares: [4, 12],
+          rims: [2, 10, 14],
+          claps: [4, 12],
+          ghostSnares: [7, 15],
+          openHats: [2, 14],
+          tomsBar2: [11, 13, 14],
+          hatMode: '16th_funk',
+          fillStyle: 'phil_collins'
+        }
+      ]
+    },
+    {
+      artistId: 'hotchip',
+      artistName: '🎹 Hot Chip',
+      drummer: 'Sarah Jones, Felix Martin & Joe Goddard',
+      defaultKit: 'hotchip',
+      songs: [
+        {
+          id: 'hc_overandover',
+          title: 'Over and Over',
+          bpm: 122,
+          swing: 10,
+          kit: 'hotchip',
+          desc: 'Relentless indie-dance floor-filler: 4-on-the-floor kick + 16th pickups (0, 4, 7, 8, 12, 15), persistent cowbell/rim ostinato & offbeat open hats',
+          kicks: [0, 4, 7, 8, 12, 15],
+          kicksBar2: [0, 4, 6, 8, 11, 12, 15],
+          snares: [4, 12],
+          rims: [0, 2, 4, 6, 8, 10, 12, 14],
+          claps: [4, 12],
+          ghostSnares: [9, 15],
+          openHats: [2, 6, 10, 14],
+          tomsBar2: [13, 14],
+          hatMode: '16th_funk',
+          fillStyle: 'hot_chip'
+        },
+        {
+          id: 'hc_readyforthefloor',
+          title: 'Ready for the Floor',
+          bpm: 125,
+          swing: 8,
+          kit: 'hotchip',
+          desc: 'Euphoric synth-pop house groove: bouncing kick (0, 4, 6, 8, 12, 14), crisp clap+snare backbeat, syncopated rimclicks & sparkling 16th hats',
+          kicks: [0, 4, 6, 8, 12, 14],
+          kicksBar2: [0, 3, 4, 8, 10, 12, 15],
+          snares: [4, 12],
+          rims: [3, 6, 11, 15],
+          claps: [4, 12],
+          ghostSnares: [7, 15],
+          openHats: [2, 10, 14],
+          tomsBar2: [14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'hot_chip'
+        },
+        {
+          id: 'hc_boyfromschool',
+          title: 'Boy From School',
+          bpm: 117,
+          swing: 12,
+          kit: 'hotchip',
+          desc: 'Hypnotic mid-tempo filter-disco pulse: syncopated kick (0, 3, 8, 10, 14), woody rim counter-rhythm (2, 6, 9, 14) & sloshy open-hat barks',
+          kicks: [0, 3, 8, 10, 14],
+          kicksBar2: [0, 3, 6, 8, 11, 14],
+          snares: [4, 12],
+          rims: [2, 6, 9, 14],
+          claps: [4, 12],
+          ghostSnares: [7, 15],
+          openHats: [2, 10, 14],
+          tomsBar2: [12, 14],
+          hatMode: '16th_funk',
+          fillStyle: 'hot_chip'
+        },
+        {
+          id: 'hc_flutes',
+          title: 'Flutes',
+          bpm: 123,
+          swing: 6,
+          kit: 'hotchip',
+          desc: 'Propulsive motorik deep-house roller: 4-on-the-floor kick (0, 4, 8, 12) with sub-pickups, arpeggiated rim/tom interplay & offbeat open hats',
+          kicks: [0, 4, 8, 12],
+          kicksBar2: [0, 4, 8, 11, 12, 15],
+          snares: [4, 12],
+          rims: [2, 5, 10, 13],
+          claps: [4, 12],
+          ghostSnares: [7, 15],
+          openHats: [2, 6, 10, 14],
+          tomsBar2: [6, 11, 14],
+          hatMode: '16th_drive',
+          fillStyle: 'hot_chip'
+        },
+        {
+          id: 'hc_onelifes',
+          title: 'One Life Stand',
+          bpm: 121,
+          swing: 8,
+          kit: 'hotchip',
+          desc: 'Steel-pan & 808 electro-soul pocket: syncopated kick (0, 4, 7, 10, 12), layered clap+snare backbeat & tropical rimclick polyrhythm',
+          kicks: [0, 4, 7, 10, 12],
+          kicksBar2: [0, 3, 6, 8, 10, 12, 14],
+          snares: [4, 12],
+          rims: [2, 5, 10, 13, 15],
+          claps: [4, 12],
+          ghostSnares: [9, 15],
+          openHats: [2, 10],
+          tomsBar2: [13, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'hot_chip'
+        }
+      ]
+    },
+    {
+      artistId: 'blink182',
+      artistName: '🛹 blink-182',
+      drummer: 'Travis Barker',
+      defaultKit: 'blink182',
+      songs: [
+        {
+          id: 'blink_allthesmall',
+          title: 'All the Small Things',
+          bpm: 149,
+          swing: 0,
+          kit: 'blink182',
+          desc: 'Stadium pop-punk anthem: punchy kick on 1, 3, 3-& (0, 8, 10) with Bar-2 pickup, sloshy open hats, cracking OCDP snare & rudimental fills',
+          kicks: [0, 8, 10],
+          kicksBar2: [0, 6, 8, 10, 14],
+          snares: [4, 12],
+          rims: [],
+          claps: [],
+          ghostSnares: [7, 15],
+          openHats: [2, 6, 10, 14],
+          tomsBar2: [13, 14, 15],
+          hatMode: '8th_heavy',
+          fillStyle: 'travis_barker'
+        },
+        {
+          id: 'blink_whatsmyage',
+          title: "What's My Age Again?",
+          bpm: 158,
+          swing: 0,
+          kit: 'blink182',
+          desc: 'Blazing melodic punk sprint: rapid double-kick punctuation (0, 2, 6, 8, 10, 14), high-tuned OCDP snare crack & marching-snare roll turnarounds',
+          kicks: [0, 2, 6, 8, 10, 14],
+          kicksBar2: [0, 2, 6, 8, 10, 11, 14],
+          snares: [4, 12],
+          snaresBar2: [4, 7, 12, 15],
+          rims: [4, 12],
+          claps: [],
+          ghostSnares: [1, 9, 15],
+          openHats: [2, 14],
+          tomsBar2: [12, 13, 14, 15],
+          hatMode: '16th_drive',
+          fillStyle: 'travis_barker'
+        },
+        {
+          id: 'blink_feelingthis',
+          title: 'Feeling This',
+          bpm: 173,
+          swing: 0,
+          kit: 'blink182',
+          desc: 'Flanged Intro/Verse cowbell & latin-tom hip-hop-punk breakbeat (0, 3, 6, 10) erupting into full-throttle crash-driven punk in the Chorus!',
+          kicks: [0, 3, 6, 10],
+          kicksBar2: [0, 2, 6, 8, 10, 14],
+          snares: [4, 12],
+          rims: [0, 2, 6, 8, 10, 14],
+          claps: [],
+          ghostSnares: [7, 9, 15],
+          openHats: [2, 10, 14],
+          tomsBar2: [7, 13, 14, 15],
+          hatMode: '16th_drive',
+          fillStyle: 'travis_barker'
+        },
+        {
+          id: 'blink_imissyou',
+          title: 'I Miss You',
+          bpm: 110,
+          swing: 8,
+          kit: 'blink182',
+          desc: 'Hypnotic acoustic hip-hop loop: booming kick (0, 3, 8, 10, 11), woody rim+snare backbeat, 16th brush/shaker drive & marching-snare ghost rolls',
+          kicks: [0, 3, 8, 10, 11],
+          kicksBar2: [0, 3, 6, 8, 10, 14],
+          snares: [4, 12],
+          rims: [4, 7, 12, 15],
+          claps: [],
+          ghostSnares: [6, 7, 13, 15],
+          openHats: [14],
+          tomsBar2: [14, 15],
+          hatMode: '16th_funk',
+          fillStyle: 'travis_barker'
+        },
+        {
+          id: 'blink_adamssong',
+          title: "Adam's Song",
+          bpm: 136,
+          swing: 0,
+          kit: 'blink182',
+          desc: 'Travis Barker’s creative linear Verse groove: melodic tom + ride-bell + cross-stick pattern opening into massive Chorus crashes & snare rolls',
+          kicks: [0, 3, 8, 10],
+          kicksBar2: [0, 3, 6, 8, 10, 14],
+          snares: [4, 12],
+          rims: [2, 4, 10, 12],
+          claps: [],
+          ghostSnares: [7, 9, 15],
+          openHats: [6, 14],
+          tomsBar2: [2, 6, 10, 14],
+          hatMode: '16th_funk',
+          fillStyle: 'travis_barker'
+        }
+      ]
     }
   ];
 
@@ -1932,6 +2249,28 @@
         hit(2, s60 + 2, 2, 1);
         hit(5, s60 + 2, 2, 1);
         hit(0, s60 + 3, 2, 1);
+      } else if (style === 'phil_collins') {
+        // Townhouse gated concert-tom cascade into Bar-1 crash
+        hit(6, s60, 2, 1);
+        hit(6, s60 + 1, 2, 1);
+        hit(2, s60 + 2, 2, 1);
+        hit(0, s60 + 3, 2, 1);
+        hit(7, nextSectionFirstStep, 2, 1);
+      } else if (style === 'hot_chip') {
+        // Indie-dance cowbell/rim + clap + synth-tom turnaround
+        hit(1, s60, 2, 1);
+        hit(3, s60, 2, 1);
+        hit(6, s60 + 1, 1, 1);
+        hit(5, s60 + 2, 2, 1);
+        hit(1, s60 + 2, 2, 1);
+        hit(0, s60 + 3, 2, 1);
+      } else if (style === 'travis_barker') {
+        // Travis Barker rudimental snare drag + floor tom + kick pickup
+        hit(2, s60, 2, 2);
+        hit(2, s60 + 1, 1, 1);
+        hit(6, s60 + 2, 2, 1);
+        hit(0, s60 + 3, 2, 1);
+        hit(7, nextSectionFirstStep, 2, 1);
       } else {
         hit(2, s60, 2, 1);
         hit(2, s60 + 1, 1, 1);
@@ -1990,6 +2329,46 @@
       hit(2, s56 + 6, 2, highFill ? 2 : 1);
       hit(5, s56 + 6, 2, 1);
       hit(0, s56 + 7, 2, 1);
+    } else if (style === 'phil_collins') {
+      // Phil Collins signature descending Townhouse concert-tom + kick cascade ("DA-DA, DA-DA, DUM-DUM!")
+      hit(6, s56, 2, 1);
+      hit(6, s56 + 1, 2, 1);
+      hit(0, s56 + 2, 2, 1);
+      hit(6, s56 + 3, 2, 1);
+      hit(6, s56 + 4, 2, 1);
+      hit(0, s56 + 5, 2, 1);
+      hit(2, s56 + 6, 2, highFill ? 2 : 1);
+      hit(6, s56 + 6, 2, 1);
+      hit(0, s56 + 7, 2, 1);
+      hit(2, s56 + 7, 2, 1);
+      hit(7, nextSectionFirstStep, 2, 1);
+    } else if (style === 'hot_chip') {
+      // Hot Chip indie-dance 707/808 cowbell + clap + synth-tom polyrhythmic turnaround
+      hit(0, s56, 2, 1);
+      hit(1, s56, 2, 1);
+      hit(1, s56 + 2, 2, 1);
+      hit(5, s56 + 2, 2, 1);
+      hit(2, s56 + 3, 1, 1);
+      hit(0, s56 + 4, 2, 1);
+      hit(2, s56 + 4, 2, 1);
+      hit(3, s56 + 4, 2, 1);
+      hit(6, s56 + 5, 2, 1);
+      hit(6, s56 + 6, 2, 1);
+      hit(5, s56 + 6, 2, 1);
+      hit(0, s56 + 7, 2, 1);
+      hit(7, nextSectionFirstStep, 2, 1);
+    } else if (style === 'travis_barker') {
+      // Travis Barker rudimental drum-corps 32nd-drag snare roll + floor tom & double-kick explosion
+      hit(0, s56, 2, 1);
+      hit(2, s56 + 1, 2, 2);
+      hit(2, s56 + 2, 2, 1);
+      hit(0, s56 + 3, 2, 1);
+      hit(2, s56 + 4, 2, highFill ? 2 : 1);
+      hit(6, s56 + 5, 2, 1);
+      hit(6, s56 + 6, 2, 1);
+      hit(2, s56 + 6, 2, 1);
+      hit(0, s56 + 7, 2, 1);
+      hit(7, nextSectionFirstStep, 2, 1);
     } else if (style === 'clyde_funk') {
       hit(0, s56, 2, 1);
       hit(4, s56, 1, 1);
@@ -2110,7 +2489,7 @@
 
       // In Electro/House Bridge (Sec 2, Bars 9–10), strip kicks to downbeat or filter-break before building in Bars 11–12
       const isElectroBreakdownBar =
-        secIdx === 2 && barInSec < 2 && (style === 'french_house' || style === 'linndrum');
+        secIdx === 2 && barInSec < 2 && (style === 'french_house' || style === 'linndrum' || style === 'hot_chip');
 
       for (let i = 0; i < kickList.length; i++) {
         const s = kickList[i];
@@ -2128,7 +2507,15 @@
       const snareList = useBar2Snares ? song.snaresBar2 : song.snares;
 
       // Iconic Song-Specific Section 1 (Intro/Verse) Arrangement Nuances:
-      if (songId === 'bea_cometogether' && secIdx === 0 && barInSec < 2) {
+      if (songId === 'pc_intheair' && secIdx < 3) {
+        // Phil Collins "In the Air Tonight" Sections 1–3 (Bars 1–12): Minimalist Roland CR-78 pulse (NO gated snare until Section 4 Climax!)
+        for (const s of [4, 6, 12, 14]) hit(1, o + s, s === 4 || s === 12 ? 2 : 1, 1);
+        if (secIdx === 2 && barInSec < 3) {
+          // Tense low-tom heartbeat in Section 3 (Bars 9–11) right before the legendary Bar-12 drum fill!
+          hit(6, o + 14, 1, 1);
+          hit(6, o + 15, 2, 1);
+        }
+      } else if (songId === 'bea_cometogether' && secIdx === 0 && barInSec < 2) {
         // Ringo's famous "Come Together" Intro/Riff (Bars 1–2): NO snare backbeat, just Kick + 16th hat burst + floor-tom slide!
         for (const s of [8, 10, 12, 14]) hit(6, o + s, s === 8 ? 2 : 1, 1);
       } else if (songId === 'prince_purplerain' && secIdx === 0 && barInSec < 2) {
@@ -2138,6 +2525,15 @@
       } else if ((songId === 'rad_weirdfishes' || songId === 'rad_paranoidandroid') && secIdx === 0 && barInSec < 2) {
         // Radiohead Intro (Bars 1–2): crisp wood-rim pulse on 2 & 4 before full snare enters in Bar 3
         for (const s of song.rims || [4, 12]) hit(1, o + s, s === 4 || s === 12 ? 2 : 1, 1);
+      } else if (songId === 'blink_adamssong' && secIdx === 0) {
+        // Travis Barker "Adam's Song" Verse (Bars 1–4): cross-stick rim on Beat 2, snare on Beat 4 + melodic tom pulse
+        hit(1, o + 4, 2, 1);
+        hit(2, o + 12, 2, 1);
+        for (const s of [2, 6, 10, 14]) hit(6, o + s, 1, 1);
+      } else if (songId === 'blink_feelingthis' && secIdx === 0) {
+        // Travis Barker "Feeling This" Flanged Intro/Verse (Bars 1–4): cowbell/rim ostinato + latin tom accents
+        for (const s of snareList || []) hit(2, o + s, 2, 1);
+        for (const s of [7, 14, 15]) hit(6, o + s, s === 14 ? 2 : 1, 1);
       } else {
         for (const s of snareList || []) {
           hit(2, o + s, 2, 1);
@@ -2213,13 +2609,31 @@
           for (const s of [1, 5, 9, 11, 15]) {
             if (g[2][o + s].state === 0) hit(2, o + s, 3, 1);
           }
-        } else if (style === 'french_house' || style === 'linndrum') {
-          // Disco / Electro Bridge: offbeat open hats (2, 6, 10, 14) + syncopated clap/rim
+        } else if (style === 'french_house' || style === 'linndrum' || style === 'hot_chip') {
+          // Disco / Electro / Hot Chip Bridge: offbeat open hats (2, 6, 10, 14) + cowbell/rim ostinato
           for (const s of [2, 6, 10, 14]) hit(5, o + s, 2, 1);
+          if (style === 'hot_chip') {
+            for (const s of [0, 3, 6, 10, 12, 14]) hit(1, o + s, s % 4 === 0 ? 2 : 1, 1);
+          }
           if (barInSec === 3) {
             // Bar 12 16th snare build into Climax
             for (let s = 0; s < 8; s++) hit(2, o + s, s % 2 === 0 ? 2 : 1, 1);
           }
+        } else if (style === 'phil_collins') {
+          // Phil Collins Townhouse Bridge: melodic concert-tom accents + CR-78/DMX rim pulse
+          for (const s of [2, 6, 10, 14]) hit(1, o + s, 1, 1);
+          if (barInSec % 2 === 1 && songId !== 'pc_intheair') {
+            for (const s of [11, 12, 14, 15]) hit(6, o + s, 2, 1);
+          }
+        } else if (style === 'travis_barker') {
+          // Travis Barker Half-Time Breakdown / Marching-Snare Bridge (Bars 9–12):
+          // Crash on beat 1, huge half-time snare on beat 3 (step 8), rudimental 32nd drags & floor-tom accents
+          hit(7, o + 0, 2, 1);
+          hit(2, o + 8, 2, 1);
+          hit(2, o + 11, 3, 2);
+          hit(6, o + 12, 2, 1);
+          hit(6, o + 14, 2, 1);
+          hit(0, o + 15, 2, 1);
         }
       }
 
@@ -2282,14 +2696,43 @@
     // ------------------------------------------------------------------------
     // 7. SECTION-END TURNAROUND FILLS (Bars 4, 8, 12, and Showstopper Bar 16!)
     // ------------------------------------------------------------------------
-    // Section 1 End (Bar 4, step 63): subtle pickup into Chorus
-    applySectionTurnaroundFill(g, 63, style, Math.max(30, fillPct - 20), false);
-    // Section 2 End (Bar 8, step 127): solid turnaround into Bridge/Break
-    applySectionTurnaroundFill(g, 127, style, fillPct, false);
-    // Section 3 End (Bar 12, step 191): energetic launch fill into Climax
-    applySectionTurnaroundFill(g, 191, style, Math.min(100, fillPct + 12), false);
-    // Section 4 End (Bar 16, step 255): Full Artist Signature Showstopper Fill!
-    applySectionTurnaroundFill(g, 255, style, Math.min(100, fillPct + 25), true);
+    if (songId === 'pc_intheair') {
+      // "In the Air Tonight" Special Arrangement:
+      // Keep Bars 1–11 pure Roland CR-78 tension, then unleash the legendary 1-Bar 10-note concert-tom fill in Bar 12 (steps 176..191) into Section 4 Climax!
+      if (fillPct >= 20) {
+        clearStepRange(g, 176, 191);
+        const f = 176;
+        // "DA-DA (kick), DA-DA (kick), DA-DA (kick), DA-DA, DUM-DUM!"
+        hit(6, f + 0, 2, 1);
+        hit(6, f + 1, 2, 1);
+        hit(0, f + 2, 2, 1);
+        hit(6, f + 3, 2, 1);
+        hit(6, f + 4, 2, 1);
+        hit(0, f + 5, 2, 1);
+        hit(6, f + 6, 2, 1);
+        hit(6, f + 7, 2, 1);
+        hit(0, f + 8, 2, 1);
+        hit(6, f + 9, 2, 1);
+        hit(6, f + 10, 2, 1);
+        hit(0, f + 11, 2, 1);
+        hit(2, f + 12, 2, 1);
+        hit(6, f + 12, 2, 1);
+        hit(2, f + 14, 2, 1);
+        hit(6, f + 14, 2, 1);
+        hit(0, f + 15, 2, 1);
+        hit(7, 192, 2, 1); // Massive Bar-13 Downbeat Crash!
+      }
+      applySectionTurnaroundFill(g, 255, style, Math.min(100, fillPct + 25), true);
+    } else {
+      // Section 1 End (Bar 4, step 63): subtle pickup into Chorus
+      applySectionTurnaroundFill(g, 63, style, Math.max(30, fillPct - 20), false);
+      // Section 2 End (Bar 8, step 127): solid turnaround into Bridge/Break
+      applySectionTurnaroundFill(g, 127, style, fillPct, false);
+      // Section 3 End (Bar 12, step 191): energetic launch fill into Climax
+      applySectionTurnaroundFill(g, 191, style, Math.min(100, fillPct + 12), false);
+      // Section 4 End (Bar 16, step 255): Full Artist Signature Showstopper Fill!
+      applySectionTurnaroundFill(g, 255, style, Math.min(100, fillPct + 25), true);
+    }
 
     return g;
   }
@@ -4053,7 +4496,7 @@
       <div class="fold-card" id="card-artists">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-artists">
-            <h3>🎸 1. Band / Drummer & Song Groove (15 Artists · 75 Songs · 16-Bar Arrangements)</h3>
+            <h3>🎸 1. Band / Drummer & Song Groove (18 Artists · 90 Songs · 16-Bar Arrangements)</h3>
             <span id="fold-summary-artist" class="fold-panel-summary">🔨 Led Zeppelin · When the Levee Breaks (71 BPM · 16 Bars)</span>
           </div>
           <div class="fold-btn-row">
@@ -4061,7 +4504,7 @@
           </div>
         </div>
         <div class="fold-card-body">
-          <!-- 15 Artist Pills -->
+          <!-- 18 Artist Pills -->
           <div id="fold-artist-tabs"></div>
           <!-- 5 Song Grooves for Selected Artist -->
           <div id="fold-artist-songs"></div>
@@ -4113,7 +4556,7 @@
             </div>
             <div class="fold-dial-box">
               <label><span>⏱️ Tempo (BPM)</span><span id="val-bpm" class="dial-val">71 BPM</span></label>
-              <input id="dial-bpm" type="range" min="50" max="180" step="1" value="71">
+              <input id="dial-bpm" type="range" min="50" max="200" step="1" value="71">
             </div>
           </div>
         </div>

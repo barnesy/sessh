@@ -1,7 +1,7 @@
 {
   "name": "Session Drummer",
   "short_name": "sessh",
-  "description": "16-Bar Session Drummer & Artist Groove Workstation (15 Legendary Drummers, 75 Songs, 15 Drum Kits)",
+  "description": "16-Bar Session Drummer & Artist Groove Workstation (18 Legendary Drummers, 90 Songs, 18 Drum Kits)",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
