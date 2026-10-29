@@ -15,7 +15,14 @@
 
   if ('serviceWorker' in navigator) {
     const registerSw = () => {
-      navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+      navigator.serviceWorker
+        .register('./sw.js', { scope: './', updateViaCache: 'none' })
+        .then((reg) => {
+          try {
+            reg.update();
+          } catch (_) {}
+        })
+        .catch(() => {});
     };
     if (document.readyState === 'complete') {
       registerSw();
@@ -3257,7 +3264,7 @@
   const CRATE_STORAGE_KEY = 'sessh_crate_v1';
   const HISTORY_STORAGE_KEY = 'sessh_history_v1';
   const PLAYER_PROFILE_KEY = 'sessh_player_v1';
-  const APP_VERSION = 'v2.2.0 (PWA Build v22)';
+  const APP_VERSION = 'v2.2.1 (PWA Build v23)';
 
   const WORKSPACE_TABS = [
     { id: 'compose', icon: '🎛️', label: 'Compose', sub: 'Select · Edit · Tweak' },
@@ -6641,7 +6648,7 @@
         padding: 8px 10px 28px 10px !important;
       }
       body.fold-drum-fullscreen .logo-container,
-      body.fold-drum-fullscreen nav,
+      body.fold-drum-fullscreen nav:not(#fold-nav-rail),
       body.fold-drum-fullscreen #plugin-container {
         display: none !important;
       }
@@ -7246,11 +7253,12 @@
       }
       /* Responsive Navigation: Left Menu on Desktop (>=820px), Bottom Tab Bar on Mobile (<820px) */
       #fold-nav-rail {
+        display: flex !important;
         box-sizing: border-box;
-        background: rgba(12, 13, 20, 0.97);
+        background: rgba(12, 13, 20, 0.98);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        z-index: 99995;
+        z-index: 99999 !important;
       }
       .fold-ws-tab-list {
         display: flex;
@@ -7486,7 +7494,7 @@
       <div id="fold-top-bar-spacer"></div>
 
       <!-- Responsive Navigation Rail: Left Menu on Desktop, Bottom Tab Bar on Mobile (No Numbers) -->
-      <nav id="fold-nav-rail" aria-label="Workspace Navigation">
+      <div id="fold-nav-rail" role="navigation" aria-label="Workspace Navigation">
         <div class="fold-ws-tab-list">
           <button type="button" class="fold-ws-tab-btn active" data-ws-tab="compose">
             <div class="fold-ws-tab-main">
@@ -7521,7 +7529,7 @@
           <button type="button" id="fold-layout-mode-btn" class="fold-btn" style="width:100%;" title="Switch between focused 4-Tab View or showing All Zones stacked">⊞ Show All Zones</button>
           <button type="button" id="fold-collapse-all-btn" class="fold-btn" style="width:100%;" title="Collapse or Expand All Panels">↕ Collapse All</button>
         </div>
-      </nav>
+      </div>
 
       <!-- ================================================================ -->
       <!-- TAB: COMPOSE (PART 1): SELECT BAND & ICONIC GROOVE               -->

@@ -1,9 +1,10 @@
 // Session Drummer ("sessh") WebAPK / PWA Service Worker
-const CACHE_NAME = 'sessh-pwa-v22';
+const CACHE_NAME = 'sessh-pwa-v23';
 const PRECACHE_URLS = [
   './',
   './index.html',
   './fold-studio-dock.js',
+  './fold-studio-dock.js?v=23',
   './manifest.json',
   './icon.svg',
   './icon-192.png',
@@ -53,7 +54,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((res) => {
         if (res && res.status === 200) {
           const clone = res.clone();
