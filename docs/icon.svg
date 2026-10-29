@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#12131c"/>
+  <rect x="24" y="24" width="464" height="464" rx="80" fill="none" stroke="#e73ff6" stroke-width="12"/>
+  <text x="256" y="118" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-weight="900" font-size="64" letter-spacing="4">sessh</text>
+  <!-- 4x2 Drum Pads -->
+  <rect x="64" y="156" width="84" height="84" rx="14" fill="#f43f5e"/>
+  <rect x="164" y="156" width="84" height="84" rx="14" fill="#fb923c"/>
+  <rect x="264" y="156" width="84" height="84" rx="14" fill="#eab308"/>
+  <rect x="364" y="156" width="84" height="84" rx="14" fill="#f59e0b"/>
+  <rect x="64" y="256" width="84" height="84" rx="14" fill="#38bdf8"/>
+  <rect x="164" y="256" width="84" height="84" rx="14" fill="#84dcc6"/>
+  <rect x="264" y="256" width="84" height="84" rx="14" fill="#a855f7"/>
+  <rect x="364" y="256" width="84" height="84" rx="14" fill="#e73ff6"/>
+  <text x="256" y="420" text-anchor="middle" fill="#84dcc6" font-family="system-ui, sans-serif" font-weight="800" font-size="34" letter-spacing="2">SESSION DRUMMER</text>
+</svg>

@@ -1,0 +1,13 @@
+# Keep the sessh GitHub Pages repository ultra-lightweight (< 200 KB)
+*.exe
+*.toml
+*.bat
+!Publish-Sessh-GitHubPages.bat
+node_modules/
+magenta-studio/
+AbletonOSC/
+MIDI Clips/
+Recordings/
+studio-cli.js
+.DS_Store
+Thumbs.db
