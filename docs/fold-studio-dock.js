@@ -1,13 +1,27 @@
 /**
  * Session Drummer ("sessh") — 16-Bar (4-Section) Artist Groove Workstation PWA
- * 15 Legendary Artists × 75 Iconic Song Arrangements + 15 Swappable Drum Kits
+ * 18 Legendary Artists × 90 Iconic Song Arrangements + 18 Swappable Drum Kits
  * Runs 100% Standalone Offline (GitHub Pages PWA) + Optional Ableton Live 12 Studio Bridge
  */
 (function () {
+  function isStandaloneApp() {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.navigator.standalone === true
+    );
+  }
+
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
+    const registerSw = () => {
+      navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+    };
+    if (document.readyState === 'complete') {
+      registerSw();
+    } else {
+      window.addEventListener('load', registerSw, { once: true });
+    }
   }
 
   let deferredInstallPrompt = null;
@@ -15,7 +29,16 @@
     e.preventDefault();
     deferredInstallPrompt = e;
     const btn = document.getElementById('fold-install-btn');
-    if (btn) btn.style.display = 'inline-flex';
+    if (btn && !isStandaloneApp()) {
+      btn.style.display = 'inline-flex';
+      btn.textContent = '📲 Install App';
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    const btn = document.getElementById('fold-install-btn');
+    if (btn) btn.style.display = 'none';
   });
 
   // ==========================================================================
@@ -2809,6 +2832,14 @@
   // ==========================================================================
   const STORAGE_KEY = 'sessh_state_v1';
   const BRIDGE_URL_KEY = 'sessh_bridge_url';
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramBridge = urlParams.get('bridge');
+    if (paramBridge && /^https?:\/\//i.test(paramBridge)) {
+      localStorage.setItem(BRIDGE_URL_KEY, paramBridge.replace(/\/+$/, ''));
+    }
+  } catch (_) {}
+
   const isLocalBridgeOrigin =
     window.location.port === '3333' ||
     window.location.hostname === 'localhost' ||
@@ -2818,7 +2849,7 @@
     abletonConnected: false,
     bridgeUrl: isLocalBridgeOrigin
       ? window.location.origin
-      : localStorage.getItem(BRIDGE_URL_KEY) || '',
+      : localStorage.getItem(BRIDGE_URL_KEY) || 'http://192.168.1.247:3333',
     targetTrack: 'selected',   // 'selected' (follows Ableton's highlighted track) or explicit track index '0', '1', ...
     targetSlot: 'selected',    // 'selected' (follows Ableton's highlighted clip slot/scene), 'artist', or explicit scene index '0', '1', ...
     abletonSelectedTrackIndex: 0,
@@ -3241,51 +3272,65 @@
     }
   }
 
+  function sendVia204Bridge(payload) {
+    const base = (state.bridgeUrl || 'http://192.168.1.247:3333').replace(/\/+$/, '');
+    const url = `${base}/api/write-clip-204?q=${encodeURIComponent(JSON.stringify(payload))}&_t=${Date.now()}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   async function sendCurrentBeatToAbleton(fire = true) {
     const btn = document.getElementById('fold-send-ableton-btn');
     const { startStep, endStep, barsCount, durationBeats } = getActiveLoopStepBounds();
     if (!state.bridgeUrl) {
       await autoDiscoverStudioBridge();
       if (!state.bridgeUrl) {
-        configureStudioBridgeUrl();
-        if (!state.bridgeUrl) return;
+        state.bridgeUrl = 'http://192.168.1.247:3333';
       }
     }
     if (btn) btn.textContent = `⏳ Sending ${barsCount} Bars to Ableton...`;
 
-    try {
-      const notes = buildNotesFromSequencer(startStep, endStep);
-      const { artist, song } = findSongById(state.selectedSongId);
-      const artistSlotIdx = Math.max(0, ARTIST_CATALOG.findIndex((a) => a.artistId === artist.artistId));
-      const useSelectedTrack = state.targetTrack === 'selected';
-      const useSelectedScene = state.targetSlot === 'selected';
-      const resolvedSlot =
-        state.targetSlot === 'selected'
-          ? -1
-          : state.targetSlot === 'artist'
-          ? artistSlotIdx
-          : Number(state.targetSlot) || 0;
+    const notes = buildNotesFromSequencer(startStep, endStep);
+    const { artist, song } = findSongById(state.selectedSongId);
+    const artistSlotIdx = Math.max(0, ARTIST_CATALOG.findIndex((a) => a.artistId === artist.artistId));
+    const useSelectedTrack = state.targetTrack === 'selected';
+    const useSelectedScene = state.targetSlot === 'selected';
+    const resolvedSlot =
+      state.targetSlot === 'selected'
+        ? -1
+        : state.targetSlot === 'artist'
+        ? artistSlotIdx
+        : Number(state.targetSlot) || 0;
 
-      const secSuffix =
-        state.loopMode === 'section4'
-          ? ` [${SONG_SECTIONS[state.activeSection].shortTitle}]`
-          : ` [${barsCount} Bars]`;
-      await sendOsc('/live/song/set/tempo', [{ type: 'f', value: state.tempo }], false);
+    const secSuffix =
+      state.loopMode === 'section4'
+        ? ` [${SONG_SECTIONS[state.activeSection].shortTitle}]`
+        : ` [${barsCount} Bars]`;
+    const clipName = `${artist.artistName.replace(/^[^\w]+/, '')} - ${song.title}${secSuffix}`;
+    const reqPayload = {
+      useSelectedTrack,
+      useSelectedScene,
+      trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
+      slotIndex: resolvedSlot,
+      tempo: state.tempo,
+      name: clipName,
+      duration: durationBeats,
+      color: 0xe73ff6,
+      fire,
+      notes
+    };
+
+    try {
       const res = await fetch(getApiUrl('/api/write-clip'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          useSelectedTrack,
-          useSelectedScene,
-          trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
-          slotIndex: resolvedSlot,
-          name: `${artist.artistName.replace(/^[^\w]+/, '')} - ${song.title}${secSuffix}`,
-          duration: durationBeats,
-          color: 0xe73ff6,
-          fire,
-          notes
-        })
+        body: JSON.stringify(reqPayload)
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (btn) {
         const trackLabel = data.trackName || state.abletonSelectedTrackName || 'Selected Track';
@@ -3297,32 +3342,48 @@
       }
       refreshAbletonStatus();
     } catch (e) {
-      if (btn) {
-        btn.textContent = '📱 Saved Offline (Use ⬇ .mid)';
-        setTimeout(() => updatePlayerButtons(), 1500);
+      // Fallback for HTTPS Mobile PWA -> HTTP LAN Studio Bridge (bypasses Mixed Content via 204 No Content link)
+      try {
+        const compactNotes = notes.map((n) => [
+          n.pitch,
+          Number(n.startTime.toFixed(3)),
+          Number(n.duration.toFixed(3)),
+          n.velocity
+        ]);
+        sendVia204Bridge({
+          ...reqPayload,
+          notes: compactNotes
+        });
+        if (btn) {
+          btn.textContent = `✅ Sent to Ableton Selected Track!`;
+          setTimeout(() => updatePlayerButtons(), 2000);
+        }
+      } catch (_) {
+        if (btn) {
+          btn.textContent = '📱 Saved Offline (Use ⬇ .mid)';
+          setTimeout(() => updatePlayerButtons(), 1500);
+        }
       }
     }
   }
 
   async function sendSplitSectionsToAbletonScenes() {
     const btn = document.getElementById('fold-split-scenes-btn');
-    const origText = btn ? btn.textContent : '🎛️ Split 4 Sections → Selected Track (Scenes 1–4)';
+    const origText = btn ? btn.textContent : '🎛️ Split 4 Sections → Scenes 1–4';
     if (!state.bridgeUrl) {
       await autoDiscoverStudioBridge();
       if (!state.bridgeUrl) {
-        configureStudioBridgeUrl();
-        if (!state.bridgeUrl) return;
+        state.bridgeUrl = 'http://192.168.1.247:3333';
       }
     }
     if (btn) btn.textContent = '⏳ Writing 4 Song Sections to Scenes 1–4...';
 
-    try {
-      const { artist, song } = findSongById(state.selectedSongId);
-      const cleanArtist = artist.artistName.replace(/^[^\w]+/, '');
-      const useSelectedTrack = state.targetTrack === 'selected';
-      await sendOsc('/live/song/set/tempo', [{ type: 'f', value: state.tempo }], false);
+    const { artist, song } = findSongById(state.selectedSongId);
+    const cleanArtist = artist.artistName.replace(/^[^\w]+/, '');
+    const useSelectedTrack = state.targetTrack === 'selected';
+    const sectionColors = [0x10b981, 0xf59e0b, 0x38bdf8, 0xe73ff6];
 
-      const sectionColors = [0x10b981, 0xf59e0b, 0x38bdf8, 0xe73ff6];
+    try {
       let targetTrackName = state.abletonSelectedTrackName || 'Selected Track';
       for (let secIdx = 0; secIdx < SONG_SECTIONS.length; secIdx++) {
         const sec = SONG_SECTIONS[secIdx];
@@ -3335,6 +3396,7 @@
             useSelectedScene: false,
             trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
             slotIndex: secIdx,
+            tempo: secIdx === 0 ? state.tempo : null,
             name: `${secIdx + 1}-${sec.id.toUpperCase()}: ${cleanArtist} - ${song.title}`,
             duration: 16.0,
             color: sectionColors[secIdx],
@@ -3342,6 +3404,7 @@
             notes: secNotes
           })
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.trackName) targetTrackName = data.trackName;
       }
@@ -3352,9 +3415,37 @@
       }
       refreshAbletonStatus();
     } catch (e) {
-      if (btn) {
-        btn.textContent = '⚠️ Tap Badge to Set Studio Bridge IP';
-        setTimeout(() => (btn.textContent = origText), 2000);
+      try {
+        const clips = SONG_SECTIONS.map((sec, secIdx) => {
+          const secNotes = buildNotesFromSequencer(sec.startStep, sec.endStep + 1).map((n) => [
+            n.pitch,
+            Number(n.startTime.toFixed(3)),
+            Number(n.duration.toFixed(3)),
+            n.velocity
+          ]);
+          return {
+            useSelectedTrack,
+            useSelectedScene: false,
+            trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
+            slotIndex: secIdx,
+            tempo: secIdx === 0 ? state.tempo : null,
+            name: `${secIdx + 1}-${sec.id.toUpperCase()}: ${cleanArtist} - ${song.title}`,
+            duration: 16.0,
+            color: sectionColors[secIdx],
+            fire: secIdx === state.activeSection,
+            notes: secNotes
+          };
+        });
+        sendVia204Bridge({ clips });
+        if (btn) {
+          btn.textContent = `✅ 4 Sections → Selected Track (Scenes 1–4)!`;
+          setTimeout(() => (btn.textContent = origText), 2400);
+        }
+      } catch (_) {
+        if (btn) {
+          btn.textContent = '⚠️ Tap Badge to Set Studio Bridge IP';
+          setTimeout(() => (btn.textContent = origText), 2000);
+        }
       }
     }
   }
@@ -3883,7 +3974,6 @@
   }
 
   async function autoDiscoverStudioBridge() {
-    if (state.bridgeUrl) return state.bridgeUrl;
     const candidates = ['http://localhost:3333', 'http://192.168.1.247:3333'];
     for (const candidate of candidates) {
       try {
@@ -3900,7 +3990,7 @@
         }
       } catch (_) {}
     }
-    return '';
+    return state.bridgeUrl || 'http://192.168.1.247:3333';
   }
 
   function renderAbletonTargetSelectors() {
@@ -5082,13 +5172,33 @@
       padEl.addEventListener('pointercancel', () => stopPadPress(vIdx, padEl));
     });
 
-    document.getElementById('fold-install-btn').addEventListener('click', async () => {
-      if (deferredInstallPrompt) {
-        deferredInstallPrompt.prompt();
-        await deferredInstallPrompt.userChoice;
-        deferredInstallPrompt = null;
+    const installBtnEl = document.getElementById('fold-install-btn');
+    if (installBtnEl) {
+      if (!isStandaloneApp()) {
+        installBtnEl.style.display = 'inline-flex';
       }
-    });
+      installBtnEl.addEventListener('click', async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          await deferredInstallPrompt.userChoice;
+          deferredInstallPrompt = null;
+          if (isStandaloneApp()) installBtnEl.style.display = 'none';
+          return;
+        }
+        // If user is on a private HTTP LAN IP (http://192.168.x.x:3333), Android's cloud WebAPK server
+        // cannot reach the private IP and shows "Cannot install this app". Redirect to HTTPS GitHub Pages!
+        if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+          window.location.href = `https://barnesy.github.io/sessh/?pwa=1&bridge=${encodeURIComponent(window.location.origin)}`;
+          return;
+        }
+        window.alert(
+          '📲 To install Session Drummer ("sessh") on your phone:\n\n' +
+            '1. Make sure you are on https://barnesy.github.io/sessh/\n' +
+            '2. If you have an older "sessh" shortcut on your Home Screen, long-press and remove it first.\n' +
+            '3. Tap the Chrome ⋮ menu (top-right) → "Add to Home screen" → "Install".'
+        );
+      });
+    }
 
     // Restore persisted PWA state from localStorage or load Led Zeppelin ("When the Levee Breaks") by default!
     if (loadPersistedState()) {

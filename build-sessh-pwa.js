@@ -158,35 +158,46 @@ for (const dir of [DOCS_DIR, PUBLIC_DIR]) {
 
 // ----------------------------------------------------------------------------
 // 2. Write Manifest ("Session Drummer" / "sessh") for GitHub Pages & Local
+//    Matches strictly-spending's verified Android WebAPK schema
 // ----------------------------------------------------------------------------
 const manifestObj = {
+  id: './?pwa=1',
   name: 'Session Drummer',
   short_name: 'sessh',
   description: '16-Bar Session Drummer & Artist Groove Workstation (18 Legendary Drummers, 90 Songs, 18 Drum Kits)',
-  start_url: './',
+  start_url: './?pwa=1',
   scope: './',
   display: 'standalone',
+  display_override: ['standalone', 'minimal-ui'],
   orientation: 'any',
   background_color: '#12131c',
   theme_color: '#12131c',
+  categories: ['music', 'entertainment', 'utilities'],
+  prefer_related_applications: false,
   icons: [
     {
       src: './icon-192.png',
       sizes: '192x192',
       type: 'image/png',
-      purpose: 'any maskable'
+      purpose: 'any'
     },
     {
       src: './icon-512.png',
       sizes: '512x512',
       type: 'image/png',
-      purpose: 'any maskable'
+      purpose: 'any'
     },
     {
-      src: './icon.svg',
-      sizes: 'any',
-      type: 'image/svg+xml',
-      purpose: 'any'
+      src: './icon-192.png',
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'maskable'
+    },
+    {
+      src: './icon-512.png',
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'maskable'
     }
   ]
 };
@@ -201,13 +212,13 @@ const dockJsPath = path.join(PUBLIC_DIR, 'fold-studio-dock.js');
 fs.copyFileSync(dockJsPath, path.join(DOCS_DIR, 'fold-studio-dock.js'));
 
 // ----------------------------------------------------------------------------
-// 4. Write Clean Standalone index.html & Offline Service Worker (sw.js) in ./docs
+// 4. Write Clean Standalone index.html & Offline Service Worker (sw.js) in ./docs and PUBLIC_DIR
 // ----------------------------------------------------------------------------
 const standaloneHtml = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#12131c">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -216,6 +227,8 @@ const standaloneHtml = `<!doctype html>
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
   <title>Session Drummer (sessh)</title>
   <style>
     html, body {
@@ -234,8 +247,10 @@ const standaloneHtml = `<!doctype html>
 fs.writeFileSync(path.join(DOCS_DIR, 'index.html'), standaloneHtml, 'utf8');
 fs.writeFileSync(path.join(DOCS_DIR, '404.html'), standaloneHtml, 'utf8');
 fs.writeFileSync(path.join(DOCS_DIR, '.nojekyll'), '', 'utf8');
+fs.writeFileSync(path.join(PUBLIC_DIR, 'index.html'), standaloneHtml, 'utf8');
 
-const standaloneSw = `const CACHE_NAME = 'sessh-pwa-v16';
+const standaloneSw = `// Session Drummer ("sessh") WebAPK / PWA Service Worker
+const CACHE_NAME = 'sessh-pwa-v18';
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -249,7 +264,7 @@ const PRECACHE_URLS = [
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS).catch(() => {}))
   );
 });
 
@@ -262,14 +277,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Network-first passthrough with offline fallback support so Chrome Android WebAPK minting succeeds
+  if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
   const url = new URL(event.request.url);
   if (url.pathname.includes('/api/') || url.pathname.endsWith('/call') || url.pathname.endsWith('/status')) {
     return;
   }
-  // Network-first for fold-studio-dock.js & index.html with instant offline cache fallback
-  if (url.pathname.endsWith('fold-studio-dock.js') || url.pathname.endsWith('/') || url.pathname.endsWith('index.html')) {
+
+  if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-cache' })
         .then((res) => {
           if (res && res.status === 200) {
             const clone = res.clone();
@@ -277,16 +296,28 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         })
-        .catch(() => caches.match(event.request).then((r) => r || caches.match('./index.html')))
+        .catch(() =>
+          caches.match(event.request, { ignoreSearch: true }).then((r) => r || caches.match('./index.html'))
+        )
     );
     return;
   }
+
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((res) => {
+        if (res && res.status === 200) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(event.request, { ignoreSearch: true }))
   );
 });
 `;
 fs.writeFileSync(path.join(DOCS_DIR, 'sw.js'), standaloneSw, 'utf8');
+fs.writeFileSync(path.join(PUBLIC_DIR, 'sw.js'), standaloneSw, 'utf8');
 
 // ----------------------------------------------------------------------------
 // 5. Write GitHub Actions Workflow (.github/workflows/deploy-pages.yml)
