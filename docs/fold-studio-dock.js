@@ -3264,7 +3264,7 @@
   const CRATE_STORAGE_KEY = 'sessh_crate_v1';
   const HISTORY_STORAGE_KEY = 'sessh_history_v1';
   const PLAYER_PROFILE_KEY = 'sessh_player_v1';
-  const APP_VERSION = 'v2.4.0 (PWA Build v25)';
+  const APP_VERSION = 'v2.5.0 (PWA Build v26)';
 
   const WORKSPACE_TABS = [
     { id: 'compose', icon: '🎛️', label: 'Compose', sub: 'Select · Edit · Tweak' },
@@ -4256,9 +4256,9 @@
   function updatePlayerButtons() {
     const playBtn = document.getElementById('fold-play-phone-btn');
     const padsPlayBtn = document.getElementById('fold-pads-play-btn');
-    const sendBtn = document.getElementById('fold-send-ableton-btn');
     const tlPlayBtn = document.getElementById('fold-timeline-play-btn');
     const tlLoopBtn = document.getElementById('fold-timeline-loop-mode-btn');
+    const disableSecLoopBtn = document.getElementById('fold-disable-sec-loop-btn');
     const { barsCount } = getActiveLoopStepBounds();
     const secName = SONG_SECTIONS[state.activeSection]?.badge || '4-Bar';
     const loopLabel =
@@ -4270,13 +4270,16 @@
 
     const arr = state.arrangementSections || [];
     const totalTlBars = arr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
+    const activeLoopSecIdx = Math.max(0, Math.min(arr.length - 1, state.selectedTimelineIdx || 0));
 
     if (playBtn) {
       if (state.phonePlayer.playing) {
         playBtn.textContent =
           state.playbackMode === 'timeline' ? '⏹ Stop Timeline' : '⏹ Stop Drummer';
       } else if (state.activeTab === 'arrange') {
-        playBtn.textContent = `▶ Play Timeline (${totalTlBars} Bars)`;
+        playBtn.textContent = state.timelineLoopSingle
+          ? `▶ Play Section #${activeLoopSecIdx + 1} Loop`
+          : `▶ Play Timeline (${totalTlBars} Bars)`;
       } else {
         playBtn.textContent = `▶ Play (${loopLabel})`;
       }
@@ -4294,44 +4297,63 @@
     if (tlPlayBtn) {
       const isTlPlaying = state.phonePlayer.playing && state.playbackMode === 'timeline';
       tlPlayBtn.textContent = isTlPlaying
-        ? '⏹ Stop Timeline Review'
+        ? '⏹ Stop Playback'
         : state.timelineLoopSingle
-        ? `▶ Play Block #${(state.selectedTimelineIdx || 0) + 1} Loop`
+        ? `▶ Play Section #${activeLoopSecIdx + 1} Loop`
         : `▶ Play Full Timeline (${totalTlBars} Bars)`;
       tlPlayBtn.classList.toggle('active', isTlPlaying);
     }
 
     if (tlLoopBtn) {
       tlLoopBtn.classList.toggle('chip-on', state.timelineLoopSingle);
+      tlLoopBtn.style.borderColor = state.timelineLoopSingle ? '#f59e0b' : '';
+      tlLoopBtn.style.color = state.timelineLoopSingle ? '#fde68a' : '';
       tlLoopBtn.textContent = state.timelineLoopSingle
-        ? `🔁 Loop: Block #${(state.selectedTimelineIdx || 0) + 1} Only`
-        : `🔁 Loop: Full Timeline (${arr.length} Blocks)`;
+        ? `🔁 Looping Section #${activeLoopSecIdx + 1} Only`
+        : `🔁 Loop Mode: Full Timeline (${arr.length} Sections)`;
+    }
+
+    if (disableSecLoopBtn) {
+      disableSecLoopBtn.style.display = state.timelineLoopSingle ? 'inline-flex' : 'none';
+      disableSecLoopBtn.textContent = `✕ Disable Section #${activeLoopSecIdx + 1} Loop`;
     }
 
     const modalPlayBtn = document.getElementById('fold-modal-play-btn');
     if (modalPlayBtn) {
-      const isModalBlockPlaying =
+      const isModalPlaying =
         state.phonePlayer.playing &&
         state.playbackMode === 'timeline' &&
-        state.timelineLoopSingle &&
         state.selectedTimelineIdx === state.modalSectionIdx;
-      modalPlayBtn.textContent = isModalBlockPlaying
-        ? '⏹ Stop Section Loop'
-        : `▶ Loop Section #${(state.modalSectionIdx ?? 0) + 1}`;
-      modalPlayBtn.classList.toggle('active', isModalBlockPlaying);
+      modalPlayBtn.textContent = isModalPlaying
+        ? '⏹ Stop Playback'
+        : `▶ Play Section #${(state.modalSectionIdx ?? 0) + 1}`;
+      modalPlayBtn.classList.toggle('active', isModalPlaying);
     }
 
-    if (sendBtn) {
+    const modalLoopToggleBtn = document.getElementById('fold-modal-loop-toggle-btn');
+    if (modalLoopToggleBtn) {
+      const isThisSectionLooped =
+        state.timelineLoopSingle && state.selectedTimelineIdx === state.modalSectionIdx;
+      modalLoopToggleBtn.classList.toggle('chip-on', isThisSectionLooped);
+      modalLoopToggleBtn.style.borderColor = isThisSectionLooped ? '#f59e0b' : 'rgba(255,255,255,0.22)';
+      modalLoopToggleBtn.style.background = isThisSectionLooped
+        ? 'rgba(245, 158, 11, 0.28)'
+        : 'rgba(255,255,255,0.06)';
+      modalLoopToggleBtn.style.color = isThisSectionLooped ? '#fef08a' : '#d1d5db';
+      modalLoopToggleBtn.textContent = isThisSectionLooped
+        ? `🔁 Section Loop: ON (Tap to Disable)`
+        : `🔁 Loop This Section: OFF`;
+    }
+
+    const builderSendFullBtn = document.getElementById('fold-builder-send-full-btn');
+    if (builderSendFullBtn) {
       const targetLabel =
         state.targetTrack === 'selected'
           ? state.abletonConnected
             ? `🎯 ${state.abletonSelectedTrackName}`
-            : '🎯 Selected Track'
+            : '🎯 Selected Ableton Track'
           : `Track #${Number(state.targetTrack) + 1}`;
-      sendBtn.textContent =
-        state.activeTab === 'arrange'
-          ? `🚀 Send Timeline (${totalTlBars}B) → ${targetLabel}`
-          : `🚀 Send (${loopLabel}) → ${targetLabel}`;
+      builderSendFullBtn.textContent = `🚀 Send Arrangement (${totalTlBars} Bars @ ${state.tempo} BPM) → ${targetLabel}`;
     }
   }
 
@@ -5997,24 +6019,31 @@
         </div>`;
     }
 
+    const isThisSectionLooped = state.timelineLoopSingle && state.selectedTimelineIdx === secIdx;
+
     contentEl.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.14);">
+      <!-- Modal Top Header with Clear Top-Right Close Button -->
+      <div style="position:sticky;top:0;z-index:10;background:#141621;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:10px;border-bottom:1.5px solid rgba(255,255,255,0.15);">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span style="font-size:13px;font-weight:900;color:#fff;background:${roleObj.color};padding:4px 10px;border-radius:7px;">SECTION #${secIdx + 1}</span>
           <strong style="font-size:15px;color:#fff;">${artist.artistName} — ${song.title}</strong>
           <span style="font-size:12px;font-weight:800;color:#fbbf24;background:rgba(251,191,36,0.16);padding:3px 9px;border-radius:6px;">${barRangeText} (${bars}B)</span>
-          <span id="fold-modal-bpm-badge" style="font-size:12px;font-weight:800;color:#84dcc6;background:rgba(132,220,198,0.14);padding:3px 9px;border-radius:6px;">⏱️ Global Timeline: ${state.tempo} BPM</span>
+          <span id="fold-modal-bpm-badge" style="font-size:12px;font-weight:800;color:#84dcc6;background:rgba(132,220,198,0.14);padding:3px 9px;border-radius:6px;">⏱️ ${state.tempo} BPM</span>
+          ${
+            isThisSectionLooped
+              ? `<span style="font-size:11px;font-weight:900;color:#000;background:#fbbf24;padding:3px 9px;border-radius:999px;box-shadow:0 0 12px rgba(251,191,36,0.6);">🔁 LOOPING THIS SECTION</span>`
+              : ''
+          }
         </div>
-        <div class="fold-btn-row">
-          <button type="button" id="fold-modal-play-btn" class="fold-btn primary">▶ Loop Section #${secIdx + 1}</button>
-          <button type="button" id="fold-modal-reset-btn" class="fold-btn" title="Reset this section back to the factory pattern of its selected song">🔄 Reset Section</button>
-          <button type="button" id="fold-modal-open-compose-btn" class="fold-btn teal" title="Open this section in full Compose view with Dials & Finger Instruments">🎛️ Open in Compose</button>
-          <button type="button" id="fold-modal-close-btn" class="fold-btn" style="background:#374151;border-color:#6b7280;color:#fff;">✕ Done</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;">
+          <button type="button" id="fold-modal-play-btn" class="fold-btn primary">▶ Play Section #${secIdx + 1}</button>
+          <button type="button" id="fold-modal-loop-toggle-btn" class="fold-btn">🔁 Loop This Section</button>
+          <button type="button" id="fold-modal-close-btn" class="fold-modal-close-x" title="Close Section Editor (Esc)">✕ Close</button>
         </div>
       </div>
 
-      <!-- Section Role, Length (1B/4B/16B), Song & Source Bar Controls -->
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.34);padding:8px 11px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);">
+      <!-- Section Management Bar: Role, Length (1B/4B/16B), Song, Source Bar & Reorder/Duplicate/Delete -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.34);padding:9px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);margin-bottom:10px;">
         <div class="fold-btn-row" style="gap:6px;">
           <span style="font-size:11px;font-weight:800;color:#9ca3af;">ROLE:</span>
           <select id="fold-modal-role-select" class="fold-select" style="height:34px;font-size:12px;border-color:${roleObj.color};">
@@ -6031,17 +6060,23 @@
               )
               .join('')}
           </div>
-        </div>
-        <div class="fold-btn-row" style="gap:6px;flex:1;justify-content:flex-end;">
-          <select id="fold-modal-song-select" class="fold-select" style="height:34px;font-size:12px;max-width:260px;">
+          <select id="fold-modal-song-select" class="fold-select" style="height:34px;font-size:12px;max-width:240px;">
             ${songOptionsHtml}
           </select>
           ${sourcePickerHtml}
         </div>
+        <div class="fold-btn-row" style="gap:6px;">
+          <button type="button" id="fold-modal-move-left" class="fold-btn" title="Move Section Earlier in Timeline" ${secIdx === 0 ? 'disabled' : ''}>← Move Left</button>
+          <button type="button" id="fold-modal-move-right" class="fold-btn" title="Move Section Later in Timeline" ${secIdx >= arr.length - 1 ? 'disabled' : ''}>Move Right →</button>
+          <button type="button" id="fold-modal-dup-btn" class="fold-btn" title="Duplicate this Section on Timeline">📋 Duplicate</button>
+          <button type="button" id="fold-modal-reset-btn" class="fold-btn" title="Reset this section back to the factory pattern of its selected song">🔄 Reset</button>
+          <button type="button" id="fold-modal-open-compose-btn" class="fold-btn teal" title="Open this section in Compose to tweak drummer dials or record finger pads">🎛️ Dials & Pads</button>
+          <button type="button" id="fold-modal-delete-btn" class="fold-btn" style="border-color:rgba(244,63,94,0.5);color:#fda4af;background:rgba(244,63,94,0.14);" title="Remove this Section from Timeline" ${arr.length <= 1 ? 'disabled' : ''}>🗑️ Delete</button>
+        </div>
       </div>
 
       <!-- Step Brush Bar inside Modal -->
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.26);padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.26);padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:10px;">
         <div class="fold-btn-row">
           <span style="font-size:11px;font-weight:800;color:#84dcc6;">STEP BRUSH (TAP OR DRAG STEPS):</span>
           <button type="button" class="fold-btn ${state.brushMode === 'normal' ? 'chip-on' : ''}" data-modal-brush="normal">● Normal</button>
@@ -6050,7 +6085,7 @@
           <button type="button" class="fold-btn ${state.brushMode === 'roll2' ? 'chip-on' : ''}" data-modal-brush="roll2">⚡ 32nd (2x)</button>
           <button type="button" class="fold-btn ${state.brushMode === 'roll3' ? 'chip-on' : ''}" data-modal-brush="roll3">⚡ Triplet (3x)</button>
         </div>
-        <span style="font-size:11px;color:#d1d5db;">💡 Changes save automatically to Section #${secIdx + 1} on your timeline</span>
+        <span style="font-size:11px;color:#d1d5db;">💡 Edits save automatically to Section #${secIdx + 1} on your timeline</span>
       </div>
 
       <!-- Interactive Step Sequencer Grid for this Section -->
@@ -6066,7 +6101,6 @@
       const isPlayingThis =
         state.phonePlayer.playing &&
         state.playbackMode === 'timeline' &&
-        state.timelineLoopSingle &&
         state.selectedTimelineIdx === secIdx;
       if (isPlayingThis) {
         stopPhonePlayback();
@@ -6075,7 +6109,49 @@
         state.timelineLoopSingle = true;
         startPhonePlayback('timeline');
       }
+      renderSectionSequenceModal();
+      renderSongBuilderAndClipsUI();
+    });
+
+    document.getElementById('fold-modal-loop-toggle-btn')?.addEventListener('click', () => {
+      if (state.timelineLoopSingle && state.selectedTimelineIdx === secIdx) {
+        state.timelineLoopSingle = false;
+      } else {
+        state.selectedTimelineIdx = secIdx;
+        state.timelineLoopSingle = true;
+      }
+      if (state.phonePlayer.playing && state.playbackMode === 'timeline') {
+        const ctx = getAudioCtx();
+        state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
+        state.phonePlayer.lastStepTime = -0.001;
+      }
+      renderSectionSequenceModal();
+      renderSongBuilderAndClipsUI();
       updatePlayerButtons();
+    });
+
+    document.getElementById('fold-modal-move-left')?.addEventListener('click', () => {
+      if (secIdx > 0) {
+        moveArrangementSection(secIdx, -1);
+        renderSectionSequenceModal();
+      }
+    });
+
+    document.getElementById('fold-modal-move-right')?.addEventListener('click', () => {
+      if (secIdx < (state.arrangementSections?.length || 1) - 1) {
+        moveArrangementSection(secIdx, 1);
+        renderSectionSequenceModal();
+      }
+    });
+
+    document.getElementById('fold-modal-dup-btn')?.addEventListener('click', () => {
+      duplicateArrangementSection(secIdx);
+      state.modalSectionIdx = secIdx + 1;
+      renderSectionSequenceModal();
+    });
+
+    document.getElementById('fold-modal-delete-btn')?.addEventListener('click', () => {
+      removeArrangementSection(secIdx);
     });
 
     document.getElementById('fold-modal-reset-btn')?.addEventListener('click', () => {
@@ -6156,23 +6232,6 @@
     });
   }
 
-  async function refreshAbletonTrackClips() {
-    if (!state.bridgeReachable) return;
-    const tIdx =
-      state.targetTrack === 'selected'
-        ? state.abletonSelectedTrackIndex || 0
-        : Number(state.targetTrack) || 0;
-    try {
-      const res = await fetch(getApiUrl(`/api/clips-overview?trackIndex=${tIdx}`));
-      if (!res.ok) return;
-      const data = await res.json();
-      if (Array.isArray(data.slots)) {
-        state.abletonClipSlots = data.slots;
-        renderSongBuilderAndClipsUI();
-      }
-    } catch (_) {}
-  }
-
   function renderBlockMiniWaveformHtml(secItem) {
     const blockGrid = getTimelineBlockGrid(secItem);
     const totalSteps = blockGrid[0] ? blockGrid[0].length : 64;
@@ -6199,13 +6258,13 @@
       const color = hasKick ? '#f43f5e' : hasSnare ? '#fbbf24' : density > 0 ? '#38bdf8' : 'rgba(255,255,255,0.12)';
       spans += `<span style="height:${norm}%;background:${color};border-radius:2px;display:block;width:100%;"></span>`;
     }
-    return `<div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px;height:22px;align-items:end;margin-top:4px;">${spans}</div>`;
+    return `<div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px;height:24px;align-items:end;margin-top:4px;">${spans}</div>`;
   }
 
   let draggedTimelineBlockIdx = null;
   let pointerDragState = null;
 
-  function wireTimelineDragAndClick(containerEl, selector, attrName, onTapBlock) {
+  function wireTimelineDragAndClick(containerEl, selector, attrName) {
     if (!containerEl) return;
     const items = Array.from(containerEl.querySelectorAll(selector));
 
@@ -6281,17 +6340,13 @@
       pointerDragState.sourceEl.classList.add('dragging-tl-block');
     }
     if (pointerDragState.moved) {
-      document.querySelectorAll('.fold-tl-block, .fold-seq-card-row').forEach((el) => {
+      document.querySelectorAll('.fold-tl-block').forEach((el) => {
         el.classList.remove('drag-over-left', 'drag-over-right');
       });
       const underEl = document.elementFromPoint(e.clientX, e.clientY);
-      const targetBlock = underEl && underEl.closest('[data-tl-block], [data-seq-row]');
+      const targetBlock = underEl && underEl.closest('[data-tl-block]');
       if (targetBlock) {
-        const targetIdx = Number(
-          targetBlock.hasAttribute('data-tl-block')
-            ? targetBlock.getAttribute('data-tl-block')
-            : targetBlock.getAttribute('data-seq-row')
-        );
+        const targetIdx = Number(targetBlock.getAttribute('data-tl-block'));
         if (!Number.isNaN(targetIdx) && targetIdx !== pointerDragState.fromIdx) {
           pointerDragState.overIdx = targetIdx;
           const rect = targetBlock.getBoundingClientRect();
@@ -6303,11 +6358,11 @@
     }
   });
 
-  window.addEventListener('pointerup', (e) => {
+  window.addEventListener('pointerup', () => {
     if (!pointerDragState) return;
     const st = pointerDragState;
     pointerDragState = null;
-    document.querySelectorAll('.fold-tl-block, .fold-seq-card-row').forEach((el) => {
+    document.querySelectorAll('.fold-tl-block').forEach((el) => {
       el.classList.remove('dragging-tl-block', 'drag-over-left', 'drag-over-right');
     });
     if (st.moved) {
@@ -6315,14 +6370,13 @@
         reorderArrangementSection(st.fromIdx, st.overIdx);
       }
     } else if (st.sourceEl && st.sourceEl.hasAttribute('data-tl-block')) {
-      // Simple click/tap on a Timeline Block opens the Section Sequence Modal!
+      // Touch/click on a Timeline Block opens the Section Sequence Modal Card!
       openSectionSequenceModal(st.fromIdx);
     }
   });
 
   function renderSongBuilderAndClipsUI() {
     const visualTimelineEl = document.getElementById('fold-visual-timeline');
-    const mashupGridEl = document.getElementById('fold-mashup-sections-grid');
     if (!Array.isArray(state.arrangementSections) || state.arrangementSections.length === 0) {
       state.arrangementSections = createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
     }
@@ -6334,19 +6388,11 @@
 
     const arrangeSummaryEl = document.getElementById('fold-summary-arrange');
     if (arrangeSummaryEl) {
-      arrangeSummaryEl.textContent = `${arr.length} Blocks · ${totalBars} Bars · ${state.tempo} BPM`;
+      arrangeSummaryEl.textContent = `${arr.length} Sections · ${totalBars} Bars · ${state.tempo} BPM`;
     }
     const arrangeBadgeEl = document.getElementById('fold-tab-badge-arrange');
     if (arrangeBadgeEl) {
       arrangeBadgeEl.textContent = `${totalBars} Bars`;
-    }
-    const builderSplitBtn = document.getElementById('fold-builder-split-scenes-btn');
-    if (builderSplitBtn) {
-      builderSplitBtn.textContent = `🎛️ Split ${arr.length} Blocks → Scenes 1–${arr.length}`;
-    }
-    const builderSendFullBtn = document.getElementById('fold-builder-send-full-btn');
-    if (builderSendFullBtn) {
-      builderSendFullBtn.textContent = `🚀 Send Full Timeline (${totalBars} Bars @ ${state.tempo} BPM) → Ableton`;
     }
 
     // Update Global Timeline BPM Bar
@@ -6365,7 +6411,7 @@
 
     updatePlayerButtons();
 
-    // 1. Render Horizontal Proportional Song Arrangement Timeline (#fold-visual-timeline)
+    // Render Horizontal Proportional Song Arrangement Timeline (#fold-visual-timeline)
     if (visualTimelineEl) {
       let runningBar = 1;
       visualTimelineEl.innerHTML = arr
@@ -6379,23 +6425,31 @@
           const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
           const cleanArtist = artist.artistName.replace(/^[^\w]+/, '').trim();
           const isSelected = secIdx === state.selectedTimelineIdx;
+          const isLooped = state.timelineLoopSingle && secIdx === state.selectedTimelineIdx;
           const isPlaying = state.phonePlayer.playing && state.playbackMode === 'timeline' && state.activeTimelineIdx === secIdx;
-          const flexWeight = bars === 1 ? 1.35 : bars === 16 ? 3.6 : 2.1;
-          const minW = bars === 1 ? 135 : bars === 16 ? 235 : 170;
+          const flexWeight = bars === 1 ? 1.45 : bars === 16 ? 3.6 : 2.15;
+          const minW = bars === 1 ? 150 : bars === 16 ? 250 : 185;
 
           return `
-            <div class="fold-tl-block ${isSelected ? 'selected-tl-block' : ''} ${isPlaying ? 'playing-tl-block' : ''}"
+            <div class="fold-tl-block ${isSelected ? 'selected-tl-block' : ''} ${isLooped ? 'looping-tl-block' : ''} ${isPlaying ? 'playing-tl-block' : ''}"
                  data-tl-block="${secIdx}"
                  draggable="true"
-                 title="Drag to reorder · Click to open Section Sequence Editor Modal"
+                 title="Drag to reorder · Tap/Click to open Section Sequence Modal"
                  style="flex:${flexWeight} 1 ${minW}px;min-width:${minW}px;border-top:4px solid ${roleObj.color};position:relative;overflow:hidden;">
               <div class="fold-tl-needle" style="display:${isPlaying ? 'block' : 'none'};left:0%;"></div>
               <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
-                <span style="font-size:11px;font-weight:900;color:#fbbf24;">⠿ ${barLabel}</span>
-                <span style="font-size:10px;font-weight:900;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.12);color:#fff;">${bars}B · 🎹 Click</span>
+                <span style="font-size:11px;font-weight:900;color:#fbbf24;">⠿ ${barLabel} (${bars}B)</span>
+                <button type="button"
+                        data-tl-loop-toggle="${secIdx}"
+                        title="${isLooped ? 'Tap to Disable Section Loop' : 'Tap to Loop Only This Section'}"
+                        style="border:1px solid ${isLooped ? '#fbbf24' : 'rgba(255,255,255,0.2)'};background:${
+                          isLooped ? '#fbbf24' : 'rgba(255,255,255,0.08)'
+                        };color:${isLooped ? '#000' : '#d1d5db'};border-radius:999px;padding:2px 7px;font-size:10px;font-weight:900;cursor:pointer;">
+                  ${isLooped ? '🔁 LOOPING · ✕ Off' : '🔁 Loop'}
+                </button>
               </div>
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px;">
-                <strong style="font-size:12px;color:#fff;">#${secIdx + 1} ${roleObj.label}</strong>
+                <strong style="font-size:13px;color:#fff;">#${secIdx + 1} ${roleObj.label}</strong>
                 ${secItem.customEdited ? `<span style="font-size:9px;font-weight:800;background:rgba(231,63,246,0.28);color:#f5d0fe;padding:1px 5px;border-radius:4px;">✏️ EDITED</span>` : ''}
               </div>
               <div style="font-size:11px;font-weight:700;color:#84dcc6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${cleanArtist} — ${song.title}">
@@ -6406,361 +6460,27 @@
         })
         .join('');
 
-      wireTimelineDragAndClick(visualTimelineEl, '[data-tl-block]', 'data-tl-block', (idx) => {
-        openSectionSequenceModal(idx);
-      });
-    }
-
-    // 2. Render Clean Timeline Block Sequence Cards (#fold-mashup-sections-grid)
-    if (mashupGridEl) {
-      const songOptionsFor = (selectedId) =>
-        ARTIST_CATALOG.map(
-          (a) =>
-            `<optgroup label="${a.artistName} (${a.drummer})">${a.songs
-              .map(
-                (s) =>
-                  `<option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${s.title}</option>`
-              )
-              .join('')}</optgroup>`
-        ).join('');
-
-      const sliceLabels = [
-        'Sec 1: Intro / Verse (Bars 1–4)',
-        'Sec 2: Chorus / Hook (Bars 5–8)',
-        'Sec 3: Bridge / Break (Bars 9–12)',
-        'Sec 4: Climax & Fill (Bars 13–16)'
-      ];
-
-      let runningBar = 1;
-      mashupGridEl.innerHTML = arr
-        .map((secItem, secIdx) => {
-          const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
-          const curSongId = secItem.songId || state.selectedSongId;
-          const { artist, song } = findSongById(curSongId);
-          const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
-          const startBarNum = runningBar;
-          const endBarNum = runningBar + bars - 1;
-          runningBar = endBarNum + 1;
-          const barRangeText = bars === 1 ? `Bar ${startBarNum}` : `Bars ${startBarNum}–${endBarNum}`;
-          const sliceIdx = Math.max(0, Math.min(3, Number(secItem.sourceSlice ?? (secIdx % 4))));
-          const sourceBarIdx = Math.max(0, Math.min(15, Number(secItem.sourceBar ?? sliceIdx * 4)));
-          const isSelected = secIdx === state.selectedTimelineIdx;
-
-          let sourceSelectorHtml = '';
-          if (bars === 1) {
-            sourceSelectorHtml = `
-              <select class="fold-select" data-arr-bar-idx="${secIdx}" style="width:100%;height:34px;font-size:12px;border-color:rgba(255,255,255,0.22);color:#e5e7eb;">
-                ${Array.from({ length: 16 }, (_, b) => {
-                  const secNum = Math.floor(b / 4) + 1;
-                  const isFill = (b + 1) % 4 === 0;
-                  return `<option value="${b}" ${b === sourceBarIdx ? 'selected' : ''}>Source: Bar ${b + 1} of 16 (Sec ${secNum}${isFill ? ' · Turnaround Fill' : ''})</option>`;
-                }).join('')}
-              </select>`;
-          } else if (bars === 4) {
-            sourceSelectorHtml = `
-              <select class="fold-select" data-arr-slice="${secIdx}" style="width:100%;height:34px;font-size:12px;border-color:rgba(255,255,255,0.22);color:#e5e7eb;">
-                ${sliceLabels
-                  .map((lbl, sIdx) => `<option value="${sIdx}" ${sIdx === sliceIdx ? 'selected' : ''}>${lbl}</option>`)
-                  .join('')}
-              </select>`;
-          } else {
-            sourceSelectorHtml = `
-              <div style="font-size:12px;color:#d1d5db;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.1);">
-                📚 Full 16-Bar Song Progression (Intro → Chorus → Bridge → Climax)
-              </div>`;
-          }
-
-          return `
-            <div class="fold-seq-card-row ${isSelected ? 'selected-seq-row' : ''}" data-seq-row="${secIdx}" draggable="true" style="background:${
-              isSelected ? 'rgba(231,63,246,0.11)' : 'rgba(0,0,0,0.36)'
-            };border:1.5px solid ${
-              isSelected ? '#e73ff6' : 'rgba(255,255,255,0.14)'
-            };border-top:4px solid ${roleObj.color};border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:9px;cursor:grab;">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <span style="font-size:12px;font-weight:900;color:#fff;background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;" title="Drag to reorder">⠿ #${secIdx + 1}</span>
-                  <select class="fold-select" data-arr-role="${secIdx}" style="height:32px;font-size:12px;padding:2px 8px;border-color:${roleObj.color};">
-                    ${ARRANGEMENT_ROLES.map(
-                      (r) => `<option value="${r.id}" ${r.id === roleObj.id ? 'selected' : ''}>${r.label}</option>`
-                    ).join('')}
-                  </select>
-                  <div style="display:inline-flex;background:#14151e;border:1px solid rgba(255,255,255,0.18);border-radius:7px;overflow:hidden;">
-                    ${[1, 4, 16]
-                      .map(
-                        (bLen) =>
-                          `<button type="button" data-arr-bars="${secIdx}" data-bars-val="${bLen}" style="border:none;padding:4px 8px;font-size:11px;font-weight:800;cursor:pointer;background:${
-                            bars === bLen ? '#e73ff6' : 'transparent'
-                          };color:${bars === bLen ? '#fff' : '#9ca3af'};">${bLen}B</button>`
-                      )
-                      .join('')}
-                  </div>
-                </div>
-                <div style="display:flex;align-items:center;gap:4px;">
-                  <span style="font-size:11px;font-weight:800;color:#fbbf24;background:rgba(251,191,36,0.15);padding:3px 7px;border-radius:5px;">${barRangeText}</span>
-                  <button type="button" class="drum-mini-ctrl" data-arr-up="${secIdx}" title="Move Block Earlier" ${secIdx === 0 ? 'disabled' : ''}>←</button>
-                  <button type="button" class="drum-mini-ctrl" data-arr-down="${secIdx}" title="Move Block Later" ${secIdx === arr.length - 1 ? 'disabled' : ''}>→</button>
-                  <button type="button" class="drum-mini-ctrl" data-arr-dup="${secIdx}" title="Duplicate Block">⧉</button>
-                  <button type="button" class="drum-mini-ctrl" style="color:#fda4af;border-color:rgba(244,63,94,0.4);" data-arr-del="${secIdx}" title="Remove Block from Timeline" ${arr.length <= 1 ? 'disabled' : ''}>✕</button>
-                </div>
-              </div>
-
-              <div data-arr-modal="${secIdx}" style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:12px;color:#84dcc6;font-weight:700;cursor:pointer;" title="Click to open Section Sequence Editor Modal">
-                <span>🎹 ${artist.artistName} — ${song.title}</span>
-                <span style="font-size:10px;color:#9ca3af;">
-                  ${secItem.customEdited ? `<strong style="color:#f0abfc;">✏️ Custom Edited</strong> · ` : ''}by <strong style="color:${secItem.addedColor || '#84dcc6'};">${secItem.addedBy || 'Producer'}</strong>
-                </span>
-              </div>
-
-              <select class="fold-select" data-arr-song="${secIdx}" style="width:100%;height:34px;font-size:12px;">
-                ${songOptionsFor(curSongId)}
-              </select>
-
-              ${sourceSelectorHtml}
-
-              <div class="fold-btn-row" style="gap:6px;margin-top:2px;">
-                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.22);" data-arr-modal="${secIdx}">🎹 Edit Sequence (Modal)</button>
-                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-play="${secIdx}">▶ Loop</button>
-                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-edit="${secIdx}">🎛️ Compose</button>
-                <button type="button" class="fold-song-send-btn" style="padding:5px 10px;font-size:11px;" data-arr-send="${secIdx}">🚀 → Scene ${secIdx + 1}</button>
-              </div>
-            </div>`;
-        })
-        .join('');
-
-      wireTimelineDragAndClick(mashupGridEl, '[data-seq-row]', 'data-seq-row', null);
-
-      mashupGridEl.querySelectorAll('[data-arr-modal]').forEach((el) => {
-        el.addEventListener('click', (e) => {
+      visualTimelineEl.querySelectorAll('[data-tl-loop-toggle]').forEach((loopBtn) => {
+        loopBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const idx = Number(el.getAttribute('data-arr-modal'));
-          openSectionSequenceModal(idx);
-        });
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-role]').forEach((sel) => {
-        sel.addEventListener('change', (e) => {
-          const idx = Number(sel.getAttribute('data-arr-role'));
-          if (!state.arrangementSections[idx]) return;
-          const newRole = ARRANGEMENT_ROLES.find((r) => r.id === e.target.value) || ARRANGEMENT_ROLES[1];
-          state.arrangementSections[idx].roleId = newRole.id;
-          state.arrangementSections[idx].addedBy = state.playerName;
-          state.arrangementSections[idx].addedColor = state.playerColor;
-          commitArrangementChange(`Changed Block #${idx + 1} Role → ${newRole.label}`);
-        });
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-bars]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const idx = Number(btn.getAttribute('data-arr-bars'));
-          const newBars = Number(btn.getAttribute('data-bars-val')) || 4;
-          if (!state.arrangementSections[idx]) return;
-          pushUndoState();
-          state.arrangementSections[idx].bars = newBars;
-          state.arrangementSections[idx].customGrid = null;
-          state.arrangementSections[idx].customEdited = false;
-          state.arrangementSections[idx].addedBy = state.playerName;
-          state.arrangementSections[idx].addedColor = state.playerColor;
-          commitArrangementChange(`Set Block #${idx + 1} Length → ${newBars} Bar(s)`);
-        });
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-song]').forEach((sel) => {
-        sel.addEventListener('change', (e) => {
-          const idx = Number(sel.getAttribute('data-arr-song'));
-          if (!state.arrangementSections[idx]) return;
-          pushUndoState();
-          state.arrangementSections[idx].songId = e.target.value;
-          state.arrangementSections[idx].customGrid = null;
-          state.arrangementSections[idx].customEdited = false;
-          state.arrangementSections[idx].addedBy = state.playerName;
-          state.arrangementSections[idx].addedColor = state.playerColor;
-          const { song } = findSongById(e.target.value);
-          commitArrangementChange(`Block #${idx + 1} Groove → ${song.title}`);
-        });
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-slice]').forEach((sel) => {
-        sel.addEventListener('change', (e) => {
-          const idx = Number(sel.getAttribute('data-arr-slice'));
-          if (!state.arrangementSections[idx]) return;
-          pushUndoState();
-          state.arrangementSections[idx].sourceSlice = Number(e.target.value);
-          state.arrangementSections[idx].customGrid = null;
-          state.arrangementSections[idx].customEdited = false;
-          state.arrangementSections[idx].addedBy = state.playerName;
-          state.arrangementSections[idx].addedColor = state.playerColor;
-          commitArrangementChange(`Changed Block #${idx + 1} 4-Bar Section`);
-        });
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-bar-idx]').forEach((sel) => {
-        sel.addEventListener('change', (e) => {
-          const idx = Number(sel.getAttribute('data-arr-bar-idx'));
-          if (!state.arrangementSections[idx]) return;
-          pushUndoState();
-          state.arrangementSections[idx].sourceBar = Number(e.target.value);
-          state.arrangementSections[idx].customGrid = null;
-          state.arrangementSections[idx].customEdited = false;
-          state.arrangementSections[idx].addedBy = state.playerName;
-          state.arrangementSections[idx].addedColor = state.playerColor;
-          commitArrangementChange(`Changed Block #${idx + 1} Source Bar → Bar ${Number(e.target.value) + 1}`);
-        });
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-up]').forEach((btn) => {
-        btn.addEventListener('click', () => moveArrangementSection(Number(btn.getAttribute('data-arr-up')), -1));
-      });
-      mashupGridEl.querySelectorAll('[data-arr-down]').forEach((btn) => {
-        btn.addEventListener('click', () => moveArrangementSection(Number(btn.getAttribute('data-arr-down')), 1));
-      });
-      mashupGridEl.querySelectorAll('[data-arr-dup]').forEach((btn) => {
-        btn.addEventListener('click', () => duplicateArrangementSection(Number(btn.getAttribute('data-arr-dup'))));
-      });
-      mashupGridEl.querySelectorAll('[data-arr-del]').forEach((btn) => {
-        btn.addEventListener('click', () => removeArrangementSection(Number(btn.getAttribute('data-arr-del'))));
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-play]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const idx = Number(btn.getAttribute('data-arr-play'));
-          state.selectedTimelineIdx = idx;
-          state.timelineLoopSingle = true;
-          renderSongBuilderAndClipsUI();
-          startPhonePlayback('timeline');
-        });
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-edit]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const idx = Number(btn.getAttribute('data-arr-edit'));
-          openTimelineBlockInCompose(idx);
-        });
-      });
-
-      mashupGridEl.querySelectorAll('[data-arr-send]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const secIdx = Number(btn.getAttribute('data-arr-send'));
-          const secItem = state.arrangementSections[secIdx] || state.arrangementSections[0];
-          const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
-          const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
-          const secNotes = getNotesForArrangementSectionIndex(secIdx);
-          const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
-          const cleanArtist = artist.artistName.replace(/^[^\w]+/, '').trim();
-          const useSelectedTrack = state.targetTrack === 'selected';
-          const sectionColors = [0x10b981, 0xf59e0b, 0x38bdf8, 0xe73ff6, 0xa855f7, 0xf43f5e];
-          const orig = btn.textContent;
-          btn.textContent = '⏳...';
-          const payload = {
-            useSelectedTrack,
-            useSelectedScene: false,
-            trackIndex: useSelectedTrack ? -1 : Number(state.targetTrack) || 0,
-            slotIndex: secIdx,
-            tempo: state.tempo,
-            name: `${secIdx + 1}-${roleObj.id.toUpperCase()} (${bars}B): ${cleanArtist} - ${song.title}`,
-            duration: bars * 4.0,
-            color: sectionColors[secIdx % sectionColors.length],
-            fire: true,
-            notes: secNotes
-          };
-          try {
-            const res = await fetch(getApiUrl('/api/write-clip'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            if (!res.ok) throw new Error('err');
-            btn.textContent = `✅ Scene ${secIdx + 1}!`;
-            refreshAbletonTrackClips();
-          } catch (_) {
-            sendVia204Bridge({
-              ...payload,
-              notes: secNotes.map((n) => [
-                n.pitch,
-                Number(n.startTime.toFixed(3)),
-                Number(n.duration.toFixed(3)),
-                n.velocity
-              ])
-            });
-            btn.textContent = `✅ Scene ${secIdx + 1}!`;
+          const idx = Number(loopBtn.getAttribute('data-tl-loop-toggle'));
+          if (state.timelineLoopSingle && state.selectedTimelineIdx === idx) {
+            state.timelineLoopSingle = false;
+          } else {
+            state.selectedTimelineIdx = idx;
+            state.timelineLoopSingle = true;
           }
-          setTimeout(() => {
-            btn.textContent = orig;
-          }, 1600);
-        });
-      });
-    }
-
-    const clipsGridEl = document.getElementById('fold-ableton-clips-grid');
-    if (clipsGridEl) {
-      const tIdx =
-        state.targetTrack === 'selected'
-          ? state.abletonSelectedTrackIndex || 0
-          : Number(state.targetTrack) || 0;
-      const slots =
-        Array.isArray(state.abletonClipSlots) && state.abletonClipSlots.length > 0
-          ? state.abletonClipSlots.slice(0, 8)
-          : Array.from({ length: 8 }, (_, i) => ({
-              slotIndex: i,
-              empty: true,
-              name: ''
-            }));
-
-      clipsGridEl.innerHTML = slots
-        .map((slot, i) => {
-          const isSelectedScene = i === state.abletonSelectedSceneIndex;
-          return `
-            <div style="background:rgba(20,22,32,0.88);border:1.5px solid ${
-              isSelectedScene ? '#84dcc6' : 'rgba(255,255,255,0.12)'
-            };border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-                <span style="font-size:11px;font-weight:800;color:${
-                  isSelectedScene ? '#84dcc6' : '#9ca3af'
-                };">🎬 SCENE ${i + 1} ${isSelectedScene ? '(Selected)' : ''}</span>
-                <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:${
-                  slot.empty ? 'rgba(255,255,255,0.06)' : 'rgba(16,185,129,0.2)'
-                };color:${slot.empty ? '#6b7280' : '#6ee7b7'};font-weight:800;">${
-                  slot.empty ? 'EMPTY' : 'CLIP READY'
-                }</span>
-              </div>
-              <div style="font-size:12px;font-weight:800;color:${
-                slot.empty ? '#6b7280' : '#fff'
-              };white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                ${slot.empty ? '— Empty Clip Slot —' : slot.name}
-              </div>
-              <div class="fold-btn-row" style="gap:5px;margin-top:2px;">
-                <button type="button" class="fold-song-send-btn" data-fire-slot="${i}">▶ Fire</button>
-                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-write-slot="${i}">🚀 Write Here</button>
-              </div>
-            </div>`;
-        })
-        .join('');
-
-      clipsGridEl.querySelectorAll('[data-fire-slot]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const slotIdx = Number(btn.getAttribute('data-fire-slot'));
-          await sendOsc('/live/clip_slot/fire', [tIdx, slotIdx], false);
-          btn.textContent = '▶ Fired!';
-          setTimeout(() => {
-            btn.textContent = '▶ Fire';
-          }, 1200);
+          if (state.phonePlayer.playing && state.playbackMode === 'timeline') {
+            const ctx = getAudioCtx();
+            state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
+            state.phonePlayer.lastStepTime = -0.001;
+          }
+          renderSongBuilderAndClipsUI();
+          updatePlayerButtons();
         });
       });
 
-      clipsGridEl.querySelectorAll('[data-write-slot]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const slotIdx = Number(btn.getAttribute('data-write-slot'));
-          const prevSlot = state.targetSlot;
-          state.targetSlot = String(slotIdx);
-          btn.textContent = '⏳ Writing...';
-          await sendCurrentBeatToAbleton(true);
-          state.targetSlot = prevSlot;
-          btn.textContent = '✅ Written!';
-          refreshAbletonTrackClips();
-          setTimeout(() => {
-            btn.textContent = '🚀 Write Here';
-          }, 1500);
-        });
-      });
+      wireTimelineDragAndClick(visualTimelineEl, '[data-tl-block]', 'data-tl-block');
     }
   }
 
@@ -7553,19 +7273,11 @@
 
     const sumCrateEl = document.getElementById('fold-summary-crate');
     if (sumCrateEl) {
-      sumCrateEl.textContent = `${combined.length} Saved Arrangements · ${outboxCount} Outbox · ${historyItems.length} Session History · ${pcMidiItems.length} PC MIDI`;
+      sumCrateEl.textContent = `${combined.length} Saved Arrangements · ${historyItems.length} Past Session History`;
     }
     const sumCollabEl = document.getElementById('fold-summary-collab');
     if (sumCollabEl) {
       sumCollabEl.textContent = `${APP_VERSION} · ${state.abletonConnected ? 'Ableton Live Connected' : state.bridgeReachable ? 'Studio Bridge Ready' : 'Offline PWA'} · ${peers.length} Peer(s)`;
-    }
-
-    const pushOutboxBtn = document.getElementById('fold-push-outbox-btn');
-    if (pushOutboxBtn) {
-      pushOutboxBtn.textContent =
-        outboxCount > 0
-          ? `🚀 Push Outbox (${outboxCount} Queued) → Ableton Scenes`
-          : `🚀 Push Saved Arrangements → Ableton Scenes`;
     }
 
     // 2. Render Live Status Cards in #card-collab (Settings Tab)
@@ -7717,56 +7429,44 @@
     }
 
     // 3. Update Arrangements Vault Filter Buttons & Render Past Arrangements inside #card-crate
-    const vf = state.crateVaultFilter || 'all';
+    const vf = state.crateVaultFilter === 'crate' || state.crateVaultFilter === 'history' ? state.crateVaultFilter : 'all';
     document.querySelectorAll('[data-vault-filter]').forEach((btn) => {
       const f = btn.getAttribute('data-vault-filter');
       btn.classList.toggle('chip-on', f === vf);
-      if (f === 'all') btn.textContent = `🗂️ All (${combined.length + historyItems.length + pcMidiItems.length})`;
-      if (f === 'outbox') btn.textContent = `⏳ Studio Outbox (${outboxCount})`;
+      if (f === 'all') btn.textContent = `🗂️ All (${combined.length + historyItems.length})`;
       if (f === 'crate') btn.textContent = `💾 Saved Arrangements (${combined.length})`;
       if (f === 'history') btn.textContent = `🕒 Past Session History (${historyItems.length})`;
-      if (f === 'pcfiles') btn.textContent = `📂 PC MIDI Clips (${pcMidiItems.length})`;
     });
 
     const crateSectionWrap = document.getElementById('fold-vault-crate-section');
     const historySectionWrap = document.getElementById('fold-vault-history-section');
-    const pcFilesSectionWrap = document.getElementById('fold-vault-pcfiles-section');
     if (crateSectionWrap) {
-      crateSectionWrap.style.display = vf === 'all' || vf === 'outbox' || vf === 'crate' ? 'flex' : 'none';
+      crateSectionWrap.style.display = vf === 'all' || vf === 'crate' ? 'flex' : 'none';
     }
     if (historySectionWrap) {
       historySectionWrap.style.display = vf === 'all' || vf === 'history' ? 'flex' : 'none';
     }
-    if (pcFilesSectionWrap) {
-      pcFilesSectionWrap.style.display = vf === 'all' || vf === 'pcfiles' ? 'flex' : 'none';
-    }
 
     const crateListEl = document.getElementById('fold-crate-items-list');
     if (crateListEl) {
-      const visibleCrate =
-        vf === 'outbox' ? combined.filter((x) => x.queuedForOutbox) : combined;
+      const visibleCrate = combined;
 
       if (visibleCrate.length === 0) {
         crateListEl.innerHTML = `
           <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15);font-size:12px;color:#9ca3af;text-align:center;">
-            ${
-              vf === 'outbox'
-                ? '⏳ No arrangements are currently queued in your Studio Outbox. Tap <strong>📥 Queue in Outbox</strong> to stage an arrangement for Ableton!'
-                : '📂 No saved arrangements yet. Build an arrangement in the <strong>Arrange</strong> tab or tweak a groove in <strong>Compose</strong> and tap <strong>💾 Save Arrangement</strong>!'
-            }
+            📂 No saved arrangements yet. Build an arrangement in the <strong>Arrange</strong> tab and tap <strong>💾 Save Arrangement</strong>!
           </div>`;
       } else {
         crateListEl.innerHTML = visibleCrate
           .map((item) => {
-            const statusBadge = item.queuedForOutbox
-              ? `<span style="background:rgba(245,158,11,0.22);color:#fcd34d;border:1px solid #f59e0b;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">⏳ OUTBOX QUEUED</span>`
-              : item.pushedToAbleton
-              ? `<span style="background:rgba(16,185,129,0.22);color:#6ee7b7;border:1px solid #10b981;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">✅ IN ABLETON</span>`
-              : item.syncedToStudio
-              ? `<span style="background:rgba(56,189,248,0.2);color:#7dd3fc;border:1px solid #38bdf8;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">💻 ON STUDIO PC</span>`
+            const statusBadge = item.syncedToStudio
+              ? `<span style="background:rgba(56,189,248,0.2);color:#7dd3fc;border:1px solid #38bdf8;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">💻 SYNCED</span>`
               : `<span style="background:rgba(231,63,246,0.2);color:#f5d0fe;border:1px solid #e73ff6;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">📱 SAVED ARRANGEMENT</span>`;
 
             const secCount = Array.isArray(item.arrangementSections) ? item.arrangementSections.length : 4;
+            const totalBars = Array.isArray(item.arrangementSections)
+              ? item.arrangementSections.reduce((acc, s) => acc + (Number(s.barsCount) || 4), 0)
+              : secCount * 4;
             const chainPills = renderArrangementChainPillsHtml(item);
 
             return `
@@ -7775,16 +7475,14 @@
                   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                     <strong style="font-size:12px;color:#fff;">${item.title}</strong>
                     ${statusBadge}
-                    <span style="font-size:10px;color:#84dcc6;font-weight:700;">${secCount} Sections (${secCount * 4} Bars)</span>
+                    <span style="font-size:10px;color:#84dcc6;font-weight:700;">${secCount} Sections (${totalBars} Bars)</span>
                     <span style="font-size:10px;color:#9ca3af;">by <span style="color:${item.authorColor || '#84dcc6'};font-weight:700;">${item.authorName || 'Producer'}</span></span>
                   </div>
                   <div class="fold-btn-row" style="gap:5px;">
                     <button type="button" class="fold-song-send-btn" data-crate-arrange="${item.id}">🎬 Load in Arrange</button>
                     <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-crate-edit="${item.id}">🎛️ Load in Compose</button>
                     <button type="button" class="fold-song-send-btn" data-crate-load="${item.id}">▶ Play</button>
-                    <button type="button" class="fold-song-send-btn" data-crate-send="${item.id}">🚀 → Ableton</button>
                     <button type="button" class="fold-song-send-btn" data-crate-beam="${item.id}" title="Beam this arrangement to everyone in the LAN Jam Room">📡 Beam</button>
-                    <button type="button" class="fold-song-send-btn" data-crate-mid="${item.id}">⬇ .mid</button>
                     <button type="button" class="fold-song-send-btn" style="border-color:#f43f5e;color:#fda4af;background:rgba(244,63,94,0.15);" data-crate-del="${item.id}">🗑️</button>
                   </div>
                 </div>
@@ -7826,25 +7524,6 @@
           });
         });
 
-        crateListEl.querySelectorAll('[data-crate-send]').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const id = btn.getAttribute('data-crate-send');
-            const found = getCombinedCrateList().find((x) => x.id === id);
-            if (!found) return;
-            loadIdeaObjectIntoWorkstation(found, false);
-            btn.textContent = '⏳...';
-            await sendCurrentBeatToAbleton(true);
-            const loc = state.localCrate.find((x) => x.id === id);
-            if (loc) {
-              loc.queuedForOutbox = false;
-              loc.pushedToAbleton = true;
-              saveLocalCrate();
-            }
-            btn.textContent = '✅ Sent!';
-            setTimeout(() => renderCrateAndJamUI(), 1200);
-          });
-        });
-
         crateListEl.querySelectorAll('[data-crate-beam]').forEach((btn) => {
           btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-crate-beam');
@@ -7857,25 +7536,6 @@
             });
             btn.textContent = '✅ Beamed!';
             setTimeout(() => renderCrateAndJamUI(), 1200);
-          });
-        });
-
-        crateListEl.querySelectorAll('[data-crate-mid]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-crate-mid');
-            const found = getCombinedCrateList().find((x) => x.id === id);
-            if (!found) return;
-            loadIdeaObjectIntoWorkstation(found, false);
-            const notes = buildNotesFromSequencer(0, TOTAL_STEPS);
-            const blob = buildMidiBlob(notes, 64.0, found.tempo || state.tempo);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${(found.title || 'SessionDrummer').replace(/[^a-zA-Z0-9_\-+]/g, '_')}.mid`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 2000);
           });
         });
 
@@ -7925,7 +7585,6 @@
                     <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.16);" data-hist-edit="${h.id}">🎛️ Load in Compose</button>
                     <button type="button" class="fold-song-send-btn" data-hist-restore="${h.id}">▶ Play</button>
                     <button type="button" class="fold-song-send-btn" data-hist-save="${h.id}">💾 Save Arrangement</button>
-                    <button type="button" class="fold-song-send-btn" data-hist-send="${h.id}">🚀 → Ableton</button>
                   </div>
                 </div>
                 ${chainPills}
@@ -7977,41 +7636,6 @@
             setTimeout(() => renderCrateAndJamUI(), 1200);
           });
         });
-
-        historyListEl.querySelectorAll('[data-hist-send]').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const id = btn.getAttribute('data-hist-send');
-            const found = (state.sessionHistory || []).find((x) => x.id === id);
-            if (!found) return;
-            loadIdeaObjectIntoWorkstation(found, false);
-            btn.textContent = '⏳...';
-            await sendCurrentBeatToAbleton(true);
-            btn.textContent = '✅ Sent!';
-            setTimeout(() => renderCrateAndJamUI(), 1200);
-          });
-        });
-      }
-    }
-
-    // 5. Render Studio PC MIDI Clips Vault
-    const pcFilesListEl = document.getElementById('fold-pc-midi-files-list');
-    if (pcFilesListEl) {
-      if (pcMidiItems.length === 0) {
-        pcFilesListEl.innerHTML = `
-          <div style="padding:10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.14);font-size:11px;color:#9ca3af;text-align:center;">
-            📂 Connect to your Studio PC Bridge to browse <code>MIDI Clips/</code> files saved on your computer.
-          </div>`;
-      } else {
-        pcFilesListEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;">${pcMidiItems
-          .slice(0, 24)
-          .map(
-            (fname) => `
-            <div style="background:rgba(20,22,32,0.85);border:1px solid rgba(255,255,255,0.11);border-radius:8px;padding:7px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
-              <span style="font-size:11px;color:#e5e7eb;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${fname}">🎵 ${fname}</span>
-              <span style="font-size:9px;color:#84dcc6;background:rgba(132,220,198,0.14);padding:2px 5px;border-radius:4px;white-space:nowrap;">PC Vault</span>
-            </div>`
-          )
-          .join('')}</div>`;
       }
     }
   }
@@ -8897,6 +8521,11 @@
         border-color: #e73ff6;
         box-shadow: 0 0 14px rgba(231, 63, 246, 0.36);
       }
+      .fold-tl-block.looping-tl-block {
+        background: linear-gradient(160deg, rgba(245, 158, 11, 0.28), rgba(231, 63, 246, 0.22));
+        border: 2px solid #f59e0b !important;
+        box-shadow: 0 0 18px rgba(245, 158, 11, 0.55), inset 0 0 0 1px rgba(252, 211, 77, 0.65) !important;
+      }
       .fold-tl-block.playing-tl-block {
         border-color: #84dcc6;
         box-shadow: 0 0 18px rgba(132, 220, 198, 0.55), inset 0 0 0 1px #84dcc6;
@@ -8943,6 +8572,27 @@
         color: #f4f4f6;
         box-sizing: border-box;
       }
+      .fold-modal-close-x {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        min-height: 36px;
+        padding: 6px 14px;
+        border-radius: 9px;
+        border: 2px solid #f43f5e;
+        background: rgba(244, 63, 94, 0.25);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(244, 63, 94, 0.35);
+        transition: all 0.14s ease;
+      }
+      .fold-modal-close-x:hover {
+        background: #f43f5e;
+        color: #fff;
+      }
       .fold-tl-needle {
         position: absolute;
         top: 0;
@@ -8988,7 +8638,7 @@
     const dock = document.createElement('section');
     dock.id = 'fold-studio-dock';
     dock.innerHTML = `
-      <!-- Pinned Top Studio Transport & Ableton Bar -->
+      <!-- Pinned Top Studio Transport Bar -->
       <div class="fold-top-bar" id="fold-top-bar" style="padding:8px 12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;width:100%;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -9000,18 +8650,6 @@
           </div>
           <div class="fold-btn-row">
             <button id="fold-play-phone-btn" class="fold-btn primary">▶ Play (16 Bars)</button>
-            <select id="fold-target-track-select" class="fold-top-select" title="Target Ableton MIDI Track (Default: follows whichever track is currently selected in Ableton Live)">
-              <option value="selected">🎯 Selected Track in Ableton</option>
-            </select>
-            <select id="fold-target-slot-select" class="fold-top-select" style="display:none;" title="Target Ableton Clip Slot / Scene">
-              <option value="selected">🎯 Selected Slot in Ableton</option>
-              <option value="artist">🗂️ Auto Slot by Artist</option>
-            </select>
-            <button id="fold-send-ableton-btn" class="fold-btn teal" title="Write and fire the active groove or Arrange Timeline directly into the selected track in Ableton Live">🚀 Send to 🎯 Selected Track</button>
-            <button id="fold-split-scenes-btn" class="fold-btn amber" title="Write all Arrange Timeline blocks as separate clips in sequential Scenes of the selected track">🎛️ Split Blocks → Scenes</button>
-            <button id="fold-save-crate-top-btn" class="fold-btn" title="Save this arrangement to your Saved Arrangements vault">💾 Save Arrangement</button>
-            <button id="fold-top-outbox-btn" class="fold-btn amber" style="display:none;" title="Push all queued offline arrangements in your Outbox straight into Ableton Live">📦 Push Outbox → Ableton</button>
-            <button id="fold-download-midi-btn" class="fold-btn" title="Download standard .mid file">⬇ .mid</button>
             <button id="fold-install-btn" class="fold-btn amber" style="display:none;">📲 Install App</button>
           </div>
         </div>
@@ -9296,17 +8934,20 @@
           </div>
         </div>
         <div class="fold-card-body">
-          <!-- Timeline Transport, Review & Send to Ableton Bar -->
+          <!-- Timeline Transport, Loop Highlighting & Send Arrangement to Ableton Bar -->
           <div style="background:linear-gradient(135deg, rgba(231,63,246,0.18), rgba(13,148,136,0.18));border:1.5px solid rgba(231,63,246,0.45);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:9px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <div class="fold-btn-row">
                 <button type="button" id="fold-timeline-play-btn" class="fold-btn primary" style="font-size:13px;padding:8px 14px;">▶ Play Full Timeline (16 Bars)</button>
                 <button type="button" id="fold-timeline-loop-mode-btn" class="fold-btn">🔁 Loop: Full Timeline (4 Blocks)</button>
+                <button type="button" id="fold-disable-sec-loop-btn" class="fold-btn amber" style="display:none;border-color:#f59e0b;background:rgba(245,158,11,0.28);color:#fff;font-weight:900;">✕ Disable Section Loop</button>
                 <span id="fold-timeline-hud-pill" class="fold-panel-summary" style="border:1px solid rgba(255,255,255,0.2);font-size:12px;">⏸ Ready (4 Blocks · 16 Bars Total)</span>
               </div>
               <div class="fold-btn-row">
-                <button type="button" id="fold-builder-send-full-btn" class="fold-btn teal" style="font-size:13px;padding:8px 14px;" title="Write the entire arranged timeline as one continuous multi-bar MIDI clip into your selected Ableton track">🚀 Send Full Timeline (16 Bars) → Ableton</button>
-                <button type="button" id="fold-builder-split-scenes-btn" class="fold-btn amber" title="Write each block in your timeline into sequential Ableton Scenes (Scene 1, Scene 2, Scene 3...)">🎛️ Split 4 Blocks → Scenes 1–4</button>
+                <select id="fold-target-track-select" class="fold-top-select" title="Target Ableton MIDI Track (Default: follows whichever track is currently selected in Ableton Live)">
+                  <option value="selected">🎯 Selected Track in Ableton</option>
+                </select>
+                <button type="button" id="fold-builder-send-full-btn" class="fold-btn teal" style="font-size:13px;padding:8px 14px;" title="Write the entire arranged timeline as a continuous MIDI clip into your target Ableton track">🚀 Send Arrangement (16 Bars) → 🎯 Selected Track</button>
               </div>
             </div>
 
@@ -9321,12 +8962,12 @@
             </div>
           </div>
 
-          <!-- 1. Horizontal Proportional Song Arrangement Timeline -->
+          <!-- Horizontal Proportional Song Arrangement Timeline (Touch/Click any Section to Open Modal Card) -->
           <div style="background:rgba(0,0,0,0.32);border:1px solid rgba(255,255,255,0.11);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <div>
-                <strong style="font-size:13px;color:#fff;">📏 Horizontal Song Arrangement Timeline (✋ Drag Blocks to Reorder · 🎹 Click Section to Edit Sequence in Modal)</strong>
-                <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Proportional 1-Bar, 4-Bar & 16-Bar blocks with live playhead needle</span>
+                <strong style="font-size:13px;color:#fff;">📏 Horizontal Song Arrangement Timeline (✋ Drag to Reorder · 🎹 Touch/Click Section to Manage & Edit in Modal Card)</strong>
+                <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Touch any section in the timeline to edit its sequence, loop it, resize (1B/4B/16B), swap song/role, duplicate, or delete</span>
               </div>
               <div class="fold-btn-row">
                 <span style="font-size:11px;font-weight:800;color:#84dcc6;">QUICK ADD CURRENT SONG:</span>
@@ -9340,76 +8981,44 @@
             <div id="fold-visual-timeline" class="fold-tl-track"></div>
           </div>
 
-          <!-- 2. Detailed Timeline Block Sequence Cards (Reorder, Resize 1B/4B/16B, Swap Song/Bar, or Edit in Compose) -->
-          <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <strong style="font-size:12px;color:#f5d0fe;">🧬 Timeline Blocks — Drag or Use ←/→ to Reorder, Set Length (1B / 4B / 16B), or Click to Open Sequence Modal</strong>
-              <div class="fold-btn-row">
-                ${ARRANGEMENT_ROLES.map(
-                  (r) =>
-                    `<button type="button" class="fold-btn" data-add-sec-role="${r.id}" style="border-color:${r.color};padding:4px 8px;font-size:11px;">+ ${r.label}</button>`
-                ).join('')}
-              </div>
-            </div>
-            <div id="fold-mashup-sections-grid" class="fold-mashup-grid"></div>
-          </div>
-
-          <!-- 3. Save Arrangement, Queue in Outbox & Beam to Peers -->
+          <!-- Save Arrangement & Beam to Peers -->
           <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
             <input id="fold-arrange-title-input" class="fold-crate-input" type="text" placeholder="Save Arrangement Name (optional — e.g. Levee + Tame Impala Timeline)">
             <div class="fold-btn-row">
               <button type="button" id="fold-builder-save-crate-btn" class="fold-btn primary">💾 Save Arrangement</button>
-              <button type="button" id="fold-builder-queue-outbox-btn" class="fold-btn amber" title="Save & queue this arrangement in your Studio Outbox to push to Ableton when back on Wi-Fi">📥 Save & Queue in Outbox</button>
               <button type="button" id="fold-builder-beam-btn" class="fold-btn teal" title="Beam this arrangement live to collaborators on the same Wi-Fi">📡 Beam to Peers</button>
             </div>
-          </div>
-
-          <!-- 4. Live Ableton Track Clip & Scene Launcher -->
-          <div style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <strong style="font-size:12px;color:#84dcc6;">🎛️ Live Ableton Track Clip & Scene Launcher (Scenes 1–8)</strong>
-              <div class="fold-btn-row">
-                <button type="button" id="fold-refresh-clips-btn" class="fold-btn">🔄 Refresh Track Clips</button>
-                <button type="button" id="fold-stop-ableton-clips-btn" class="fold-btn">⏹ Stop Track Clips</button>
-              </div>
-            </div>
-            <div id="fold-ableton-clips-grid" class="fold-clips-grid"></div>
           </div>
         </div>
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: ARRANGEMENTS: PAST ARRANGEMENTS TO LOAD & STUDIO OUTBOX     -->
+      <!-- TAB: ARRANGEMENTS: PAST ARRANGEMENTS TO LOAD                     -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-crate">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-crate">
-            <h3>📂 Arrangements — Past Arrangements to Load & Studio Outbox</h3>
-            <span id="fold-summary-crate" class="fold-panel-summary">0 Saved Arrangements · 0 Outbox · 0 History</span>
+            <h3>📂 Arrangements — Past Arrangements to Load</h3>
+            <span id="fold-summary-crate" class="fold-panel-summary">0 Saved Arrangements · 0 Past Session History</span>
           </div>
           <div class="fold-btn-row">
             <button type="button" class="fold-btn chip-on" data-vault-filter="all">🗂️ All</button>
-            <button type="button" class="fold-btn" data-vault-filter="outbox">⏳ Studio Outbox</button>
             <button type="button" class="fold-btn" data-vault-filter="crate">💾 Saved Arrangements</button>
             <button type="button" class="fold-btn" data-vault-filter="history">🕒 Past Session History</button>
-            <button type="button" class="fold-btn" data-vault-filter="pcfiles">📂 PC MIDI Clips</button>
             <button class="fold-collapse-btn" data-toggle-card="card-crate">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
-          <!-- Sub-zone A: Saved Arrangements & Studio Outbox -->
+          <!-- Sub-zone A: Saved Arrangements -->
           <div id="fold-vault-crate-section" style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <strong style="font-size:12px;color:#84dcc6;">💾 Saved Arrangements & Offline Outbox Queue</strong>
-              <span style="font-size:11px;color:#9ca3af;">Load any past arrangement into <strong>Arrange</strong> or <strong>Compose</strong>, or push queued arrangements to Ableton Scenes!</span>
+              <strong style="font-size:12px;color:#84dcc6;">💾 Saved Arrangements</strong>
+              <span style="font-size:11px;color:#9ca3af;">Load any past arrangement into <strong>Arrange</strong> or <strong>Compose</strong>!</span>
             </div>
 
             <div class="fold-btn-row" style="gap:8px;">
               <input id="fold-crate-title-input" class="fold-crate-input" type="text" placeholder="Save Current Arrangement As (optional — defaults to Artist + Song + BPM)">
               <button type="button" id="fold-save-crate-btn" class="fold-btn primary">💾 Save Current Arrangement</button>
-              <button type="button" id="fold-queue-outbox-btn" class="fold-btn amber" title="Queue this arrangement in your Studio Outbox to push to Ableton when back on Wi-Fi">📥 Queue in Outbox</button>
-              <button type="button" id="fold-push-outbox-btn" class="fold-btn teal" title="Push queued Outbox arrangements straight into sequential Scenes on your selected Ableton track">🚀 Push Outbox → Ableton Scenes</button>
-              <button type="button" id="fold-sync-studio-only-btn" class="fold-btn" title="Sync all Offline Arrangements to your Studio PC library without overwriting active Ableton clips">🗂️ Sync → Studio PC Only</button>
             </div>
 
             <div id="fold-crate-items-list"></div>
@@ -9425,15 +9034,6 @@
               <button type="button" id="fold-clear-history-btn" class="fold-btn">🧹 Clear History</button>
             </div>
             <div id="fold-history-items-list"></div>
-          </div>
-
-          <!-- Sub-zone C: Studio PC MIDI Clips Folder -->
-          <div id="fold-vault-pcfiles-section" style="background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-              <strong style="font-size:12px;color:#fcd34d;">📂 Studio PC <code>MIDI Clips/</code> Vault</strong>
-              <span style="font-size:11px;color:#9ca3af;">Standard <code>.mid</code> files stored in your computer's <code>MIDI Clips/</code> directory</span>
-            </div>
-            <div id="fold-pc-midi-files-list"></div>
           </div>
         </div>
       </div>
@@ -9742,6 +9342,23 @@
           state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
           state.phonePlayer.lastStepTime = -0.001;
         }
+        renderSongBuilderAndClipsUI();
+        renderSectionSequenceModal();
+        updatePlayerButtons();
+      });
+    }
+
+    const disableSecLoopBtn = document.getElementById('fold-disable-sec-loop-btn');
+    if (disableSecLoopBtn) {
+      disableSecLoopBtn.addEventListener('click', () => {
+        state.timelineLoopSingle = false;
+        if (state.phonePlayer.playing && state.playbackMode === 'timeline') {
+          const ctx = getAudioCtx();
+          state.phonePlayer.startWallTime = ctx.currentTime + 0.01;
+          state.phonePlayer.lastStepTime = -0.001;
+        }
+        renderSongBuilderAndClipsUI();
+        renderSectionSequenceModal();
         updatePlayerButtons();
       });
     }
@@ -10038,11 +9655,11 @@
       });
     }
 
-    document.getElementById('fold-send-ableton-btn').addEventListener('click', () => {
+    document.getElementById('fold-send-ableton-btn')?.addEventListener('click', () => {
       sendCurrentBeatToAbleton(true);
     });
 
-    document.getElementById('fold-split-scenes-btn').addEventListener('click', () => {
+    document.getElementById('fold-split-scenes-btn')?.addEventListener('click', () => {
       sendSplitSectionsToAbletonScenes();
     });
 
@@ -10202,12 +9819,12 @@
     });
     document.getElementById('fold-conn-badge').style.cursor = 'pointer';
 
-    document.getElementById('fold-target-track-select').addEventListener('change', (e) => {
+    document.getElementById('fold-target-track-select')?.addEventListener('change', (e) => {
       state.targetTrack = e.target.value;
       updatePlayerButtons();
     });
 
-    document.getElementById('fold-target-slot-select').addEventListener('change', (e) => {
+    document.getElementById('fold-target-slot-select')?.addEventListener('change', (e) => {
       state.targetSlot = e.target.value;
     });
 
@@ -10219,7 +9836,7 @@
       });
     });
 
-    document.getElementById('fold-download-midi-btn').addEventListener('click', () => {
+    document.getElementById('fold-download-midi-btn')?.addEventListener('click', () => {
       const { startStep, endStep, barsCount, durationBeats } = getActiveLoopStepBounds();
       const notes = buildNotesFromSequencer(startStep, endStep);
       const blob = buildMidiBlob(notes, durationBeats, state.tempo);
