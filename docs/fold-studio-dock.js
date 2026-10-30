@@ -2454,6 +2454,312 @@
   }
 
   // ==========================================================================
+  // 4B. 21 Swappable Bass Rigs & Artist Bassist Profiles (WebAudio + MIDI)
+  // ==========================================================================
+  const BASS_KITS = [
+    {
+      id: 'jpj_jazz',
+      name: "🔨 John Paul Jones '62 Fender Jazz Bass (Led Zeppelin)",
+      oscType: 'sawtooth', subMix: 0.78, cutoffBase: 420, cutoffEnv: 1150, resonance: 2.2, decay: 0.38, drive: 0.28
+    },
+    {
+      id: 'bootsy_funk',
+      name: '👑 Bootsy Space-Funk & One-Drop P-Bass (James Brown)',
+      oscType: 'sawtooth', subMix: 0.72, cutoffBase: 520, cutoffEnv: 1850, resonance: 4.2, decay: 0.28, drive: 0.32
+    },
+    {
+      id: 'prince_synth',
+      name: '☔ Minneapolis Oberheim OB-Xa & Slap Bass (Prince)',
+      oscType: 'sawtooth', subMix: 0.82, cutoffBase: 480, cutoffEnv: 2100, resonance: 4.8, decay: 0.26, drive: 0.35
+    },
+    {
+      id: 'gorillaz_dub',
+      name: '🦍 Demon Days Dub Reggae Sub & P-Bass (Gorillaz)',
+      oscType: 'triangle', subMix: 0.92, cutoffBase: 310, cutoffEnv: 880, resonance: 2.5, decay: 0.44, drive: 0.34
+    },
+    {
+      id: 'pino_flatwound',
+      name: "🍯 Pino Palladino Flatwound '63 P-Bass (D'Angelo)",
+      oscType: 'triangle', subMix: 0.95, cutoffBase: 260, cutoffEnv: 580, resonance: 1.5, decay: 0.42, drive: 0.14
+    },
+    {
+      id: 'badu_sub',
+      name: "🔮 Mama's Gun Warm Sub & Upright Pocket (Erykah Badu)",
+      oscType: 'triangle', subMix: 0.94, cutoffBase: 280, cutoffEnv: 640, resonance: 1.8, decay: 0.4, drive: 0.16
+    },
+    {
+      id: 'mosdef_upright',
+      name: '🌙 Brooklyn SP-1200 Filtered Jazz & Upright Bass (Mos Def)',
+      oscType: 'triangle', subMix: 0.88, cutoffBase: 320, cutoffEnv: 740, resonance: 2.1, decay: 0.34, drive: 0.22
+    },
+    {
+      id: 'kanye_soul',
+      name: '🐻 Warm Motown P-Bass & 808 Sub (Kanye West)',
+      oscType: 'sawtooth', subMix: 0.86, cutoffBase: 360, cutoffEnv: 920, resonance: 2.0, decay: 0.4, drive: 0.25
+    },
+    {
+      id: 'mccartney_hofner',
+      name: "🪲 Paul McCartney '61 Höfner Violin & Rickenbacker (The Beatles)",
+      oscType: 'triangle', subMix: 0.82, cutoffBase: 440, cutoffEnv: 1080, resonance: 2.1, decay: 0.32, drive: 0.24
+    },
+    {
+      id: 'daft_synth',
+      name: '🤖 French Touch Slap & MS-20 Disco Filter Bass (Daft Punk)',
+      oscType: 'sawtooth', subMix: 0.8, cutoffBase: 460, cutoffEnv: 2200, resonance: 5.2, decay: 0.25, drive: 0.36
+    },
+    {
+      id: 'strokes_pick',
+      name: '🎸 Nikolai Fraiture Picked Ampeg SVT P-Bass (The Strokes)',
+      oscType: 'sawtooth', subMix: 0.68, cutoffBase: 580, cutoffEnv: 1450, resonance: 2.4, decay: 0.26, drive: 0.42
+    },
+    {
+      id: 'outkast_sub',
+      name: '🛸 ATLiens Trunk-Rattling 808 & P-Funk Bass (OutKast)',
+      oscType: 'sawtooth', subMix: 0.92, cutoffBase: 340, cutoffEnv: 1380, resonance: 3.6, decay: 0.42, drive: 0.3
+    },
+    {
+      id: 'beegees_disco',
+      name: '🕺 Maurice Gibb Octave-Strut Disco Bass (Bee Gees)',
+      oscType: 'sawtooth', subMix: 0.76, cutoffBase: 490, cutoffEnv: 1420, resonance: 2.8, decay: 0.24, drive: 0.22
+    },
+    {
+      id: 'geddy_rick',
+      name: '🦉 Geddy Lee Rickenbacker 4001 Growl & Taurus (Rush)',
+      oscType: 'sawtooth', subMix: 0.72, cutoffBase: 640, cutoffEnv: 2150, resonance: 3.4, decay: 0.31, drive: 0.48
+    },
+    {
+      id: 'radiohead_p',
+      name: "📻 Colin Greenwood '70s P-Bass & Prophet Sub (Radiohead)",
+      oscType: 'triangle', subMix: 0.84, cutoffBase: 390, cutoffEnv: 1020, resonance: 2.3, decay: 0.35, drive: 0.22
+    },
+    {
+      id: 'collins_taurus',
+      name: '🥁 Leland Sklar & Moog Taurus Sub Pedals (Phil Collins)',
+      oscType: 'sawtooth', subMix: 0.9, cutoffBase: 350, cutoffEnv: 980, resonance: 2.6, decay: 0.46, drive: 0.24
+    },
+    {
+      id: 'hotchip_sh101',
+      name: '🎹 Modular Roland SH-101 & Acid Disco Bass (Hot Chip)',
+      oscType: 'square', subMix: 0.82, cutoffBase: 430, cutoffEnv: 1950, resonance: 4.9, decay: 0.22, drive: 0.3
+    },
+    {
+      id: 'hoppus_pbass',
+      name: '🛹 Mark Hoppus Ernie Ball P-Bass Pick Drive (blink-182)',
+      oscType: 'sawtooth', subMix: 0.66, cutoffBase: 660, cutoffEnv: 1750, resonance: 2.5, decay: 0.24, drive: 0.45
+    },
+    {
+      id: 'parker_fuzz',
+      name: '🌀 Kevin Parker Höfner Club Bass + KTG-1 Fuzz (Tame Impala)',
+      oscType: 'sawtooth', subMix: 0.78, cutoffBase: 540, cutoffEnv: 1820, resonance: 3.8, decay: 0.29, drive: 0.52
+    },
+    {
+      id: 'kumalo_fretless',
+      name: '🌍 Bakithi Kumalo Washburn Fretless & StingRay (Paul Simon)',
+      oscType: 'triangle', subMix: 0.82, cutoffBase: 510, cutoffEnv: 1580, resonance: 3.1, decay: 0.36, drive: 0.2
+    },
+    {
+      id: 'novoselic_svt',
+      name: '🧷 Krist Novoselic Gibson Ripper + Ampeg SVT (Nirvana)',
+      oscType: 'sawtooth', subMix: 0.74, cutoffBase: 590, cutoffEnv: 1680, resonance: 2.9, decay: 0.33, drive: 0.46
+    }
+  ];
+
+  const ARTIST_BASS_PROFILES = {
+    zeppelin: { bassist: 'John Paul Jones', kit: 'jpj_jazz', rootMidi: 40, scale: 'minor', style: 'blues_riff' },
+    jamesbrown: { bassist: 'Bootsy Collins & Bernard Odum', kit: 'bootsy_funk', rootMidi: 38, scale: 'dorian', style: 'funk_one' },
+    prince: { bassist: 'BrownMark & Prince Synth Bass', kit: 'prince_synth', rootMidi: 45, scale: 'minor', style: 'synth_funk' },
+    gorillaz: { bassist: 'Murdoc Niccals / Dub Sub', kit: 'gorillaz_dub', rootMidi: 39, scale: 'minor', style: 'dub_bounce' },
+    dangelo: { bassist: 'Pino Palladino', kit: 'pino_flatwound', rootMidi: 38, scale: 'minor', style: 'neosoul_pocket' },
+    badu: { bassist: 'Ron Carter & Braylon Lacy', kit: 'badu_sub', rootMidi: 41, scale: 'minor', style: 'neosoul_pocket' },
+    mosdef: { bassist: 'Doug Wimbish / SP-1200 Sub', kit: 'mosdef_upright', rootMidi: 43, scale: 'minor', style: 'boombap_walk' },
+    kanye: { bassist: 'Motown Soul-Chop & 808 Sub', kit: 'kanye_soul', rootMidi: 41, scale: 'minor', style: 'soul_walk' },
+    beatles: { bassist: 'Paul McCartney', kit: 'mccartney_hofner', rootMidi: 38, scale: 'dorian', style: 'mccartney_melodic' },
+    daftpunk: { bassist: 'Thomas Bangalter & Nathan East', kit: 'daft_synth', rootMidi: 45, scale: 'minor', style: 'disco_octave' },
+    strokes: { bassist: 'Nikolai Fraiture', kit: 'strokes_pick', rootMidi: 48, scale: 'major', style: 'picked_8th' },
+    outkast: { bassist: 'Preston Crump & Stankonia Sub', kit: 'outkast_sub', rootMidi: 40, scale: 'minor', style: 'pfunk_sub' },
+    beegees: { bassist: 'Maurice Gibb', kit: 'beegees_disco', rootMidi: 41, scale: 'minor', style: 'disco_octave' },
+    rush: { bassist: 'Geddy Lee', kit: 'geddy_rick', rootMidi: 40, scale: 'minor', style: 'prog_drive' },
+    radiohead: { bassist: 'Colin Greenwood', kit: 'radiohead_p', rootMidi: 40, scale: 'minor', style: 'kraut_ostinato' },
+    philcollins: { bassist: 'Leland Sklar & Moog Taurus', kit: 'collins_taurus', rootMidi: 38, scale: 'minor', style: 'pedal_pulse' },
+    hotchip: { bassist: 'Al Doyle & Joe Goddard', kit: 'hotchip_sh101', rootMidi: 43, scale: 'minor', style: 'sh101_arp' },
+    blink182: { bassist: 'Mark Hoppus', kit: 'hoppus_pbass', rootMidi: 48, scale: 'major', style: 'punk_8th' },
+    tameimpala: { bassist: 'Kevin Parker (Höfner Fuzz)', kit: 'parker_fuzz', rootMidi: 37, scale: 'minor', style: 'parker_psych' },
+    paulsimon: { bassist: 'Bakithi Kumalo (Fretless)', kit: 'kumalo_fretless', rootMidi: 41, scale: 'major', style: 'kumalo_graceland' },
+    nirvana: { bassist: 'Krist Novoselic (Gibson Ripper)', kit: 'novoselic_svt', rootMidi: 40, scale: 'minor', style: 'novoselic_grunge' }
+  };
+
+  // Song-level musical root MIDI pitches (36 = C1 .. 47 = B1) & mode overrides for signature basslines
+  const SONG_KEY_OVERRIDES = {
+    zep_levee: { rootMidi: 41, scale: 'minor' },         // F minor
+    zep_kashmir: { rootMidi: 38, scale: 'dorian' },      // D modal
+    zep_immigrant: { rootMidi: 42, scale: 'minor' },     // F#m octave gallop
+    zep_goodtimes: { rootMidi: 40, scale: 'minor' },     // E minor
+    zep_foolinrain: { rootMidi: 48, scale: 'major' },    // C major samba-blues
+    bea_cometogether: { rootMidi: 38, scale: 'minor' },  // D minor slide hook
+    bea_tomorrownever: { rootMidi: 48, scale: 'major' }, // C mixolydian drone
+    bea_rain: { rootMidi: 43, scale: 'major' },          // G major McCartney high bass
+    dp_aroundtheworld: { rootMidi: 45, scale: 'minor' }, // A minor disco octave walk
+    dp_getlucky: { rootMidi: 47, scale: 'dorian' },      // B dorian slap groove
+    bg_stayinalive: { rootMidi: 41, scale: 'minor' },    // F minor octave strut
+    rush_tomsawyer: { rootMidi: 40, scale: 'minor' },    // E minor Taurus + Rick
+    rush_yyz: { rootMidi: 47, scale: 'minor' },          // B tritone/minor prog
+    rad_15step: { rootMidi: 37, scale: 'minor' },        // C# minor
+    rad_weirdfishes: { rootMidi: 40, scale: 'minor' },   // E minor arpeggio ostinato
+    pc_intheair: { rootMidi: 38, scale: 'minor' },       // D minor Taurus pedal
+    ti_lessiknow: { rootMidi: 37, scale: 'minor' },      // C# minor ("The Less I Know the Better")
+    ti_elephant: { rootMidi: 38, scale: 'minor' },       // D blues-fuzz swing ("Elephant")
+    ti_letithappen: { rootMidi: 45, scale: 'minor' },    // A minor psych-disco
+    ti_backwards: { rootMidi: 41, scale: 'major' },      // F major walking hook
+    ti_borderline: { rootMidi: 45, scale: 'minor' },     // A minor boogie
+    ps_callmeal: { rootMidi: 41, scale: 'major' },       // F major Bakithi Kumalo bounce
+    ps_graceland: { rootMidi: 40, scale: 'major' },      // E major mbaqanga walk
+    ps_50ways: { rootMidi: 40, scale: 'minor' },         // E minor Tony Levin pocket
+    ps_diamonds: { rootMidi: 41, scale: 'major' },       // F major fretless singing bass
+    ps_lateintheevening: { rootMidi: 41, scale: 'major' }, // F mixolydian horn-locked bass
+    nir_teenspirit: { rootMidi: 41, scale: 'minor' },    // F -> Bb -> Ab -> Db grunge riff
+    nir_comeasyouare: { rootMidi: 40, scale: 'minor' },  // E minor walking chorus riff
+    nir_inbloom: { rootMidi: 46, scale: 'minor' },       // Bb power riff
+    nir_heartshapedbox: { rootMidi: 45, scale: 'minor' },// A -> F -> D drop-D riff
+    nir_loungeact: { rootMidi: 47, scale: 'major' }      // B major Novoselic signature bass intro!
+  };
+
+  const NOTE_NAMES_SHARP = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+  function midiToNoteLabel(midiPitch) {
+    const p = Math.max(24, Math.min(84, Math.round(Number(midiPitch) || 40)));
+    const name = NOTE_NAMES_SHARP[p % 12];
+    const oct = Math.floor(p / 12) - 1;
+    return `${name}${oct}`;
+  }
+
+  function getArtistBassProfile(artistId, songId) {
+    const base = ARTIST_BASS_PROFILES[artistId] || ARTIST_BASS_PROFILES.zeppelin;
+    const over = songId && SONG_KEY_OVERRIDES[songId] ? SONG_KEY_OVERRIDES[songId] : null;
+    return {
+      ...base,
+      rootMidi: over ? over.rootMidi : base.rootMidi,
+      scale: over ? over.scale : base.scale
+    };
+  }
+
+  function getBassVoicesForSong(songId = null) {
+    const sid = songId || (typeof state !== 'undefined' && state.selectedSongId) || 'zep_levee';
+    const { artist } = findSongById(sid);
+    const prof = getArtistBassProfile(artist.artistId, sid);
+    const root = prof.rootMidi || 40;
+    const isMajor = prof.scale === 'major';
+    const thirdInterval = isMajor ? 4 : 3;
+    const seventhInterval = isMajor ? 9 : 10; // Major 6th (Mbaqanga/Soul) or Minor 7th (Funk/Rock)
+
+    const pitches = [
+      root,                         // 0: Low Root (e.g. E1)
+      Math.max(33, root - 2),       // 1: Low b7 / 5th Pickup (e.g. D1)
+      root + thirdInterval,         // 2: 3rd (e.g. G1 / G#1)
+      root + 5,                     // 3: 4th (e.g. A1)
+      root + 7,                     // 4: 5th (e.g. B1)
+      root + seventhInterval,       // 5: 6th / b7 (e.g. C#2 / D2)
+      root + 12,                    // 6: Octave Root (e.g. E2)
+      root + 12 + thirdInterval     // 7: High 10th / Fill (e.g. G2)
+    ];
+
+    const labels = [
+      { id: 'bass_root', role: 'ROOT', color: '#10b981' },
+      { id: 'bass_sub', role: 'LOW SUB', color: '#06b6d4' },
+      { id: 'bass_3rd', role: isMajor ? 'MAJ 3RD' : 'MIN 3RD', color: '#38bdf8' },
+      { id: 'bass_4th', role: '4TH', color: '#84dcc6' },
+      { id: 'bass_5th', role: '5TH', color: '#f59e0b' },
+      { id: 'bass_7th', role: isMajor ? '6TH' : 'b7TH', color: '#fb923c' },
+      { id: 'bass_oct', role: 'OCTAVE', color: '#e73ff6' },
+      { id: 'bass_high', role: 'HIGH RUN', color: '#f43f5e' }
+    ];
+
+    return labels.map((l, idx) => {
+      const p = pitches[idx];
+      const nLbl = midiToNoteLabel(p);
+      return {
+        id: l.id,
+        name: `${l.role} (${nLbl})`,
+        short: nLbl,
+        pitch: p,
+        color: l.color
+      };
+    });
+  }
+
+  function getActiveVoices(instrumentOverride = null, songIdOverride = null) {
+    const inst = instrumentOverride || (typeof state !== 'undefined' && state.composeInstrument) || 'drums';
+    if (inst === 'bass') {
+      return getBassVoicesForSong(songIdOverride);
+    }
+    return DRUM_VOICES;
+  }
+
+  function getActiveBassKitProfile(bassKitIdOverride = null) {
+    const kid = bassKitIdOverride || (typeof state !== 'undefined' && state.bassKitId) || 'jpj_jazz';
+    return BASS_KITS.find((k) => k.id === kid) || BASS_KITS[0];
+  }
+
+  function triggerBassVoice(ctx, pitch, velocity = 105, when = 0, durationSec = 0.28, bassKitOverride = null) {
+    const kit = getActiveBassKitProfile(bassKitOverride);
+    const t0 = Math.max(ctx.currentTime, when || ctx.currentTime);
+    const midi = Math.max(28, Math.min(76, Number(pitch) || 40));
+    const freq = 440 * Math.pow(2, (midi - 69) / 12);
+    const velNorm = Math.max(0.15, Math.min(1.0, (velocity || 100) / 127));
+    const isGhost = velocity < 62;
+    const isAccent = velocity >= 115;
+
+    const noteDur = isGhost
+      ? Math.min(0.11, durationSec * 0.55)
+      : Math.max(0.16, Math.min(0.85, durationSec || kit.decay || 0.32));
+
+    // Main harmonic oscillator (Sawtooth / Triangle / Square)
+    const oscMain = ctx.createOscillator();
+    oscMain.type = kit.oscType || 'sawtooth';
+    oscMain.frequency.setValueAtTime(freq, t0);
+    if (isAccent) {
+      // Subtle pluck pitch-attack on accented slap/picked notes
+      oscMain.frequency.setValueAtTime(freq * 1.035, t0);
+      oscMain.frequency.exponentialRampToValueAtTime(freq, t0 + 0.025);
+    }
+
+    // Deep Sub-Oscillator (Sine at fundamental)
+    const oscSub = ctx.createOscillator();
+    oscSub.type = 'sine';
+    oscSub.frequency.setValueAtTime(freq, t0);
+
+    // Low-pass resonant filter with envelope
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    const baseCut = isGhost ? kit.cutoffBase * 0.65 : kit.cutoffBase;
+    const peakCut = isGhost
+      ? baseCut + 220
+      : baseCut + kit.cutoffEnv * (isAccent ? 1.25 : 0.85) * velNorm;
+    filter.frequency.setValueAtTime(peakCut, t0);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(90, baseCut), t0 + Math.min(0.18, noteDur * 0.75));
+    filter.Q.setValueAtTime(isAccent ? kit.resonance * 1.2 : kit.resonance, t0);
+
+    const mainGain = ctx.createGain();
+    const subGain = ctx.createGain();
+    const masterGain = ctx.createGain();
+
+    mainGain.gain.setValueAtTime(0.54 * (1 + (kit.drive || 0.2) * 0.4), t0);
+    subGain.gain.setValueAtTime(0.68 * (kit.subMix || 0.8), t0);
+
+    const peakAmp = 0.72 * velNorm;
+    masterGain.gain.setValueAtTime(0.001, t0);
+    masterGain.gain.linearRampToValueAtTime(peakAmp, t0 + 0.006);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, t0 + noteDur + 0.03);
+
+    oscMain.connect(mainGain).connect(filter);
+    oscSub.connect(subGain).connect(filter);
+    filter.connect(masterGain).connect(ctx.destination);
+
+    oscMain.start(t0);
+    oscSub.start(t0);
+    oscMain.stop(t0 + noteDur + 0.04);
+    oscSub.stop(t0 + noteDur + 0.04);
+  }
+
+  // ==========================================================================
   // 5. 16-Bar (256-Step) 4-Section Song Arrangement Generator
   //    Covers 4 Distinct Song Parts per Reference Track:
   //    - Sec 1 (Bars 1–4):  🟢 Intro / Verse (Stripped Groove & Signature Riff)
@@ -3190,6 +3496,178 @@
   }
 
   // ==========================================================================
+  // 5B. 16-Bar (256-Step) Artist & Song Signature Bassline Generator
+  //     Maps 8 Bass Scale Voices (0: Root, 1: Sub, 2: 3rd, 3: 4th, 4: 5th, 5: 7th, 6: Octave, 7: High Run)
+  // ==========================================================================
+  function generateSongBassGrid(songId, intensity = 70, ghostPct = 45, octaveEnergy = 60, fillPct = 65) {
+    const { artist, song } = findSongById(songId);
+    const prof = getArtistBassProfile(artist.artistId, song.id);
+    const style = prof.style || 'blues_riff';
+    const g = createEmptyGrid256();
+
+    const setNote = (vIdx, step, st = 1, sub = 1) => {
+      if (step < 0 || step >= TOTAL_STEPS) return;
+      for (let v = 0; v < 8; v++) {
+        g[v][step] = { state: 0, sub: 1 };
+      }
+      g[vIdx][step] = { state: st, sub };
+    };
+
+    for (let b = 0; b < TOTAL_BARS; b++) {
+      const o = b * 16;
+      const secIdx = Math.floor(b / 4); // 0: Verse, 1: Chorus, 2: Bridge, 3: Climax
+      const barInSec = b % 4;
+      const isEvenBar = barInSec % 2 === 1;
+
+      const secIntensity =
+        secIdx === 0
+          ? Math.max(20, intensity - 12)
+          : secIdx === 1
+          ? Math.min(100, intensity + 10)
+          : secIdx === 2
+          ? intensity
+          : Math.min(100, intensity + 20);
+
+      const secOctave =
+        secIdx === 0
+          ? Math.max(15, octaveEnergy - 15)
+          : secIdx === 1
+          ? Math.min(100, octaveEnergy + 15)
+          : secIdx === 3
+          ? Math.min(100, octaveEnergy + 22)
+          : octaveEnergy;
+
+      // 1. Anchor Bass to the Song's Kick Drum Pattern first
+      const kickList = isEvenBar && song.kicksBar2 ? song.kicksBar2 : song.kicks || [0, 8];
+      for (let i = 0; i < kickList.length; i++) {
+        const s = kickList[i];
+        if (s === 0) {
+          setNote(0, o + s, 2, 1); // Strong Root on Beat 1
+        } else if (s === 8) {
+          // Beat 3: alternate Root, 4th, or 5th depending on section/bar
+          const vBeat3 = secIdx === 1 ? (isEvenBar ? 3 : 4) : secIdx === 2 ? 2 : 0;
+          setNote(vBeat3, o + s, 2, 1);
+        } else if (secIntensity >= 28 + (i % 3) * 14) {
+          const degCycle = [0, 4, 2, 3, 5, 1];
+          const vPick = degCycle[(i + b + secIdx) % degCycle.length];
+          setNote(vPick, o + s, 1, 1);
+        }
+      }
+
+      // 2. Song & Artist Signature Bass Riff Overlay
+      if (songId === 'ti_lessiknow') {
+        // Kevin Parker "The Less I Know the Better" signature disco-psych bass hook
+        const riff = isEvenBar
+          ? [[0, 0, 2], [2, 6, 1], [3, 4, 2], [6, 5, 1], [8, 3, 2], [10, 2, 1], [12, 4, 2], [14, 5, 1]]
+          : [[0, 0, 2], [3, 2, 1], [4, 3, 2], [6, 4, 2], [8, 5, 2], [10, 6, 1], [12, 4, 2], [14, 2, 1]];
+        for (const [st, v, vel] of riff) setNote(v, o + st, vel, 1);
+      } else if (songId === 'ti_elephant') {
+        // Kevin Parker "Elephant" heavy swung blues-fuzz 8th chug
+        for (let s = 0; s < 16; s += 2) {
+          const v = s >= 12 && isEvenBar ? (s === 12 ? 2 : 4) : s === 6 ? 6 : 0;
+          setNote(v, o + s, s % 4 === 0 ? 2 : 1, 1);
+        }
+      } else if (songId === 'ps_callmeal' || style === 'kumalo_graceland') {
+        // Bakithi Kumalo joyous Graceland major-pentatonic bounce (Root - 3rd - 5th - 6th - Octave)
+        const kumalo = isEvenBar
+          ? [[0, 3, 2], [2, 5, 1], [4, 4, 2], [6, 6, 2], [8, 0, 2], [10, 2, 1], [12, 4, 2], [14, 7, 1], [15, 4, 3]]
+          : [[0, 0, 2], [2, 2, 1], [3, 4, 3], [4, 3, 2], [6, 4, 1], [8, 4, 2], [10, 6, 2], [12, 2, 1], [14, 1, 1]];
+        for (const [st, v, vel] of kumalo) {
+          if (vel !== 3 || ghostPct >= 25) setNote(v, o + st, vel, 1);
+        }
+      } else if (songId === 'nir_comeasyouare') {
+        // Krist Novoselic "Come As You Are" watery chorus 8th-note walking riff
+        const walk = [0, 0, 1, 2, 0, 2, 0, 1];
+        for (let i = 0; i < 8; i++) {
+          setNote(walk[i], o + i * 2, i === 0 || i === 3 ? 2 : 1, 1);
+        }
+      } else if (songId === 'nir_loungeact') {
+        // Krist Novoselic "Lounge Act" iconic melodic jumping bassline
+        const lounge = [[0, 0, 2], [2, 4, 1], [3, 6, 2], [4, 5, 1], [6, 3, 2], [8, 2, 2], [10, 3, 1], [12, 4, 2], [14, 1, 1]];
+        for (const [st, v, vel] of lounge) setNote(v, o + st, vel, 1);
+      } else if (style === 'novoselic_grunge' || style === 'punk_8th' || style === 'picked_8th') {
+        // Driving picked 8th-note rock/grunge/pop-punk progression (Root -> 4th -> 3rd -> 5th across bars)
+        const barRootV = [0, 3, 2, 4][barInSec];
+        const stepStride = secIntensity >= 55 ? 2 : 4;
+        for (let s = 0; s < 16; s += stepStride) {
+          const v = s === 14 && secOctave >= 50 ? 6 : barRootV;
+          setNote(v, o + s, s % 4 === 0 ? 2 : 1, 1);
+        }
+      } else if (style === 'disco_octave' || style === 'sh101_arp') {
+        // Disco / French Touch / Indie-Dance Octave Bounce (Low Root on beat, Octave on '&' offbeat!)
+        for (let beat = 0; beat < 4; beat++) {
+          const bs = beat * 4;
+          const lowV = secIdx === 1 && beat >= 2 ? 3 : 0;
+          const highV = secIdx === 1 && beat >= 2 ? 7 : 6;
+          setNote(lowV, o + bs, 2, 1);
+          if (secOctave >= 30) {
+            setNote(highV, o + bs + 2, 2, 1);
+          }
+          if (secIntensity >= 68 && beat % 2 === 1) {
+            setNote(4, o + bs + 3, 1, 1);
+          }
+        }
+      } else if (style === 'funk_one' || style === 'synth_funk' || style === 'pfunk_sub') {
+        // "On The One" heavy funk pocket + syncopated 16th b7 / 3rd / octave pops
+        setNote(0, o + 0, 2, 1);
+        setNote(1, o + 3, 1, 1);
+        if (secOctave >= 45) setNote(6, o + 6, 2, 1);
+        setNote(2, o + 7, 1, 1);
+        setNote(4, o + 10, 1, 1);
+        if (isEvenBar || secIdx >= 1) {
+          setNote(5, o + 13, 2, 1);
+          setNote(2, o + 14, 1, 1);
+        }
+      } else if (style === 'prog_drive' || style === 'kraut_ostinato') {
+        // Geddy Lee / Colin Greenwood hypnotic 16th/8th melodic ostinato
+        const pat = [[0, 0, 2], [2, 0, 1], [3, 4, 1], [6, 5, 2], [8, 0, 2], [10, 2, 1], [11, 3, 1], [14, 4, 2]];
+        for (const [st, v, vel] of pat) setNote(v, o + st, vel, 1);
+      } else {
+        // Classic Blues-Rock / Neo-Soul / Boom-Bap / McCartney melodic pocket
+        if (secOctave >= 55 && barInSec % 2 === 0) {
+          setNote(6, o + 6, 1, 1);
+        }
+        if (secIntensity >= 50) {
+          setNote(isEvenBar ? 3 : 2, o + 10, 1, 1);
+          setNote(4, o + 14, 1, 1);
+        }
+      }
+
+      // 3. Ghost / Muted Percussive Dead-Notes in the Pocket
+      if (ghostPct >= 35) {
+        const ghostCandidates = [1, 5, 9, 11, 15];
+        for (const gs of ghostCandidates) {
+          const hasAny = [0, 1, 2, 3, 4, 5, 6, 7].some((v) => g[v][o + gs].state > 0);
+          if (!hasAny && (gs + b) % 3 === 0 && ghostPct >= 40 + (gs % 4) * 10) {
+            setNote(0, o + gs, 3, 1); // State 3 = Muted/Dead Ghost Pluck
+          }
+        }
+      }
+
+      // 4. Section-End Bass Walkup / Turnaround Runs (Bar 4, 8, 12, 16)
+      if (barInSec === 3 && fillPct >= 30) {
+        const isClimaxBar = secIdx === 3;
+        if (fillPct >= 65 || isClimaxBar) {
+          // 2-beat melodic bass turnaround run (steps 8..15) walking up/down the scale into Beat 1
+          const runSteps = isClimaxBar
+            ? [[8, 2, 2], [9, 3, 1], [10, 4, 2], [11, 5, 1], [12, 6, 2], [13, 7, 2], [14, 6, 2], [15, 4, 2]]
+            : [[10, 2, 1], [12, 3, 2], [13, 4, 1], [14, 5, 2], [15, 1, 2]];
+          for (const [st, v, vel] of runSteps) {
+            setNote(v, o + st, vel, 1);
+          }
+        } else {
+          // 1-beat chromatic/pentatonic approach (steps 12..15)
+          setNote(2, o + 12, 1, 1);
+          setNote(4, o + 14, 2, 1);
+          setNote(1, o + 15, 2, 1);
+        }
+      }
+    }
+
+    return g;
+  }
+
+  // ==========================================================================
   // 6. Client-Side Standard MIDI File (.mid) Builder
   // ==========================================================================
   function writeVarLen(value) {
@@ -3264,10 +3742,11 @@
   const CRATE_STORAGE_KEY = 'sessh_crate_v1';
   const HISTORY_STORAGE_KEY = 'sessh_history_v1';
   const PLAYER_PROFILE_KEY = 'sessh_player_v1';
-  const APP_VERSION = 'v2.5.0 (PWA Build v26)';
+  const APP_VERSION = 'v2.6.0 (PWA Build v27)';
 
   const WORKSPACE_TABS = [
-    { id: 'compose', icon: '🎛️', label: 'Compose', sub: 'Select · Edit · Tweak' },
+    { id: 'songs', icon: '🎵', label: 'Songs', sub: '21 Bands · 105 Songs' },
+    { id: 'compose', icon: '🎛️', label: 'Compose', sub: 'Pick Drums or Bass · Edit · Play' },
     { id: 'arrange', icon: '🎬', label: 'Arrange', sub: 'Timeline · Review · Save' },
     { id: 'arrangements', icon: '📂', label: 'Arrangements', sub: 'Past Arrangements' },
     { id: 'settings', icon: '⚙️', label: 'Settings', sub: 'Sync · Ableton · Wi-Fi · Peers' }
@@ -3286,10 +3765,16 @@
     { id: 'outro', label: '🏁 Outro', color: '#e73ff6', defaultSlice: 3 }
   ];
 
-  function createDefaultArrangementSections(songId = 'zep_levee', authorName = 'Producer', authorColor = '#10b981') {
+  function createDefaultArrangementSections(
+    songId = 'zep_levee',
+    authorName = 'Producer',
+    authorColor = '#10b981',
+    trackType = 'drums'
+  ) {
     const roles = ['verse', 'chorus', 'bridge', 'climax'];
     return roles.map((roleId, i) => ({
-      id: `sec_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+      id: `sec_${trackType}_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+      trackType,
       roleId,
       songId,
       sourceSlice: i,
@@ -3317,7 +3802,8 @@
     return out;
   }
 
-  function getTimelineBlockGrid(secItem) {
+  function getTimelineBlockGrid(secItem, trackTypeOverride = null) {
+    const trackType = trackTypeOverride || (secItem && secItem.trackType) || 'drums';
     const bars = Math.max(1, Math.min(16, Number(secItem?.bars) || 4));
     const targetSteps = bars * 16;
     if (
@@ -3341,13 +3827,22 @@
     }
 
     const sid = (secItem && secItem.songId) || state.selectedSongId || 'zep_levee';
-    const fullSongGrid = generateSongGrooveGrid(
-      sid,
-      state.intensityPct,
-      state.ghostPct,
-      state.hatEnergyPct,
-      state.fillPct
-    );
+    const fullSongGrid =
+      trackType === 'bass'
+        ? generateSongBassGrid(
+            sid,
+            state.intensityPct,
+            state.ghostPct,
+            state.hatEnergyPct,
+            state.fillPct
+          )
+        : generateSongGrooveGrid(
+            sid,
+            state.intensityPct,
+            state.ghostPct,
+            state.hatEnergyPct,
+            state.fillPct
+          );
     let startStep = 0;
     if (bars === 1) {
       const barIdx = Math.max(0, Math.min(15, Number(secItem?.sourceBar ?? (Number(secItem?.sourceSlice || 0) * 4))));
@@ -3360,13 +3855,19 @@
   }
 
   function normalizeTabId(rawTab) {
-    if (rawTab === 'compose' || rawTab === 'arrange' || rawTab === 'arrangements' || rawTab === 'settings') {
+    if (
+      rawTab === 'songs' ||
+      rawTab === 'compose' ||
+      rawTab === 'arrange' ||
+      rawTab === 'arrangements' ||
+      rawTab === 'settings'
+    ) {
       return rawTab;
     }
     if (rawTab === 'builder') return 'arrange';
     if (rawTab === 'crate') return 'arrangements';
     if (rawTab === 'collab') return 'settings';
-    return 'compose';
+    return 'songs';
   }
 
   const PLAYER_COLORS = [
@@ -3468,30 +3969,40 @@
     /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(window.location.hostname);
 
   const state = {
-    // 4-Tab Workspace State (Compose, Arrange, Arrangements, Settings)
-    activeTab: 'compose',           // 'compose' | 'arrange' | 'arrangements' | 'settings'
+    // 5-Tab Workspace State (Songs, Compose, Arrange, Arrangements, Settings)
+    activeTab: 'songs',             // 'songs' | 'compose' | 'arrange' | 'arrangements' | 'settings'
+    composeInstrument: 'drums',     // 'drums' | 'bass' (Switch between Drums and Bass in Compose!)
+    playBothInCompose: true,        // Play companion instrument (Drums + Bass together) in Compose playback
     workspaceLayoutMode: 'tabs',    // 'tabs' (focused zone view) | 'all' (show all zones stacked)
     desktopMenuClosed: false,       // True = desktop left navigation menu collapsed/closed
-    showInlinePadsInEdit: true,     // Show finger drum pads directly below sequencer in Compose tab
-    showFineTuneDials: false,       // Progressive disclosure for secondary drummer dials
+    showInlinePadsInEdit: true,     // Show finger drum/bass pads directly below sequencer in Compose tab
+    showFineTuneDials: false,       // Progressive disclosure for secondary dials
     showSharedGridInCollab: false,
     songSearchQuery: '',
     songTempoFilter: 'all',         // 'all' | 'slow' | 'mid' | 'fast'
     crateVaultFilter: 'all',        // 'all' | 'outbox' | 'crate' | 'history' | 'pcfiles'
     sectionSources: ['zep_levee', 'zep_levee', 'zep_levee', 'zep_levee'],
-    arrangementSections: createDefaultArrangementSections('zep_levee', initialProfile.name, initialProfile.color),
+    arrangementSections: createDefaultArrangementSections('zep_levee', initialProfile.name, initialProfile.color, 'drums'),
+    bassArrangementSections: createDefaultArrangementSections('zep_levee', initialProfile.name, initialProfile.color, 'bass'),
 
-    // Timeline Review, Global Timeline BPM & Section Modal State
-    selectedTimelineIdx: 0,         // Currently highlighted block on the Arrange timeline
+    // Multi-Track Timeline Review (Drum Track + Bass Track), Global Timeline BPM & Section Modal State
+    selectedTimelineIdx: 0,         // Currently highlighted block on the Drum Track timeline
+    selectedBassTimelineIdx: 0,     // Currently highlighted block on the Bass Track timeline
     editingTimelineIdx: null,       // Non-null when editing a specific timeline block inside Compose
+    editingTimelineTrack: 'drums',  // 'drums' | 'bass'
     modalSectionIdx: null,          // Non-null when the Section Sequence Editor Modal is open
+    modalTrack: 'drums',            // 'drums' | 'bass' (which track the modal is currently editing)
     modalSubSlice: 0,               // Active 4-bar slice (0..3) when viewing a 16-bar block in modal
     timelineHasUserSection: false,  // Becomes true when the first section is added to the timeline
     timelineBpm: null,              // Global BPM for the timeline, defined by the first section added
     timelineBpmSourceTitle: '',     // Name of the first section that defined the global timeline BPM
-    timelineLoopSingle: false,      // True = loop only selectedTimelineIdx block; False = play entire timeline
+    timelineLoopSingle: false,      // True = loop only selected block; False = play entire timeline
+    timelineLoopTrack: 'drums',     // 'drums' | 'bass' (which track's selected block defines the loop range)
+    drumTrackMuted: false,          // Mute Drum Track in Arrange Timeline playback
+    bassTrackMuted: false,          // Mute Bass Track in Arrange Timeline playback
     playbackMode: 'compose',        // 'compose' | 'timeline'
-    activeTimelineIdx: -1,          // Index of timeline block currently playing during timeline review
+    activeTimelineIdx: -1,          // Index of drum timeline block currently playing during timeline review
+    activeBassTimelineIdx: -1,      // Index of bass timeline block currently playing during timeline review
     activeTimelineBar: -1,          // 0-based bar across the full timeline during timeline review
     timelineToastMessage: '',       // Confirmation toast when adding bars to timeline
 
@@ -3500,8 +4011,9 @@
     bridgeUrl: isLocalBridgeOrigin
       ? window.location.origin
       : localStorage.getItem(BRIDGE_URL_KEY) || 'http://192.168.1.247:3333',
-    targetTrack: 'selected',   // 'selected' (follows Ableton's highlighted track) or explicit track index '0', '1', ...
-    targetSlot: 'selected',    // 'selected' (follows Ableton's highlighted clip slot/scene), 'artist', or explicit scene index '0', '1', ...
+    targetTrack: 'selected',        // Drum Track target in Ableton ('selected' or track index '0', '1', ...)
+    targetBassTrack: 'auto_bass',   // Bass Track target in Ableton ('auto_bass', 'new_midi', or track index '0', '1', ...)
+    targetSlot: 'selected',         // 'selected', 'artist', or explicit scene index '0', '1', ...
     abletonSelectedTrackIndex: 0,
     abletonSelectedTrackName: 'Selected Track',
     abletonSelectedSceneIndex: 0,
@@ -3531,9 +4043,10 @@
     selectedArtistId: 'zeppelin',
     selectedSongId: 'zep_levee',
     kitId: 'bonham',
+    bassKitId: 'jpj_jazz',
     tempo: 71,
 
-    // 6 Session Drummer Dials
+    // 6 Session Drummer / Bassist Dials
     intensityPct: 70,
     ghostPct: 45,
     hatEnergyPct: 60,
@@ -3550,6 +4063,8 @@
     brushMode: 'normal',
     mutedLanes: new Array(DRUM_VOICES.length).fill(false),
     grid: createEmptyGrid256(),
+    drumGrid: null,
+    bassGrid: null,
     undoHistory: [],
 
     activeStep: -1,
@@ -3558,10 +4073,11 @@
     noteRepeatRate: 0,
 
     currentNotes: [],
+    currentCompanionNotes: [],
     phonePlayer: {
       playing: false,
       startWallTime: 0,
-      lastStepTime: -1,
+      lastStepTime: -0.001,
       rafId: null
     }
   };
@@ -3573,22 +4089,35 @@
 
   function savePersistedState() {
     try {
+      if (state.composeInstrument === 'bass') {
+        state.bassGrid = cloneGrid256(state.grid);
+      } else {
+        state.drumGrid = cloneGrid256(state.grid);
+      }
       const payload = {
         activeTab: state.activeTab,
+        composeInstrument: state.composeInstrument,
+        playBothInCompose: state.playBothInCompose,
         workspaceLayoutMode: state.workspaceLayoutMode,
         desktopMenuClosed: state.desktopMenuClosed,
         showInlinePadsInEdit: state.showInlinePadsInEdit,
         showFineTuneDials: state.showFineTuneDials,
         sectionSources: state.sectionSources,
         arrangementSections: state.arrangementSections,
+        bassArrangementSections: state.bassArrangementSections,
         selectedTimelineIdx: state.selectedTimelineIdx,
+        selectedBassTimelineIdx: state.selectedBassTimelineIdx,
         timelineHasUserSection: state.timelineHasUserSection,
         timelineBpm: state.timelineBpm,
         timelineBpmSourceTitle: state.timelineBpmSourceTitle,
         timelineLoopSingle: state.timelineLoopSingle,
+        timelineLoopTrack: state.timelineLoopTrack,
+        drumTrackMuted: state.drumTrackMuted,
+        bassTrackMuted: state.bassTrackMuted,
         selectedArtistId: state.selectedArtistId,
         selectedSongId: state.selectedSongId,
         kitId: state.kitId,
+        bassKitId: state.bassKitId,
         tempo: state.tempo,
         intensityPct: state.intensityPct,
         ghostPct: state.ghostPct,
@@ -3599,7 +4128,9 @@
         activeSection: state.activeSection,
         loopMode: state.loopMode,
         autoFollowSection: state.autoFollowSection,
-        grid: state.grid
+        grid: state.grid,
+        drumGrid: state.drumGrid,
+        bassGrid: state.bassGrid
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (e) {}
@@ -3615,6 +4146,12 @@
       if (saved.activeTab) {
         state.activeTab = normalizeTabId(saved.activeTab);
       }
+      if (saved.composeInstrument === 'bass' || saved.composeInstrument === 'drums') {
+        state.composeInstrument = saved.composeInstrument;
+      }
+      if (typeof saved.playBothInCompose === 'boolean') {
+        state.playBothInCompose = saved.playBothInCompose;
+      }
       if (saved.workspaceLayoutMode === 'all' || saved.workspaceLayoutMode === 'tabs') {
         state.workspaceLayoutMode = saved.workspaceLayoutMode;
       }
@@ -3629,6 +4166,15 @@
       }
       if (typeof saved.timelineLoopSingle === 'boolean') {
         state.timelineLoopSingle = saved.timelineLoopSingle;
+      }
+      if (saved.timelineLoopTrack === 'bass' || saved.timelineLoopTrack === 'drums') {
+        state.timelineLoopTrack = saved.timelineLoopTrack;
+      }
+      if (typeof saved.drumTrackMuted === 'boolean') {
+        state.drumTrackMuted = saved.drumTrackMuted;
+      }
+      if (typeof saved.bassTrackMuted === 'boolean') {
+        state.bassTrackMuted = saved.bassTrackMuted;
       }
       if (typeof saved.timelineHasUserSection === 'boolean') {
         state.timelineHasUserSection = saved.timelineHasUserSection;
@@ -3648,12 +4194,22 @@
       state.arrangementSections =
         Array.isArray(saved.arrangementSections) && saved.arrangementSections.length > 0
           ? saved.arrangementSections
-          : createDefaultArrangementSections(song.id, state.playerName, state.playerColor);
+          : createDefaultArrangementSections(song.id, state.playerName, state.playerColor, 'drums');
+      state.bassArrangementSections =
+        Array.isArray(saved.bassArrangementSections) && saved.bassArrangementSections.length > 0
+          ? saved.bassArrangementSections
+          : createDefaultArrangementSections(song.id, state.playerName, state.playerColor, 'bass');
       state.selectedTimelineIdx = Math.max(
         0,
         Math.min(state.arrangementSections.length - 1, Number(saved.selectedTimelineIdx || 0))
       );
+      state.selectedBassTimelineIdx = Math.max(
+        0,
+        Math.min(state.bassArrangementSections.length - 1, Number(saved.selectedBassTimelineIdx || 0))
+      );
+      const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
       state.kitId = saved.kitId || song.kit || artist.defaultKit;
+      state.bassKitId = saved.bassKitId || bProf.bassKit;
       state.tempo = state.timelineBpm || Number(saved.tempo) || song.bpm;
       state.intensityPct = Number(saved.intensityPct ?? 70);
       state.ghostPct = Number(saved.ghostPct ?? 45);
@@ -3665,21 +4221,35 @@
       state.loopMode = saved.loopMode || 'all16';
       state.autoFollowSection = saved.autoFollowSection !== false;
 
-      if (
-        Array.isArray(saved.grid) &&
-        saved.grid.length === DRUM_VOICES.length &&
-        Array.isArray(saved.grid[0]) &&
-        saved.grid[0].length === TOTAL_STEPS
-      ) {
+      const isValidGrid = (g) =>
+        Array.isArray(g) &&
+        g.length === DRUM_VOICES.length &&
+        Array.isArray(g[0]) &&
+        g[0].length === TOTAL_STEPS;
+
+      state.drumGrid = isValidGrid(saved.drumGrid)
+        ? cloneGrid256(saved.drumGrid)
+        : generateSongGrooveGrid(
+            state.selectedSongId,
+            state.intensityPct,
+            state.ghostPct,
+            state.hatEnergyPct,
+            state.fillPct
+          );
+      state.bassGrid = isValidGrid(saved.bassGrid)
+        ? cloneGrid256(saved.bassGrid)
+        : generateSongBassGrid(
+            state.selectedSongId,
+            state.intensityPct,
+            state.ghostPct,
+            state.hatEnergyPct,
+            state.fillPct
+          );
+
+      if (isValidGrid(saved.grid)) {
         state.grid = cloneGrid256(saved.grid);
       } else {
-        state.grid = generateSongGrooveGrid(
-          state.selectedSongId,
-          state.intensityPct,
-          state.ghostPct,
-          state.hatEnergyPct,
-          state.fillPct
-        );
+        state.grid = cloneGrid256(state.composeInstrument === 'bass' ? state.bassGrid : state.drumGrid);
       }
       return true;
     } catch (e) {
@@ -3707,8 +4277,10 @@
         top.swingPct = state.swingPct;
         top.pocketPct = state.pocketPct;
         top.kitId = state.kitId;
+        top.bassKitId = state.bassKitId;
         top.sectionSources = [...(state.sectionSources || [])];
         top.arrangementSections = JSON.parse(JSON.stringify(state.arrangementSections || []));
+        top.bassArrangementSections = JSON.parse(JSON.stringify(state.bassArrangementSections || []));
         top.grid = cloneGrid256(state.grid);
         saveSessionHistory();
         return;
@@ -3720,6 +4292,7 @@
         artistId: state.selectedArtistId,
         songId: state.selectedSongId,
         kitId: state.kitId,
+        bassKitId: state.bassKitId,
         tempo: state.tempo,
         intensityPct: state.intensityPct,
         ghostPct: state.ghostPct,
@@ -3729,6 +4302,7 @@
         pocketPct: state.pocketPct,
         sectionSources: [...(state.sectionSources || [])],
         arrangementSections: JSON.parse(JSON.stringify(state.arrangementSections || [])),
+        bassArrangementSections: JSON.parse(JSON.stringify(state.bassArrangementSections || [])),
         createdAt: new Date().toISOString(),
         grid: cloneGrid256(state.grid)
       };
@@ -3761,7 +4335,11 @@
 
   function syncEditingTimelineBlockFromCompose() {
     if (state.editingTimelineIdx === null || state.editingTimelineIdx === undefined) return;
-    const secItem = state.arrangementSections && state.arrangementSections[state.editingTimelineIdx];
+    const targetArr =
+      state.editingTimelineTrack === 'bass'
+        ? state.bassArrangementSections
+        : state.arrangementSections;
+    const secItem = targetArr && targetArr[state.editingTimelineIdx];
     if (!secItem) {
       state.editingTimelineIdx = null;
       return;
@@ -3773,6 +4351,7 @@
     } else if (bars < 16) {
       startStep = state.activeSection * 64;
     }
+    secItem.trackType = state.editingTimelineTrack || state.composeInstrument || 'drums';
     secItem.customGrid = extractGridSlice(state.grid, startStep, bars * 16);
     secItem.customEdited = true;
     secItem.songId = state.selectedSongId;
@@ -3793,14 +4372,67 @@
     sendOsc('/live/song/set/tempo', [{ type: 'f', value: state.tempo }], false).catch(() => {});
   }
 
+  function setComposeInstrument(inst) {
+    const nextInst = inst === 'bass' ? 'bass' : 'drums';
+    if (state.composeInstrument === nextInst) return;
+
+    // Save current edits into drumGrid or bassGrid before switching
+    if (state.composeInstrument === 'bass') {
+      state.bassGrid = cloneGrid256(state.grid);
+    } else {
+      state.drumGrid = cloneGrid256(state.grid);
+    }
+
+    state.composeInstrument = nextInst;
+    state.editingTimelineIdx = null;
+
+    if (nextInst === 'bass') {
+      if (!state.bassGrid) {
+        state.bassGrid = generateSongBassGrid(
+          state.selectedSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+      }
+      state.grid = cloneGrid256(state.bassGrid);
+    } else {
+      if (!state.drumGrid) {
+        state.drumGrid = generateSongGrooveGrid(
+          state.selectedSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+      }
+      state.grid = cloneGrid256(state.drumGrid);
+    }
+
+    syncSequencerNotes();
+    renderComposeInstrumentUI();
+    renderArtistTabsAndSongs();
+    renderSectionTabs();
+    renderMini4BarMap();
+    renderSequencerGrid();
+    renderComposeTimelineBanner();
+    updateDialsUI();
+    updatePlayerButtons();
+  }
+
   function loadSongGroove(songId, resetDials = true) {
     const { artist, song } = findSongById(songId);
     state.selectedArtistId = artist.artistId;
     state.selectedSongId = song.id;
     state.editingTimelineIdx = null;
     if (!Array.isArray(state.arrangementSections)) {
-      state.arrangementSections = createDefaultArrangementSections(song.id, state.playerName, state.playerColor);
+      state.arrangementSections = createDefaultArrangementSections(song.id, state.playerName, state.playerColor, 'drums');
     }
+    if (!Array.isArray(state.bassArrangementSections)) {
+      state.bassArrangementSections = createDefaultArrangementSections(song.id, state.playerName, state.playerColor, 'bass');
+    }
+    const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
     if (resetDials) {
       // BPM is global to the timeline once the first section has been added!
       if (state.timelineHasUserSection && state.timelineBpm) {
@@ -3810,16 +4442,26 @@
       }
       state.swingPct = song.swing;
       state.kitId = song.kit || artist.defaultKit;
+      state.bassKitId = bProf.bassKit;
     }
-    state.grid = generateSongGrooveGrid(
+    state.drumGrid = generateSongGrooveGrid(
       state.selectedSongId,
       state.intensityPct,
       state.ghostPct,
       state.hatEnergyPct,
       state.fillPct
     );
+    state.bassGrid = generateSongBassGrid(
+      state.selectedSongId,
+      state.intensityPct,
+      state.ghostPct,
+      state.hatEnergyPct,
+      state.fillPct
+    );
+    state.grid = cloneGrid256(state.composeInstrument === 'bass' ? state.bassGrid : state.drumGrid);
     syncSequencerNotes();
-    recordSessionHistoryEntry('Loaded Song Groove');
+    recordSessionHistoryEntry(`Loaded ${state.composeInstrument === 'bass' ? 'Bassline' : 'Drum Groove'}`);
+    renderComposeInstrumentUI();
     renderArtistTabsAndSongs();
     renderSectionTabs();
     renderMini4BarMap();
@@ -3846,7 +4488,7 @@
   function rebuildGridFromArrangementSections() {
     const arr = Array.isArray(state.arrangementSections) && state.arrangementSections.length > 0
       ? state.arrangementSections
-      : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
+      : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor, 'drums');
     const merged = createEmptyGrid256();
     const newSources = [];
     let dstStep = 0;
@@ -3854,7 +4496,7 @@
     while (dstStep < TOTAL_STEPS && arr.length > 0) {
       const secItem = arr[idx % arr.length];
       if (newSources.length < 4) newSources.push(secItem.songId || state.selectedSongId);
-      const blockGrid = getTimelineBlockGrid(secItem);
+      const blockGrid = getTimelineBlockGrid(secItem, 'drums');
       const blockSteps = blockGrid[0] ? blockGrid[0].length : 64;
       for (let i = 0; i < blockSteps && dstStep + i < TOTAL_STEPS; i++) {
         for (let v = 0; v < DRUM_VOICES.length; v++) {
@@ -3866,54 +4508,73 @@
     }
     while (newSources.length < 4) newSources.push(state.selectedSongId);
     state.sectionSources = newSources;
-    state.grid = merged;
+    state.drumGrid = merged;
+    if (state.composeInstrument !== 'bass') {
+      state.grid = cloneGrid256(merged);
+    }
     syncSequencerNotes();
   }
 
   function regenerateFromDials() {
-    state.grid = generateSongGrooveGrid(
+    state.drumGrid = generateSongGrooveGrid(
       state.selectedSongId,
       state.intensityPct,
       state.ghostPct,
       state.hatEnergyPct,
       state.fillPct
     );
+    state.bassGrid = generateSongBassGrid(
+      state.selectedSongId,
+      state.intensityPct,
+      state.ghostPct,
+      state.hatEnergyPct,
+      state.fillPct
+    );
+    state.grid = cloneGrid256(state.composeInstrument === 'bass' ? state.bassGrid : state.drumGrid);
     syncEditingTimelineBlockFromCompose();
     syncSequencerNotes();
-    recordSessionHistoryEntry('Tweaked Drummer Dials');
+    recordSessionHistoryEntry('Tweaked Dials');
     renderSectionTabs();
     renderMini4BarMap();
     renderSequencerGrid();
     renderSongBuilderAndClipsUI();
     if (!state.suppressJamBroadcast && state.jamMode === 'shared') {
-      broadcastFullJamState('Adjusted Drummer Dials');
+      broadcastFullJamState('Adjusted Dials');
     }
   }
 
-  function buildNotesFromArbitraryGrid(gridObj, rangeStartStep = 0, rangeEndStep = TOTAL_STEPS) {
+  function buildNotesFromArbitraryGrid(
+    gridObj,
+    rangeStartStep = 0,
+    rangeEndStep = TOTAL_STEPS,
+    instrumentType = 'drums',
+    songId = null
+  ) {
+    const isBass = instrumentType === 'bass';
     const notes = [];
     const stepDur = 0.25;
     const swingOffset = (state.swingPct / 100) * 0.145;
     const pocketScale = state.pocketPct / 100;
     const kit = getActiveKitProfile();
     const snareLaybackBeats = ((kit.laybackMs || 0) / 1000) * (state.tempo / 60) * pocketScale;
+    const voices = getActiveVoices(instrumentType, songId || state.selectedSongId);
 
     const getSwungStepStart = (stepIdx) =>
       stepIdx * stepDur + (stepIdx % 2 === 1 ? swingOffset : 0);
 
     const baseBeatOffset = rangeStartStep * stepDur;
 
-    for (let vIdx = 0; vIdx < DRUM_VOICES.length; vIdx++) {
+    for (let vIdx = 0; vIdx < voices.length; vIdx++) {
       if (state.mutedLanes[vIdx]) continue;
-      const voice = DRUM_VOICES[vIdx];
-      const isSnareOrRim = vIdx === 1 || vIdx === 2;
+      const voice = voices[vIdx];
+      const isSnareOrRim = !isBass && (vIdx === 1 || vIdx === 2);
       const row = gridObj && gridObj[vIdx] ? gridObj[vIdx] : [];
 
       for (let s = rangeStartStep; s < rangeEndStep; s++) {
         const cell = row[s];
         if (!cell || cell.state === 0) continue;
 
-        const baseVel = cell.state === 2 ? 124 : cell.state === 3 ? 46 : 96;
+        const baseVel = cell.state === 2 ? 124 : cell.state === 3 ? 52 : 98;
         const subCount = cell.sub || 1;
         const isTurnaroundFillZone = (s % 64) >= 48;
 
@@ -3925,11 +4586,30 @@
         const layback =
           isSnareOrRim && subCount === 1 && !isTurnaroundFillZone ? snareLaybackBeats : 0;
 
+        // For Bass, let accented/root notes sustain slightly longer unless another note follows immediately
+        let noteDurBeats = subStepDur * 0.85;
+        if (isBass && subCount === 1) {
+          let hasImmediateNext = false;
+          for (let nv = 0; nv < voices.length; nv++) {
+            if (gridObj && gridObj[nv] && gridObj[nv][s + 1] && gridObj[nv][s + 1].state > 0) {
+              hasImmediateNext = true;
+              break;
+            }
+          }
+          if (cell.state === 3) {
+            noteDurBeats = 0.12; // short muted ghost pluck
+          } else if (!hasImmediateNext && cell.state === 2) {
+            noteDurBeats = 0.44; // fat sustained bass note
+          } else {
+            noteDurBeats = 0.23;
+          }
+        }
+
         for (let r = 0; r < subCount; r++) {
           const seed = Math.sin((vIdx + 1) * 97 + s * 31 + r * 17);
           const timeJitter =
-            subCount === 1 && !isTurnaroundFillZone ? pocketScale * seed * 0.012 : 0;
-          const velJitter = Math.round(pocketScale * Math.cos(seed * 7) * 8);
+            subCount === 1 && !isTurnaroundFillZone ? pocketScale * seed * 0.01 : 0;
+          const velJitter = Math.round(pocketScale * Math.cos(seed * 7) * 7);
           const rollRamp = subCount > 1 ? Math.round(((r + 1) / subCount) * 16 - 12) : 0;
 
           const startTime = Math.max(0, stepStart + layback + r * subStepDur + timeJitter);
@@ -3937,9 +4617,10 @@
           notes.push({
             pitch: voice.pitch,
             startTime: Number(startTime.toFixed(4)),
-            duration: Number((subStepDur * 0.85).toFixed(4)),
+            duration: Number((subCount > 1 ? subStepDur * 0.82 : noteDurBeats).toFixed(4)),
             velocity,
-            muted: 0
+            muted: 0,
+            instrument: isBass ? 'bass' : 'drums'
           });
         }
       }
@@ -3948,28 +4629,33 @@
     return notes;
   }
 
-  function buildNotesFromSequencer(rangeStartStep = 0, rangeEndStep = TOTAL_STEPS) {
-    return buildNotesFromArbitraryGrid(state.grid, rangeStartStep, rangeEndStep);
+  function buildNotesFromSequencer(rangeStartStep = 0, rangeEndStep = TOTAL_STEPS, instrumentOverride = null) {
+    const inst = instrumentOverride || state.composeInstrument || 'drums';
+    return buildNotesFromArbitraryGrid(state.grid, rangeStartStep, rangeEndStep, inst, state.selectedSongId);
   }
 
-  function buildTimelinePlaybackData(onlySelectedBlock = false) {
+  function buildTimelinePlaybackData(onlySelectedBlock = false, trackType = 'drums') {
+    const isBass = trackType === 'bass';
+    const rawArr = isBass ? state.bassArrangementSections : state.arrangementSections;
     const arr =
-      Array.isArray(state.arrangementSections) && state.arrangementSections.length > 0
-        ? state.arrangementSections
-        : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
+      Array.isArray(rawArr) && rawArr.length > 0
+        ? rawArr
+        : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor, trackType);
 
+    const selIdx = isBass ? state.selectedBassTimelineIdx : state.selectedTimelineIdx;
     const blocksToBuild =
-      onlySelectedBlock && arr[state.selectedTimelineIdx]
-        ? [{ secItem: arr[state.selectedTimelineIdx], origIdx: state.selectedTimelineIdx }]
+      onlySelectedBlock && arr[selIdx]
+        ? [{ secItem: arr[selIdx], origIdx: selIdx }]
         : arr.map((secItem, origIdx) => ({ secItem, origIdx }));
 
     const fullGrid = Array.from({ length: DRUM_VOICES.length }, () => []);
     const blockRanges = [];
+    const allNotes = [];
     let runningStep = 0;
     let runningBar = 0;
 
     for (const { secItem, origIdx } of blocksToBuild) {
-      const blockGrid = getTimelineBlockGrid(secItem);
+      const blockGrid = getTimelineBlockGrid(secItem, trackType);
       const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
       const steps = bars * 16;
       for (let v = 0; v < DRUM_VOICES.length; v++) {
@@ -3977,6 +4663,22 @@
           fullGrid[v].push(blockGrid[v][i] || { state: 0, sub: 1 });
         }
       }
+      // Build notes with each block's own songId so Bass blocks transpose to their song's key!
+      const blockNotes = buildNotesFromArbitraryGrid(
+        blockGrid,
+        0,
+        steps,
+        trackType,
+        secItem.songId || state.selectedSongId
+      );
+      const beatOffset = runningBar * 4.0;
+      for (const n of blockNotes) {
+        allNotes.push({
+          ...n,
+          startTime: Number((n.startTime + beatOffset).toFixed(4))
+        });
+      }
+
       blockRanges.push({
         origIdx,
         secItem,
@@ -3994,25 +4696,58 @@
     const totalSteps = Math.max(16, runningStep);
     const totalBars = Math.max(1, runningBar);
     const durationBeats = totalBars * 4.0;
-    const notes = buildNotesFromArbitraryGrid(fullGrid, 0, totalSteps);
+    allNotes.sort((a, b) => a.startTime - b.startTime || a.pitch - b.pitch);
     return {
+      trackType,
       totalBars,
       totalSteps,
       durationBeats,
-      notes,
+      notes: allNotes,
       blockRanges,
       fullGrid
     };
   }
 
   function syncSequencerNotes() {
-    state.currentNotes = buildNotesFromSequencer(0, TOTAL_STEPS);
+    if (state.composeInstrument === 'bass') {
+      state.bassGrid = cloneGrid256(state.grid);
+      if (!state.drumGrid) {
+        state.drumGrid = generateSongGrooveGrid(
+          state.selectedSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+      }
+    } else {
+      state.drumGrid = cloneGrid256(state.grid);
+      if (!state.bassGrid) {
+        state.bassGrid = generateSongBassGrid(
+          state.selectedSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+      }
+    }
+    state.currentNotes = buildNotesFromSequencer(0, TOTAL_STEPS, state.composeInstrument);
+    const companionInst = state.composeInstrument === 'bass' ? 'drums' : 'bass';
+    const companionGrid = state.composeInstrument === 'bass' ? state.drumGrid : state.bassGrid;
+    state.currentCompanionNotes = buildNotesFromArbitraryGrid(
+      companionGrid,
+      0,
+      TOTAL_STEPS,
+      companionInst,
+      state.selectedSongId
+    );
     savePersistedState();
     renderMini4BarMap();
   }
 
   // ==========================================================================
-  // 8. Real-Time Phone Playback Clock (Compose Mode + Full Timeline Review Mode)
+  // 8. Real-Time Phone Playback Clock (Compose Mode + Multi-Track Timeline Mode)
   // ==========================================================================
   function startPhonePlayback(modeOverride = null) {
     const ctx = getAudioCtx();
@@ -4043,7 +4778,12 @@
         if (st > absStart && st <= absEnd) {
           const relBeat = st - loopStartBeatOffset;
           const exactWhen = Math.max(now, loopStartWallTime + relBeat / beatsPerSec);
-          triggerDrumVoice(ctx, Number(n.pitch), Number(n.velocity || 100), exactWhen);
+          if (n.instrument === 'bass') {
+            const durSec = Math.max(0.08, (Number(n.duration || 0.22) / beatsPerSec));
+            triggerBassVoice(ctx, Number(n.pitch), Number(n.velocity || 100), exactWhen, durSec);
+          } else {
+            triggerDrumVoice(ctx, Number(n.pitch), Number(n.velocity || 100), exactWhen);
+          }
         }
       }
     }
@@ -4055,12 +4795,49 @@
       const beatsPerSec = bpm / 60;
 
       const isTimelineMode = state.playbackMode === 'timeline';
-      const tlData = isTimelineMode ? buildTimelinePlaybackData(state.timelineLoopSingle) : null;
+      const loopSingleDrums = state.timelineLoopSingle && state.timelineLoopTrack !== 'bass';
+      const loopSingleBass = state.timelineLoopSingle && state.timelineLoopTrack === 'bass';
+      const drumTlData = isTimelineMode ? buildTimelinePlaybackData(loopSingleDrums, 'drums') : null;
+      const bassTlData = isTimelineMode ? buildTimelinePlaybackData(loopSingleBass, 'bass') : null;
       const composeBounds = isTimelineMode ? null : getActiveLoopStepBounds();
 
       const startStep = isTimelineMode ? 0 : composeBounds.startStep;
-      const clipDur = isTimelineMode ? tlData.durationBeats : composeBounds.durationBeats;
-      const notesList = isTimelineMode ? tlData.notes : state.currentNotes || [];
+      const clipDur = isTimelineMode
+        ? state.timelineLoopSingle
+          ? state.timelineLoopTrack === 'bass'
+            ? bassTlData.durationBeats
+            : drumTlData.durationBeats
+          : Math.max(drumTlData.durationBeats, bassTlData.durationBeats)
+        : composeBounds.durationBeats;
+
+      let notesList = [];
+      if (isTimelineMode) {
+        if (!state.drumTrackMuted && drumTlData) {
+          // If bass timeline is longer than drum timeline, tile drum notes across clipDur
+          const dDur = Math.max(4, drumTlData.durationBeats);
+          for (let offset = 0; offset < clipDur - 0.01; offset += dDur) {
+            for (const dn of drumTlData.notes) {
+              if (dn.startTime + offset < clipDur) {
+                notesList.push(offset === 0 ? dn : { ...dn, startTime: dn.startTime + offset });
+              }
+            }
+          }
+        }
+        if (!state.bassTrackMuted && bassTlData) {
+          const bDur = Math.max(4, bassTlData.durationBeats);
+          for (let offset = 0; offset < clipDur - 0.01; offset += bDur) {
+            for (const bn of bassTlData.notes) {
+              if (bn.startTime + offset < clipDur) {
+                notesList.push(offset === 0 ? bn : { ...bn, startTime: bn.startTime + offset });
+              }
+            }
+          }
+        }
+      } else {
+        notesList = state.playBothInCompose
+          ? [...(state.currentNotes || []), ...(state.currentCompanionNotes || [])]
+          : state.currentNotes || [];
+      }
 
       const loopStartBeatOffset = startStep * 0.25;
       const lookaheadBeats = 0.085 * beatsPerSec;
@@ -4106,26 +4883,52 @@
         state.phonePlayer.lastStepTime = targetBeat;
       }
 
-      const relStep = Math.floor(elapsedBeats / 0.25) % Math.max(1, Math.round(clipDur * 4));
+      const totalClipSteps = Math.max(1, Math.round(clipDur * 4));
+      const relStep = Math.floor(elapsedBeats / 0.25) % totalClipSteps;
 
-      if (isTimelineMode && tlData) {
+      if (isTimelineMode && drumTlData && bassTlData) {
         const currentTimelineBar = Math.floor(relStep / 16);
-        let activeBlockRange = tlData.blockRanges[0];
-        for (const br of tlData.blockRanges) {
-          if (relStep >= br.startStep && relStep < br.endStep) {
-            activeBlockRange = br;
+        const drumStep = relStep % Math.max(16, drumTlData.totalSteps);
+        const bassStep = relStep % Math.max(16, bassTlData.totalSteps);
+
+        let activeDrumRange = drumTlData.blockRanges[0];
+        for (const br of drumTlData.blockRanges) {
+          if (drumStep >= br.startStep && drumStep < br.endStep) {
+            activeDrumRange = br;
             break;
           }
         }
-        const blockIdx = activeBlockRange ? activeBlockRange.origIdx : 0;
-        const stepInBlock = activeBlockRange ? relStep - activeBlockRange.startStep : 0;
-        const progressPct = activeBlockRange
-          ? Math.min(100, Math.max(0, ((stepInBlock + 0.5) / activeBlockRange.steps) * 100))
+        let activeBassRange = bassTlData.blockRanges[0];
+        for (const br of bassTlData.blockRanges) {
+          if (bassStep >= br.startStep && bassStep < br.endStep) {
+            activeBassRange = br;
+            break;
+          }
+        }
+
+        const drumBlockIdx = activeDrumRange ? activeDrumRange.origIdx : 0;
+        const bassBlockIdx = activeBassRange ? activeBassRange.origIdx : 0;
+        const drumProgressPct = activeDrumRange
+          ? Math.min(100, Math.max(0, (((drumStep - activeDrumRange.startStep) + 0.5) / activeDrumRange.steps) * 100))
+          : 0;
+        const bassProgressPct = activeBassRange
+          ? Math.min(100, Math.max(0, (((bassStep - activeBassRange.startStep) + 0.5) / activeBassRange.steps) * 100))
           : 0;
 
-        state.activeTimelineIdx = blockIdx;
+        state.activeTimelineIdx = drumBlockIdx;
+        state.activeBassTimelineIdx = bassBlockIdx;
         state.activeTimelineBar = currentTimelineBar;
-        highlightTimelinePlayhead(blockIdx, currentTimelineBar, tlData.totalBars, relStep, progressPct, activeBlockRange);
+        highlightTimelinePlayhead(
+          drumBlockIdx,
+          currentTimelineBar,
+          Math.round(clipDur / 4),
+          relStep,
+          drumProgressPct,
+          activeDrumRange,
+          bassBlockIdx,
+          bassProgressPct,
+          activeBassRange
+        );
       } else {
         const current16th = startStep + relStep;
         const currentBar = Math.floor(current16th / 16);
@@ -4166,37 +4969,58 @@
     state.activeStep = -1;
     state.activeBar = -1;
     state.activeTimelineIdx = -1;
+    state.activeBassTimelineIdx = -1;
     state.activeTimelineBar = -1;
     if (state.phonePlayer.rafId) {
       cancelAnimationFrame(state.phonePlayer.rafId);
       state.phonePlayer.rafId = null;
     }
     highlightPlayheadStep(-1, -1, -1);
-    highlightTimelinePlayhead(-1, -1, 0, -1, 0, null);
+    highlightTimelinePlayhead(-1, -1, 0, -1, 0, null, -1, 0, null);
     updatePlayerButtons();
   }
 
-  function highlightTimelinePlayhead(blockIdx, timelineBarIdx, totalBars, relStep, progressPct, activeBlockRange) {
-    document.querySelectorAll('.fold-tl-block').forEach((el) => {
+  function highlightTimelinePlayhead(
+    drumBlockIdx,
+    timelineBarIdx,
+    totalBars,
+    relStep,
+    drumProgressPct,
+    activeDrumRange,
+    bassBlockIdx = -1,
+    bassProgressPct = 0,
+    activeBassRange = null
+  ) {
+    document.querySelectorAll('.fold-tl-block[data-tl-track="drums"]').forEach((el) => {
       const idx = Number(el.getAttribute('data-tl-block'));
-      const isPlaying = idx === blockIdx;
+      const isPlaying = !state.drumTrackMuted && idx === drumBlockIdx;
       el.classList.toggle('playing-tl-block', isPlaying);
       const needle = el.querySelector('.fold-tl-needle');
       if (needle) {
         needle.style.display = isPlaying ? 'block' : 'none';
-        if (isPlaying) needle.style.left = `${progressPct}%`;
+        if (isPlaying) needle.style.left = `${drumProgressPct}%`;
       }
     });
-    document.querySelectorAll('.fold-seq-card-row').forEach((el) => {
-      const idx = Number(el.getAttribute('data-seq-row'));
-      el.classList.toggle('playing-seq-row', idx === blockIdx);
+    document.querySelectorAll('.fold-tl-block[data-tl-track="bass"]').forEach((el) => {
+      const idx = Number(el.getAttribute('data-tl-block'));
+      const isPlaying = !state.bassTrackMuted && idx === bassBlockIdx;
+      el.classList.toggle('playing-tl-block', isPlaying);
+      const needle = el.querySelector('.fold-tl-needle');
+      if (needle) {
+        needle.style.display = isPlaying ? 'block' : 'none';
+        if (isPlaying) needle.style.left = `${bassProgressPct}%`;
+      }
     });
+
     // Also highlight step playhead inside the Section Sequence Modal if open for this block!
     const modalGridEl = document.getElementById('fold-modal-seq-grid');
     if (modalGridEl) {
+      const isBassModal = state.modalTrack === 'bass';
+      const activeRange = isBassModal ? activeBassRange : activeDrumRange;
+      const activeIdx = isBassModal ? bassBlockIdx : drumBlockIdx;
       const stepInBlock =
-        blockIdx >= 0 && blockIdx === state.modalSectionIdx && activeBlockRange
-          ? relStep - activeBlockRange.startStep
+        activeIdx >= 0 && activeIdx === state.modalSectionIdx && activeRange
+          ? (relStep % Math.max(16, activeRange.endStep)) - activeRange.startStep
           : -1;
       modalGridEl.querySelectorAll('.drum-step-cell[data-modal-step]').forEach((cellEl) => {
         const s = Number(cellEl.getAttribute('data-modal-step'));
@@ -4205,18 +5029,20 @@
     }
     const tlHudEl = document.getElementById('fold-timeline-hud-pill');
     if (tlHudEl) {
-      if (blockIdx >= 0 && activeBlockRange && activeBlockRange.secItem) {
-        const secItem = activeBlockRange.secItem;
+      if (drumBlockIdx >= 0 && activeDrumRange && activeDrumRange.secItem) {
+        const secItem = activeDrumRange.secItem;
         const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
         const { song } = findSongById(secItem.songId || state.selectedSongId);
         const beatInBar = Math.floor((relStep % 16) / 4) + 1;
-        tlHudEl.textContent = `▶ Block #${blockIdx + 1} (${roleObj.label} · ${song.title}) · Bar ${timelineBarIdx + 1} of ${totalBars} · Beat ${beatInBar} · ${state.tempo} BPM`;
+        tlHudEl.textContent = `▶ Drums #${drumBlockIdx + 1} + Bass #${Math.max(1, bassBlockIdx + 1)} (${roleObj.label} · ${song.title}) · Bar ${timelineBarIdx + 1}/${totalBars} · Beat ${beatInBar} · ${state.tempo} BPM`;
         tlHudEl.style.borderColor = roleObj.color;
         tlHudEl.style.color = '#fff';
       } else {
-        const arr = state.arrangementSections || [];
-        const tBars = arr.reduce((sum, s) => sum + (Number(s.bars) || 4), 0);
-        tlHudEl.textContent = `⏸ Ready (${arr.length} Blocks · ${tBars} Bars · ${state.tempo} BPM)`;
+        const dArr = state.arrangementSections || [];
+        const bArr = state.bassArrangementSections || [];
+        const dBars = dArr.reduce((sum, s) => sum + (Number(s.bars) || 4), 0);
+        const bBars = bArr.reduce((sum, s) => sum + (Number(s.bars) || 4), 0);
+        tlHudEl.textContent = `⏸ Ready (🥁 ${dBars}B Drums · 🎸 ${bBars}B Bass · ${state.tempo} BPM)`;
         tlHudEl.style.borderColor = 'rgba(255,255,255,0.2)';
         tlHudEl.style.color = '#d1d5db';
       }
@@ -4259,6 +5085,7 @@
     const tlPlayBtn = document.getElementById('fold-timeline-play-btn');
     const tlLoopBtn = document.getElementById('fold-timeline-loop-mode-btn');
     const disableSecLoopBtn = document.getElementById('fold-disable-sec-loop-btn');
+    const playBothBtn = document.getElementById('fold-compose-play-both-btn');
     const { barsCount } = getActiveLoopStepBounds();
     const secName = SONG_SECTIONS[state.activeSection]?.badge || '4-Bar';
     const loopLabel =
@@ -4269,19 +5096,38 @@
         : `${barsCount} Bars`;
 
     const arr = state.arrangementSections || [];
-    const totalTlBars = arr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
-    const activeLoopSecIdx = Math.max(0, Math.min(arr.length - 1, state.selectedTimelineIdx || 0));
+    const bassArr = state.bassArrangementSections || [];
+    const totalDrumBars = arr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
+    const totalBassBars = bassArr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
+    const totalTlBars = Math.max(totalDrumBars, totalBassBars);
+    const isBassLoop = state.timelineLoopTrack === 'bass';
+    const activeLoopSecIdx = isBassLoop
+      ? Math.max(0, Math.min(bassArr.length - 1, state.selectedBassTimelineIdx || 0))
+      : Math.max(0, Math.min(arr.length - 1, state.selectedTimelineIdx || 0));
+    const loopTrackIcon = isBassLoop ? '🎸 Bass' : '🥁 Drum';
+
+    if (playBothBtn) {
+      playBothBtn.classList.toggle('chip-on', Boolean(state.playBothInCompose));
+      playBothBtn.textContent = state.playBothInCompose
+        ? '🔊 Hear Drums + Bass Together: ON'
+        : `🔈 Solo ${state.composeInstrument === 'bass' ? 'Bass' : 'Drums'} Only`;
+    }
 
     if (playBtn) {
       if (state.phonePlayer.playing) {
         playBtn.textContent =
-          state.playbackMode === 'timeline' ? '⏹ Stop Timeline' : '⏹ Stop Drummer';
+          state.playbackMode === 'timeline' ? '⏹ Stop Timeline' : '⏹ Stop Playback';
       } else if (state.activeTab === 'arrange') {
         playBtn.textContent = state.timelineLoopSingle
-          ? `▶ Play Section #${activeLoopSecIdx + 1} Loop`
+          ? `▶ Play ${loopTrackIcon} #${activeLoopSecIdx + 1} Loop`
           : `▶ Play Timeline (${totalTlBars} Bars)`;
       } else {
-        playBtn.textContent = `▶ Play (${loopLabel})`;
+        const instBadge = state.playBothInCompose
+          ? '🥁+🎸'
+          : state.composeInstrument === 'bass'
+          ? '🎸 Bass'
+          : '🥁 Drums';
+        playBtn.textContent = `▶ Play ${instBadge} (${loopLabel})`;
       }
       playBtn.classList.toggle('active', state.phonePlayer.playing);
     }
@@ -4299,8 +5145,8 @@
       tlPlayBtn.textContent = isTlPlaying
         ? '⏹ Stop Playback'
         : state.timelineLoopSingle
-        ? `▶ Play Section #${activeLoopSecIdx + 1} Loop`
-        : `▶ Play Full Timeline (${totalTlBars} Bars)`;
+        ? `▶ Play ${loopTrackIcon} Section #${activeLoopSecIdx + 1} Loop`
+        : `▶ Play Full Timeline (${totalTlBars} Bars · Drums + Bass)`;
       tlPlayBtn.classList.toggle('active', isTlPlaying);
     }
 
@@ -4309,31 +5155,38 @@
       tlLoopBtn.style.borderColor = state.timelineLoopSingle ? '#f59e0b' : '';
       tlLoopBtn.style.color = state.timelineLoopSingle ? '#fde68a' : '';
       tlLoopBtn.textContent = state.timelineLoopSingle
-        ? `🔁 Looping Section #${activeLoopSecIdx + 1} Only`
-        : `🔁 Loop Mode: Full Timeline (${arr.length} Sections)`;
+        ? `🔁 Looping ${loopTrackIcon} Section #${activeLoopSecIdx + 1} Only`
+        : `🔁 Loop Mode: Full Timeline (${totalTlBars} Bars)`;
     }
 
     if (disableSecLoopBtn) {
       disableSecLoopBtn.style.display = state.timelineLoopSingle ? 'inline-flex' : 'none';
-      disableSecLoopBtn.textContent = `✕ Disable Section #${activeLoopSecIdx + 1} Loop`;
+      disableSecLoopBtn.textContent = `✕ Disable ${loopTrackIcon} Section #${activeLoopSecIdx + 1} Loop`;
     }
 
     const modalPlayBtn = document.getElementById('fold-modal-play-btn');
     if (modalPlayBtn) {
+      const activeIdxForModalTrack =
+        state.modalTrack === 'bass' ? state.selectedBassTimelineIdx : state.selectedTimelineIdx;
       const isModalPlaying =
         state.phonePlayer.playing &&
         state.playbackMode === 'timeline' &&
-        state.selectedTimelineIdx === state.modalSectionIdx;
+        activeIdxForModalTrack === state.modalSectionIdx &&
+        state.timelineLoopTrack === state.modalTrack;
       modalPlayBtn.textContent = isModalPlaying
         ? '⏹ Stop Playback'
-        : `▶ Play Section #${(state.modalSectionIdx ?? 0) + 1}`;
+        : `▶ Play ${state.modalTrack === 'bass' ? 'Bass' : 'Drum'} Section #${(state.modalSectionIdx ?? 0) + 1}`;
       modalPlayBtn.classList.toggle('active', isModalPlaying);
     }
 
     const modalLoopToggleBtn = document.getElementById('fold-modal-loop-toggle-btn');
     if (modalLoopToggleBtn) {
+      const activeIdxForModalTrack =
+        state.modalTrack === 'bass' ? state.selectedBassTimelineIdx : state.selectedTimelineIdx;
       const isThisSectionLooped =
-        state.timelineLoopSingle && state.selectedTimelineIdx === state.modalSectionIdx;
+        state.timelineLoopSingle &&
+        state.timelineLoopTrack === state.modalTrack &&
+        activeIdxForModalTrack === state.modalSectionIdx;
       modalLoopToggleBtn.classList.toggle('chip-on', isThisSectionLooped);
       modalLoopToggleBtn.style.borderColor = isThisSectionLooped ? '#f59e0b' : 'rgba(255,255,255,0.22)';
       modalLoopToggleBtn.style.background = isThisSectionLooped
@@ -4345,15 +5198,17 @@
         : `🔁 Loop This Section: OFF`;
     }
 
+    const builderSendDrumsBtn = document.getElementById('fold-builder-send-drums-btn');
+    if (builderSendDrumsBtn) {
+      builderSendDrumsBtn.textContent = `🥁 Send Drums (${totalDrumBars}B)`;
+    }
+    const builderSendBassBtn = document.getElementById('fold-builder-send-bass-btn');
+    if (builderSendBassBtn) {
+      builderSendBassBtn.textContent = `🎸 Send Bass (${totalBassBars}B)`;
+    }
     const builderSendFullBtn = document.getElementById('fold-builder-send-full-btn');
     if (builderSendFullBtn) {
-      const targetLabel =
-        state.targetTrack === 'selected'
-          ? state.abletonConnected
-            ? `🎯 ${state.abletonSelectedTrackName}`
-            : '🎯 Selected Ableton Track'
-          : `Track #${Number(state.targetTrack) + 1}`;
-      builderSendFullBtn.textContent = `🚀 Send Arrangement (${totalTlBars} Bars @ ${state.tempo} BPM) → ${targetLabel}`;
+      builderSendFullBtn.textContent = `🚀 Send Both (🥁 Drums + 🎸 Bass · ${totalTlBars}B @ ${state.tempo} BPM) → Ableton`;
     }
   }
 
@@ -4396,8 +5251,9 @@
     const { artist, song } = findSongById(state.selectedSongId);
     const cleanArtist = artist ? artist.artistName.replace(/^[^\w]+/, '').trim() : 'Session';
     const arr = Array.isArray(state.arrangementSections) ? state.arrangementSections : [];
+    const bassArr = Array.isArray(state.bassArrangementSections) ? state.bassArrangementSections : [];
     const totalBars = arr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0) || 16;
-    const defaultTitle = `${cleanArtist} - ${song ? song.title : 'Groove'} (${state.tempo} BPM · ${arr.length} Blocks / ${totalBars}B)`;
+    const defaultTitle = `${cleanArtist} - ${song ? song.title : 'Groove'} (${state.tempo} BPM · ${arr.length} Drum / ${bassArr.length} Bass Blocks)`;
     const inputEl = document.getElementById('fold-crate-title-input');
     const arrangeInputEl = document.getElementById('fold-arrange-title-input');
     const customTitle =
@@ -4406,7 +5262,7 @@
       (inputEl && inputEl.value.trim() ? inputEl.value.trim() : '') ||
       defaultTitle;
 
-    const tlData = buildTimelinePlaybackData(false);
+    const tlData = buildTimelinePlaybackData(false, 'drums');
     const fullNotes = tlData.notes.map((n) => [
       n.pitch,
       Number(n.startTime.toFixed(3)),
@@ -4424,10 +5280,18 @@
         JSON.stringify(
           arr.length > 0
             ? arr
-            : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor)
+            : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor, 'drums')
+        )
+      ),
+      bassArrangementSections: JSON.parse(
+        JSON.stringify(
+          bassArr.length > 0
+            ? bassArr
+            : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor, 'bass')
         )
       ),
       kitId: state.kitId,
+      bassKitId: state.bassKitId,
       tempo: state.tempo,
       duration: tlData.durationBeats || 64.0,
       intensityPct: state.intensityPct,
@@ -4444,6 +5308,8 @@
       authorColor: state.playerColor,
       createdAt: new Date().toISOString(),
       grid: cloneGrid256(state.grid),
+      drumGrid: state.drumGrid ? cloneGrid256(state.drumGrid) : null,
+      bassGrid: state.bassGrid ? cloneGrid256(state.bassGrid) : null,
       notes: fullNotes
     };
   }
@@ -4487,6 +5353,7 @@
     if (!idea) return;
     pushUndoState();
     const { artist, song } = findSongById(idea.songId || 'zep_levee');
+    const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
     state.selectedArtistId = idea.artistId || artist.artistId;
     state.selectedSongId = idea.songId || song.id;
     state.editingTimelineIdx = null;
@@ -4499,7 +5366,8 @@
     } else {
       const roles = ['verse', 'chorus', 'bridge', 'climax'];
       state.arrangementSections = state.sectionSources.map((sid, i) => ({
-        id: `sec_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+        id: `sec_drums_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+        trackType: 'drums',
         roleId: roles[i] || 'verse',
         songId: sid || state.selectedSongId,
         sourceSlice: i,
@@ -4509,8 +5377,27 @@
         addedColor: idea.authorColor || state.playerColor
       }));
     }
+    if (Array.isArray(idea.bassArrangementSections) && idea.bassArrangementSections.length > 0) {
+      state.bassArrangementSections = JSON.parse(JSON.stringify(idea.bassArrangementSections));
+    } else {
+      state.bassArrangementSections = state.arrangementSections.map((dSec, i) => ({
+        id: `sec_bass_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+        trackType: 'bass',
+        roleId: dSec.roleId || 'verse',
+        songId: dSec.songId || state.selectedSongId,
+        sourceSlice: dSec.sourceSlice ?? (i % 4),
+        sourceBar: dSec.sourceBar ?? ((i % 4) * 4),
+        bars: Number(dSec.bars) || 4,
+        customEdited: false,
+        customGrid: null,
+        addedBy: dSec.addedBy || state.playerName,
+        addedColor: dSec.addedColor || state.playerColor
+      }));
+    }
     state.selectedTimelineIdx = 0;
+    state.selectedBassTimelineIdx = 0;
     state.kitId = idea.kitId || song.kit || artist.defaultKit;
+    state.bassKitId = idea.bassKitId || bProf.bassKit;
     state.tempo = Number(idea.tempo) || song.bpm;
     state.intensityPct = Number(idea.intensityPct ?? 70);
     state.ghostPct = Number(idea.ghostPct ?? 45);
@@ -4519,18 +5406,37 @@
     state.swingPct = Number(idea.swingPct ?? song.swing);
     state.pocketPct = Number(idea.pocketPct ?? 25);
 
-    if (
-      Array.isArray(idea.grid) &&
-      idea.grid.length === DRUM_VOICES.length &&
-      Array.isArray(idea.grid[0]) &&
-      idea.grid[0].length === TOTAL_STEPS
-    ) {
-      state.grid = cloneGrid256(idea.grid);
-      syncSequencerNotes();
-    } else {
-      rebuildGridFromArrangementSections();
-    }
+    const isValidGrid = (g) =>
+      Array.isArray(g) &&
+      g.length === DRUM_VOICES.length &&
+      Array.isArray(g[0]) &&
+      g[0].length === TOTAL_STEPS;
+
+    state.drumGrid = isValidGrid(idea.drumGrid)
+      ? cloneGrid256(idea.drumGrid)
+      : isValidGrid(idea.grid)
+      ? cloneGrid256(idea.grid)
+      : generateSongGrooveGrid(
+          state.selectedSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+    state.bassGrid = isValidGrid(idea.bassGrid)
+      ? cloneGrid256(idea.bassGrid)
+      : generateSongBassGrid(
+          state.selectedSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+    state.grid = cloneGrid256(state.composeInstrument === 'bass' ? state.bassGrid : state.drumGrid);
+    syncSequencerNotes();
+
     recordSessionHistoryEntry(`Restored "${idea.title || song.title}"`);
+    renderComposeInstrumentUI();
     renderArtistTabsAndSongs();
     renderSectionTabs();
     renderMini4BarMap();
@@ -4665,7 +5571,9 @@
         selectedSongId: state.selectedSongId,
         sectionSources: state.sectionSources,
         arrangementSections: state.arrangementSections,
+        bassArrangementSections: state.bassArrangementSections,
         kitId: state.kitId,
+        bassKitId: state.bassKitId,
         tempo: state.tempo,
         intensityPct: state.intensityPct,
         ghostPct: state.ghostPct,
@@ -4673,7 +5581,9 @@
         fillPct: state.fillPct,
         swingPct: state.swingPct,
         pocketPct: state.pocketPct,
-        grid: state.grid
+        grid: state.grid,
+        drumGrid: state.drumGrid,
+        bassGrid: state.bassGrid
       }
     });
   }
@@ -4706,7 +5616,7 @@
         renderSequencerGrid();
         state.suppressJamBroadcast = false;
       }
-      state.jamStatusMessage = `🎨 ${authorName || 'Partner'} edited ${DRUM_VOICES[vIdx]?.short || 'Step'} (Bar ${Math.floor(stepIdx / 16) + 1})`;
+      state.jamStatusMessage = `🎨 ${authorName || 'Partner'} edited ${getActiveVoices()[vIdx]?.short || 'Step'} (Bar ${Math.floor(stepIdx / 16) + 1})`;
       renderCrateAndJamUI();
     } else if (msg.type === 'state_sync' && state.jamMode !== 'independent' && msg.state) {
       state.suppressJamBroadcast = true;
@@ -4733,10 +5643,18 @@
       }
       if (state.hearPartnerPads) {
         const ctx = getAudioCtx();
-        const voice = DRUM_VOICES[msg.vIdx] || DRUM_VOICES[0];
-        triggerDrumVoice(ctx, msg.pitch || voice.pitch, msg.velocity || 115, ctx.currentTime);
+        if (msg.instrument === 'bass') {
+          const bVoices = getBassVoicesForSong(state.selectedSongId);
+          const bv = bVoices[msg.vIdx] || bVoices[0];
+          triggerBassVoice(ctx, msg.pitch || bv.pitch, msg.velocity || 115, ctx.currentTime, 0.24, msg.bassKitId);
+        } else {
+          const voice = DRUM_VOICES[msg.vIdx] || DRUM_VOICES[0];
+          triggerDrumVoice(ctx, msg.pitch || voice.pitch, msg.velocity || 115, ctx.currentTime);
+        }
       }
-      state.jamStatusMessage = `🥁 ${msg.authorName || 'Partner'} hit ${DRUM_VOICES[msg.vIdx]?.name || 'Pad'}`;
+      state.jamStatusMessage = `${msg.instrument === 'bass' ? '🎸' : '🥁'} ${msg.authorName || 'Partner'} hit ${
+        getActiveVoices(msg.instrument)[msg.vIdx]?.name || 'Pad'
+      }`;
       renderCrateAndJamUI();
     } else if (msg.type === 'beam_groove' && msg.idea) {
       const existing = state.localCrate.find((x) => x.id === msg.idea.id);
@@ -4768,8 +5686,6 @@
       jamEventSource = null;
     }
     if (window.location.protocol === 'https:' && (state.bridgeUrl || '').startsWith('http://192.')) {
-      // HTTPS GitHub Pages PWA cannot open EventSource to plain HTTP LAN IP due to browser Mixed Content;
-      // the Jam panel provides a 1-tap button to switch into the live LAN Jam room!
       return;
     }
     try {
@@ -4813,7 +5729,7 @@
           kitId: state.kitId,
           tempo: state.tempo,
           targetTrack: state.targetTrack,
-          lastActivity: `${SONG_SECTIONS[state.activeSection]?.badge || 'SEC 1'} · ${state.tempo} BPM`
+          lastActivity: `${state.composeInstrument === 'bass' ? '🎸 Bass' : '🥁 Drums'} · ${SONG_SECTIONS[state.activeSection]?.badge || 'SEC 1'} · ${state.tempo} BPM`
         })
       });
       if (res.ok) {
@@ -4827,18 +5743,17 @@
   }
 
   async function sendCurrentBeatToAbleton(fire = true, forceTimeline = false) {
-    const btn = document.getElementById('fold-send-ableton-btn');
+    const btn = document.getElementById('fold-builder-send-drums-btn') || document.getElementById('fold-send-ableton-btn');
     const isTimelineSend = forceTimeline || state.activeTab === 'arrange';
-    const tlData = isTimelineSend ? buildTimelinePlaybackData(false) : null;
+    const tlData = isTimelineSend ? buildTimelinePlaybackData(false, 'drums') : null;
     const composeBounds = isTimelineSend ? null : getActiveLoopStepBounds();
     const barsCount = isTimelineSend ? tlData.totalBars : composeBounds.barsCount;
     const durationBeats = isTimelineSend ? tlData.durationBeats : composeBounds.durationBeats;
 
-    // If device is completely offline, automatically queue into the Offline Outbox!
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       await saveCurrentIdeaToCrate({ queuedForOutbox: true, offlineOnly: true });
       if (btn) {
-        btn.textContent = '📦 Queued in Outbox (Offline — Ready for Studio!)';
+        btn.textContent = '📦 Queued in Outbox (Offline)';
         setTimeout(() => updatePlayerButtons(), 2200);
       }
       return;
@@ -4850,11 +5765,11 @@
         state.bridgeUrl = 'http://192.168.1.247:3333';
       }
     }
-    if (btn) btn.textContent = `⏳ Sending ${barsCount} Bars to Ableton...`;
+    if (btn) btn.textContent = `⏳ Sending ${barsCount}B Drums...`;
 
     const notes = isTimelineSend
       ? tlData.notes
-      : buildNotesFromSequencer(composeBounds.startStep, composeBounds.endStep);
+      : buildNotesFromSequencer(composeBounds.startStep, composeBounds.endStep, 'drums');
     const { artist, song } = findSongById(state.selectedSongId);
     const artistSlotIdx = Math.max(0, ARTIST_CATALOG.findIndex((a) => a.artistId === artist.artistId));
     const useSelectedTrack = state.targetTrack === 'selected';
@@ -4867,8 +5782,8 @@
         : Number(state.targetSlot) || 0;
 
     const clipName = isTimelineSend
-      ? `Timeline Arrangement (${(state.arrangementSections || []).length} Blocks · ${barsCount} Bars)`
-      : `${artist.artistName.replace(/^[^\w]+/, '')} - ${song.title} [${barsCount}B]`;
+      ? `🥁 Drum Timeline (${(state.arrangementSections || []).length} Blocks · ${barsCount} Bars)`
+      : `🥁 ${artist.artistName.replace(/^[^\w]+/, '')} - ${song.title} [${barsCount}B]`;
     const reqPayload = {
       useSelectedTrack,
       useSelectedScene,
@@ -4891,16 +5806,15 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (btn) {
-        const trackLabel = data.trackName || state.abletonSelectedTrackName || 'Selected Track';
+        const trackLabel = data.trackName || state.abletonSelectedTrackName || 'Drum Track';
         const sceneNum = (Number(data.slotIndex ?? 0) || 0) + 1;
         btn.textContent = data.ok
-          ? `✅ Sent to "${trackLabel}" (Scene ${sceneNum})!`
-          : `✅ Saved ${barsCount}-Bar MIDI!`;
+          ? `✅ Drums → "${trackLabel}" (Sc ${sceneNum})!`
+          : `✅ Saved ${barsCount}B Drums!`;
         setTimeout(() => updatePlayerButtons(), 2000);
       }
       refreshAbletonStatus();
     } catch (e) {
-      // Fallback for HTTPS Mobile PWA -> HTTP LAN Studio Bridge (bypasses Mixed Content via 204 No Content link)
       try {
         const compactNotes = notes.map((n) => [
           n.pitch,
@@ -4913,16 +5827,107 @@
           notes: compactNotes
         });
         if (btn) {
-          btn.textContent = `✅ Sent to Ableton Selected Track!`;
+          btn.textContent = `✅ Drums Sent to Ableton!`;
           setTimeout(() => updatePlayerButtons(), 2000);
         }
       } catch (_) {
         await saveCurrentIdeaToCrate({ queuedForOutbox: true, offlineOnly: true });
-        if (btn) {
-          btn.textContent = '📦 Queued in Offline Outbox!';
-          setTimeout(() => updatePlayerButtons(), 1800);
-        }
       }
+    }
+  }
+
+  async function sendBassTimelineToAbleton(fire = true) {
+    const btn = document.getElementById('fold-builder-send-bass-btn');
+    const bassTlData = buildTimelinePlaybackData(false, 'bass');
+    const barsCount = bassTlData.totalBars;
+    const durationBeats = bassTlData.durationBeats;
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      await saveCurrentIdeaToCrate({ queuedForOutbox: true, offlineOnly: true });
+      if (btn) {
+        btn.textContent = '📦 Queued in Outbox';
+        setTimeout(() => updatePlayerButtons(), 2000);
+      }
+      return;
+    }
+
+    if (!state.bridgeUrl) {
+      await autoDiscoverStudioBridge();
+      if (!state.bridgeUrl) {
+        state.bridgeUrl = 'http://192.168.1.247:3333';
+      }
+    }
+    if (btn) btn.textContent = `⏳ Sending ${barsCount}B Bass...`;
+
+    const drumTrackIdx =
+      state.targetTrack === 'selected'
+        ? Number(state.abletonSelectedTrackIndex || 0)
+        : Number(state.targetTrack || 0);
+    const isAutoBass = state.targetBassTrack === 'auto_bass';
+    const isNewMidi = state.targetBassTrack === 'new_midi';
+
+    const clipName = `🎸 Bass Timeline (${(state.bassArrangementSections || []).length} Blocks · ${barsCount} Bars)`;
+    const reqPayload = {
+      useSelectedTrack: false,
+      useSelectedScene: state.targetSlot === 'selected',
+      autoOtherTrack: isAutoBass,
+      createNewTrack: isNewMidi,
+      avoidTrackIndex: drumTrackIdx,
+      trackIndex: isAutoBass ? 'auto_bass' : isNewMidi ? 'new_midi' : Number(state.targetBassTrack) || 0,
+      slotIndex: state.targetSlot === 'selected' ? -1 : Number(state.targetSlot) || 0,
+      tempo: state.tempo,
+      name: clipName,
+      duration: durationBeats,
+      color: 0x38bdf8,
+      fire,
+      notes: bassTlData.notes
+    };
+
+    try {
+      const res = await fetch(getApiUrl('/api/write-clip'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reqPayload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (btn) {
+        const trackLabel = data.trackName || `Track #${Number(data.trackIndex ?? 1) + 1}`;
+        const sceneNum = (Number(data.slotIndex ?? 0) || 0) + 1;
+        btn.textContent = data.ok
+          ? `✅ Bass → "${trackLabel}" (Sc ${sceneNum})!`
+          : `✅ Saved ${barsCount}B Bass!`;
+        setTimeout(() => updatePlayerButtons(), 2200);
+      }
+      refreshAbletonStatus();
+    } catch (e) {
+      try {
+        const compactNotes = bassTlData.notes.map((n) => [
+          n.pitch,
+          Number(n.startTime.toFixed(3)),
+          Number(n.duration.toFixed(3)),
+          n.velocity
+        ]);
+        sendVia204Bridge({
+          ...reqPayload,
+          notes: compactNotes
+        });
+        if (btn) {
+          btn.textContent = `✅ Bass Sent to Separate Track!`;
+          setTimeout(() => updatePlayerButtons(), 2000);
+        }
+      } catch (_) {}
+    }
+  }
+
+  async function sendBothTracksToAbleton(fire = true) {
+    const fullBtn = document.getElementById('fold-builder-send-full-btn');
+    if (fullBtn) fullBtn.textContent = '⏳ Sending 🥁 Drums + 🎸 Bass to Ableton Tracks...';
+    await sendCurrentBeatToAbleton(fire, true);
+    await sendBassTimelineToAbleton(fire);
+    if (fullBtn) {
+      fullBtn.textContent = '✅ Sent 🥁 Drums + 🎸 Bass to Separate Ableton Tracks!';
+      setTimeout(() => updatePlayerButtons(), 2200);
     }
   }
 
@@ -5058,7 +6063,7 @@
   }
 
   // ==========================================================================
-  // 10. 4-Tab Navigation (Compose, Arrange, Arrangements, Settings) & Timeline
+  // 10. 5-Tab Navigation (Songs, Compose, Arrange, Arrangements, Settings) & Timeline
   // ==========================================================================
   function switchWorkspaceTab(rawTabId) {
     const tabId = normalizeTabId(rawTabId);
@@ -5069,13 +6074,17 @@
     savePersistedState();
     applyWorkspaceTabVisibility();
     updatePlayerButtons();
-    if (tabId === 'arrange') {
+    if (tabId === 'songs') {
+      const artistsCard = document.getElementById('card-artists');
+      if (artistsCard) artistsCard.classList.remove('collapsed');
+      renderArtistTabsAndSongs();
+    } else if (tabId === 'arrange') {
       refreshAbletonTrackClips();
       renderSongBuilderAndClipsUI();
     } else if (tabId === 'arrangements' || tabId === 'settings') {
       renderCrateAndJamUI();
     } else if (tabId === 'compose') {
-      renderArtistTabsAndSongs();
+      renderComposeInstrumentUI();
       renderSectionTabs();
       renderMini4BarMap();
       renderSequencerGrid();
@@ -5106,10 +6115,11 @@
     if (layoutBtn) {
       layoutBtn.classList.toggle('chip-on', state.workspaceLayoutMode === 'all');
       layoutBtn.textContent =
-        state.workspaceLayoutMode === 'all' ? '🗂️ Use 4-Tab View' : '⊞ Show All Zones';
+        state.workspaceLayoutMode === 'all' ? '🗂️ Use 5-Tab View' : '⊞ Show All Zones';
     }
 
     const cardArtists = document.getElementById('card-artists');
+    const cardComposeInst = document.getElementById('card-compose-inst');
     const cardDials = document.getElementById('card-dials');
     const cardSeq = document.getElementById('card-sequencer');
     const cardPads = document.getElementById('card-pads');
@@ -5118,15 +6128,22 @@
     const cardCollab = document.getElementById('card-collab');
 
     if (state.workspaceLayoutMode === 'all') {
-      [cardArtists, cardDials, cardSeq, cardPads, cardBuilder, cardCrate, cardCollab].forEach((el) => {
+      [cardArtists, cardComposeInst, cardDials, cardSeq, cardPads, cardBuilder, cardCrate, cardCollab].forEach((el) => {
         if (el) el.style.display = 'flex';
       });
       return;
     }
 
-    // 1. COMPOSE: Select Band/Song + Tweak Dials + Edit 16-Bar Grid + Play/Overdub Finger Instruments
+    // 1. SONGS: Select Artist & Song (21 Bands · 105 Songs)
+    const isSongs = tab === 'songs';
+    if (cardArtists) {
+      cardArtists.style.display = isSongs ? 'flex' : 'none';
+      if (isSongs) cardArtists.classList.remove('collapsed');
+    }
+
+    // 2. COMPOSE: Pick Drums or Bass + Tweak Dials + Edit 16-Bar Grid + Play/Overdub Finger Instruments
     const isCompose = tab === 'compose';
-    if (cardArtists) cardArtists.style.display = isCompose ? 'flex' : 'none';
+    if (cardComposeInst) cardComposeInst.style.display = isCompose ? 'flex' : 'none';
     if (cardDials) cardDials.style.display = isCompose ? 'flex' : 'none';
     if (cardSeq) cardSeq.style.display = isCompose ? 'flex' : 'none';
     if (cardPads) {
@@ -5134,13 +6151,13 @@
       cardPads.classList.toggle('perform-focus-mode', Boolean(state.tallPadsInCompose));
     }
 
-    // 2. ARRANGE: Visual Song Timeline + Section Review/Add/Remove + Save Arrangement
+    // 3. ARRANGE: Multi-Track Visual Song Timeline (Drums + Bass) + Section Modal + Send to Ableton
     if (cardBuilder) cardBuilder.style.display = tab === 'arrange' ? 'flex' : 'none';
 
-    // 3. ARRANGEMENTS: Past Arrangements to Load + Saved Beat Crate + Session History + PC Vault
+    // 4. ARRANGEMENTS: Past Arrangements to Load + Saved Beat Crate + Session History + PC Vault
     if (cardCrate) cardCrate.style.display = tab === 'arrangements' ? 'flex' : 'none';
 
-    // 4. SETTINGS: Sync & Collab Status, Version, Ableton Connection, Wi-Fi Connection, Peers Collabing
+    // 5. SETTINGS: Sync & Collab Status, Version, Ableton Connection, Wi-Fi Connection, Peers Collabing
     if (cardCollab) cardCollab.style.display = tab === 'settings' ? 'flex' : 'none';
 
     const toggleEditPadsBtn = document.getElementById('fold-toggle-edit-pads-btn');
@@ -5182,6 +6199,97 @@
     }, 3200);
   }
 
+  function renderComposeInstrumentUI() {
+    const isBass = state.composeInstrument === 'bass';
+    const { artist, song } = findSongById(state.selectedSongId);
+    const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
+    const keyOverride = SONG_KEY_OVERRIDES[song.id];
+    const scaleBadge = keyOverride ? keyOverride.label : bProf.scaleLabel;
+    const voices = getActiveVoices(state.composeInstrument, state.selectedSongId);
+
+    document.querySelectorAll('[data-compose-inst]').forEach((btn) => {
+      const inst = btn.getAttribute('data-compose-inst');
+      btn.classList.toggle('chip-on', inst === state.composeInstrument);
+    });
+
+    const playBothBtn = document.getElementById('fold-compose-play-both-btn');
+    if (playBothBtn) {
+      playBothBtn.classList.toggle('chip-on', Boolean(state.playBothInCompose));
+      playBothBtn.textContent = state.playBothInCompose
+        ? '🔊 Hear Drums + Bass Together: ON'
+        : `🔈 Solo ${isBass ? 'Bass' : 'Drums'} Only`;
+    }
+
+    const composeInstSummaryEl = document.getElementById('fold-compose-inst-summary');
+    if (composeInstSummaryEl) {
+      composeInstSummaryEl.textContent = isBass
+        ? `🎸 Bass Mode · ${bProf.bassist} (${scaleBadge}) · ${artist.artistName} — ${song.title}`
+        : `🥁 Drums Mode · ${artist.drummer} · ${artist.artistName} — ${song.title}`;
+    }
+
+    const composeTabBadgeEl = document.getElementById('fold-tab-badge-compose');
+    if (composeTabBadgeEl) {
+      composeTabBadgeEl.textContent = isBass ? '🎸 Bass' : '🥁 Drums';
+    }
+
+    const artistsHeaderTitle = document.querySelector('#card-artists .fold-card-title-wrap h3');
+    if (artistsHeaderTitle) {
+      artistsHeaderTitle.textContent = `🎵 Select Artist & Song (21 Bands · 105 Songs)`;
+    }
+
+    const dialsHeaderTitle = document.querySelector('#card-dials .fold-card-title-wrap h3');
+    if (dialsHeaderTitle) {
+      dialsHeaderTitle.textContent = isBass
+        ? `🎛️ Tweak Bassist Feel & Bass Rig (${bProf.bassist} · ${scaleBadge})`
+        : `🎛️ Tweak Drummer Feel & Drum Kit (${artist.drummer})`;
+    }
+
+    const kitLabelEl = document.querySelector('label[for="fold-kit-select"]');
+    if (kitLabelEl) {
+      kitLabelEl.textContent = isBass ? 'BASS RIG:' : 'DRUM KIT:';
+    }
+    const kitSelect = document.getElementById('fold-kit-select');
+    if (kitSelect) {
+      if (isBass) {
+        kitSelect.innerHTML = BASS_KITS.map((k) => `<option value="${k.id}">${k.name}</option>`).join('');
+        kitSelect.value = state.bassKitId;
+      } else {
+        kitSelect.innerHTML = DRUM_KITS.map((k) => `<option value="${k.id}">${k.name}</option>`).join('');
+        kitSelect.value = state.kitId;
+      }
+    }
+
+    const seqHeaderTitle = document.querySelector('#card-sequencer .fold-card-title-wrap h3');
+    if (seqHeaderTitle) {
+      seqHeaderTitle.textContent = isBass
+        ? `📊 Edit 8-Note Bassline Sequencer (${scaleBadge}) & Add to Bass Track`
+        : `📊 Edit 8-Voice Drum Sequencer & Add to Drum Track`;
+    }
+
+    const padsHeaderTitle = document.querySelector('#card-pads .fold-card-title-wrap h3');
+    if (padsHeaderTitle) {
+      padsHeaderTitle.textContent = isBass
+        ? `🎸 Play Over It — Finger Bass Scale Pads (${scaleBadge} · Keys 1–8)`
+        : `🥁 Play Over It — Finger Drum Pads & Live Overdub (Keys 1–8)`;
+    }
+
+    const mpcPadsEl = document.getElementById('fold-mpc-pads');
+    if (mpcPadsEl) {
+      mpcPadsEl.querySelectorAll('.fold-drum-pad').forEach((padEl, idx) => {
+        const v = voices[idx];
+        if (!v) return;
+        padEl.style.borderBottomColor = v.color;
+        const spans = padEl.querySelectorAll('span');
+        if (spans[0]) spans[0].textContent = v.name;
+        if (spans[1]) {
+          spans[1].textContent = isBass
+            ? `Key [${idx + 1}] · ${v.noteName || 'Bass Note'} · Tap / Hold`
+            : `Key [${idx + 1}] · Tap / Hold Roll`;
+        }
+      });
+    }
+  }
+
   function renderComposeTimelineBanner() {
     const bannerEl = document.getElementById('fold-compose-editing-banner');
     const add1Btn = document.getElementById('fold-compose-add-1bar-btn');
@@ -5192,10 +6300,12 @@
     const padsAdd16Btn = document.getElementById('fold-pads-add-16bar-btn');
     const sec = SONG_SECTIONS[state.activeSection] || SONG_SECTIONS[0];
     const { song } = findSongById(state.selectedSongId);
+    const isBass = state.composeInstrument === 'bass';
+    const trackLabel = isBass ? '🎸 Bass Track' : '🥁 Drum Track';
 
-    const txt1 = `➕ Add 1 Bar (Bar ${state.zoomedBar + 1}) → Timeline`;
-    const txt4 = `➕ Add 4 Bars (${sec.badge}) → Timeline`;
-    const txt16 = `➕ Add All 16 Bars (${song ? song.title : 'Full Song'}) → Timeline`;
+    const txt1 = `➕ Add 1 Bar (Bar ${state.zoomedBar + 1}) → ${trackLabel}`;
+    const txt4 = `➕ Add 4 Bars (${sec.badge}) → ${trackLabel}`;
+    const txt16 = `➕ Add All 16 Bars (${song ? song.title : 'Full Song'}) → ${trackLabel}`;
 
     if (add1Btn) add1Btn.textContent = txt1;
     if (add4Btn) add4Btn.textContent = txt4;
@@ -5205,19 +6315,20 @@
     if (padsAdd16Btn) padsAdd16Btn.textContent = txt16;
 
     if (!bannerEl) return;
-    if (
-      state.editingTimelineIdx !== null &&
-      state.arrangementSections &&
-      state.arrangementSections[state.editingTimelineIdx]
-    ) {
+    const editArr =
+      state.editingTimelineTrack === 'bass'
+        ? state.bassArrangementSections
+        : state.arrangementSections;
+    if (state.editingTimelineIdx !== null && editArr && editArr[state.editingTimelineIdx]) {
       const idx = state.editingTimelineIdx;
-      const secItem = state.arrangementSections[idx];
+      const secItem = editArr[idx];
       const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
       const sInfo = findSongById(secItem.songId || state.selectedSongId);
+      const tBadge = state.editingTimelineTrack === 'bass' ? '🎸 BASS TRACK' : '🥁 DRUM TRACK';
       bannerEl.style.display = 'flex';
       bannerEl.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="background:#e73ff6;color:#fff;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px;">🎬 EDITING TIMELINE BLOCK #${idx + 1}</span>
+          <span style="background:#e73ff6;color:#fff;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px;">🎬 EDITING ${tBadge} BLOCK #${idx + 1}</span>
           <strong style="font-size:13px;color:#fff;">${roleObj.label} · ${sInfo.song.title} (${secItem.bars || 4} Bar${Number(secItem.bars) === 1 ? '' : 's'})</strong>
           <span style="font-size:12px;color:#d1d5db;">Every step, dial, or pad edit you make here updates Block #${idx + 1} on your Arrange Timeline automatically!</span>
         </div>
@@ -5245,16 +6356,25 @@
     }
   }
 
-  function addComposeToTimeline(barsToAdd = 4, songIdOverride = null, roleIdOverride = null) {
+  function addComposeToTimeline(
+    barsToAdd = 4,
+    songIdOverride = null,
+    roleIdOverride = null,
+    trackTypeOverride = null
+  ) {
     pushUndoState();
+    const trackType = trackTypeOverride || state.composeInstrument || 'drums';
+    const isBass = trackType === 'bass';
+    const targetArr = isBass ? state.bassArrangementSections : state.arrangementSections;
     const isFirstSectionAdded =
       !state.timelineHasUserSection ||
-      !Array.isArray(state.arrangementSections) ||
-      state.arrangementSections.length === 0;
+      !Array.isArray(targetArr) ||
+      targetArr.length === 0;
 
     const bars = barsToAdd === 1 ? 1 : barsToAdd === 16 ? 16 : 4;
     const targetSongId = songIdOverride || state.selectedSongId;
-    const isCurrentComposeSong = targetSongId === state.selectedSongId;
+    const isCurrentComposeSong =
+      targetSongId === state.selectedSongId && trackType === state.composeInstrument;
     const { song } = findSongById(targetSongId);
 
     const defaultRoleForBars =
@@ -5283,6 +6403,14 @@
 
     const srcGrid = isCurrentComposeSong
       ? state.grid
+      : isBass
+      ? generateSongBassGrid(
+          targetSongId,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        )
       : generateSongGrooveGrid(
           targetSongId,
           state.intensityPct,
@@ -5293,7 +6421,8 @@
     const customGrid = extractGridSlice(srcGrid, startStep, bars * 16);
 
     const newBlock = {
-      id: `sec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      id: `sec_${trackType}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      trackType,
       roleId: roleObj.id,
       songId: targetSongId,
       sourceSlice,
@@ -5305,62 +6434,116 @@
       addedColor: state.playerColor
     };
 
-    if (isFirstSectionAdded) {
+    if (!state.timelineHasUserSection) {
       const firstSectionBpm = isCurrentComposeSong ? state.tempo : song.bpm;
       state.timelineHasUserSection = true;
       setGlobalTimelineBpm(firstSectionBpm, song.title);
-      state.arrangementSections = [newBlock];
-      state.selectedTimelineIdx = 0;
+      if (isBass) {
+        state.bassArrangementSections = [newBlock];
+        state.selectedBassTimelineIdx = 0;
+      } else {
+        state.arrangementSections = [newBlock];
+        state.selectedTimelineIdx = 0;
+      }
     } else {
       if (state.timelineBpm) {
         state.tempo = state.timelineBpm;
       }
-      state.arrangementSections.push(newBlock);
-      state.selectedTimelineIdx = state.arrangementSections.length - 1;
+      if (isBass) {
+        state.bassArrangementSections.push(newBlock);
+        state.selectedBassTimelineIdx = state.bassArrangementSections.length - 1;
+      } else {
+        state.arrangementSections.push(newBlock);
+        state.selectedTimelineIdx = state.arrangementSections.length - 1;
+      }
     }
 
-    const totalBars = state.arrangementSections.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
+    const updatedArr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    const totalBars = updatedArr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
     const barDesc =
       bars === 1
         ? `1 Bar (Bar ${sourceBar + 1})`
         : bars === 16
         ? 'All 16 Bars'
         : `4 Bars (${SONG_SECTIONS[sourceSlice]?.badge || 'Section'})`;
+    const trackName = isBass ? '🎸 Bass Track' : '🥁 Drum Track';
     const msg = isFirstSectionAdded
-      ? `✅ Added 1st Section (${barDesc} of "${song.title}") → Global Timeline BPM set to ${state.tempo} BPM!`
-      : `✅ Added ${barDesc} of "${song.title}" → Timeline Block #${state.arrangementSections.length} (${totalBars} Bars @ ${state.tempo} BPM)`;
+      ? `✅ Added 1st Section (${barDesc} of "${song.title}") to ${trackName} → Global Timeline BPM set to ${state.tempo} BPM!`
+      : `✅ Added ${barDesc} of "${song.title}" → ${trackName} Block #${updatedArr.length} (${totalBars} Bars @ ${state.tempo} BPM)`;
     showTimelineToast(msg);
 
-    recordSessionHistoryEntry(`Added ${barDesc} (${song.title}) to Timeline`);
+    recordSessionHistoryEntry(`Added ${barDesc} (${song.title}) to ${trackName}`);
     savePersistedState();
     renderSongBuilderAndClipsUI();
     renderCrateAndJamUI();
     updatePlayerButtons();
     if (!state.suppressJamBroadcast && state.jamMode !== 'independent') {
-      broadcastFullJamState(`Added ${barDesc} (${song.title}) to Timeline`);
+      broadcastFullJamState(`Added ${barDesc} (${song.title}) to ${trackName}`);
     }
   }
 
-  function openTimelineBlockInCompose(secIdx) {
-    if (!Array.isArray(state.arrangementSections) || !state.arrangementSections[secIdx]) return;
-    const secItem = state.arrangementSections[secIdx];
+  function matchBassTimelineToDrums() {
+    pushUndoState();
+    const drumArr = Array.isArray(state.arrangementSections) ? state.arrangementSections : [];
+    if (drumArr.length === 0) return;
+    state.bassArrangementSections = drumArr.map((dSec, i) => ({
+      id: `sec_bass_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+      trackType: 'bass',
+      roleId: dSec.roleId || 'verse',
+      songId: dSec.songId || state.selectedSongId,
+      sourceSlice: dSec.sourceSlice ?? 0,
+      sourceBar: dSec.sourceBar ?? 0,
+      bars: Number(dSec.bars) || 4,
+      customEdited: false,
+      customGrid: null,
+      addedBy: state.playerName,
+      addedColor: state.playerColor
+    }));
+    state.selectedBassTimelineIdx = 0;
+    showTimelineToast(
+      `🪄 Matched 🎸 Bass Track (${state.bassArrangementSections.length} Sections) to 🥁 Drum Track!`
+    );
+    commitArrangementChange('Matched Bass Timeline to Drum Timeline');
+  }
+
+  function openTimelineBlockInCompose(secIdx, trackType = 'drums') {
+    const isBass = trackType === 'bass';
+    const arr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    if (!Array.isArray(arr) || !arr[secIdx]) return;
+    const secItem = arr[secIdx];
     const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
     const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
+    const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
 
-    state.selectedTimelineIdx = secIdx;
+    state.composeInstrument = isBass ? 'bass' : 'drums';
+    if (isBass) {
+      state.selectedBassTimelineIdx = secIdx;
+      state.bassKitId = bProf.bassKit;
+    } else {
+      state.selectedTimelineIdx = secIdx;
+      state.kitId = song.kit || artist.defaultKit;
+    }
     state.editingTimelineIdx = secIdx;
+    state.editingTimelineTrack = trackType;
     state.selectedArtistId = artist.artistId;
     state.selectedSongId = song.id;
 
-    // Start with the song's base 16-bar grid, then overlay the timeline block's customGrid into the active bar/section
-    const baseGrid = generateSongGrooveGrid(
-      song.id,
-      state.intensityPct,
-      state.ghostPct,
-      state.hatEnergyPct,
-      state.fillPct
-    );
-    const blockGrid = getTimelineBlockGrid(secItem);
+    const baseGrid = isBass
+      ? generateSongBassGrid(
+          song.id,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        )
+      : generateSongGrooveGrid(
+          song.id,
+          state.intensityPct,
+          state.ghostPct,
+          state.hatEnergyPct,
+          state.fillPct
+        );
+    const blockGrid = getTimelineBlockGrid(secItem, trackType);
 
     if (bars === 1) {
       const targetBar = Math.max(0, Math.min(15, Number(secItem.sourceBar ?? 0)));
@@ -5397,6 +6580,7 @@
 
     state.grid = baseGrid;
     syncSequencerNotes();
+    renderComposeInstrumentUI();
     updateViewModeButtons();
     updateDialsUI();
     switchWorkspaceTab('compose');
@@ -5411,6 +6595,7 @@
     const songsGridEl = document.getElementById('fold-artist-songs');
     if (!artistTabsEl || !songsGridEl) return;
 
+    const isBass = state.composeInstrument === 'bass';
     const q = (state.songSearchQuery || '').trim().toLowerCase();
     const tf = state.songTempoFilter || 'all';
     const isFilteringAll = q.length > 0 || tf !== 'all';
@@ -5422,10 +6607,11 @@
 
     artistTabsEl.innerHTML = ARTIST_CATALOG.map((a) => {
       const active = !isFilteringAll && a.artistId === state.selectedArtistId;
+      const bProf = ARTIST_BASS_PROFILES[a.artistId] || ARTIST_BASS_PROFILES.zeppelin;
       return `
         <button class="fold-artist-pill ${active ? 'active' : ''}" data-artist-tab="${a.artistId}">
           <span>${a.artistName}</span>
-          <span class="drummer-sub">${a.drummer}</span>
+          <span class="drummer-sub">${isBass ? `🎸 ${bProf.bassist}` : a.drummer}</span>
         </button>`;
     }).join('');
 
@@ -5447,6 +6633,7 @@
     let songsToRender = [];
     if (isFilteringAll) {
       for (const a of ARTIST_CATALOG) {
+        const bProf = ARTIST_BASS_PROFILES[a.artistId] || ARTIST_BASS_PROFILES.zeppelin;
         for (let idx = 0; idx < a.songs.length; idx++) {
           const s = a.songs[idx];
           const matchesQuery =
@@ -5454,7 +6641,8 @@
             s.title.toLowerCase().includes(q) ||
             s.desc.toLowerCase().includes(q) ||
             a.artistName.toLowerCase().includes(q) ||
-            a.drummer.toLowerCase().includes(q);
+            a.drummer.toLowerCase().includes(q) ||
+            bProf.bassist.toLowerCase().includes(q);
           const matchesTempo =
             tf === 'all' ||
             (tf === 'slow' && s.bpm < 95) ||
@@ -5474,8 +6662,8 @@
     const filterCountEl = document.getElementById('fold-song-filter-count');
     if (filterCountEl) {
       filterCountEl.textContent = isFilteringAll
-        ? `Showing ${songsToRender.length} matching groove(s) across all 21 bands — tap a card to load & edit, or add 1 / 4 / 16 bars straight to your Timeline`
-        : `${(ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0]).artistName} — Tap any song to load & edit in Compose, or add 1B / 4B / 16B to your Arrange Timeline`;
+        ? `Showing ${songsToRender.length} matching song(s) across all 21 bands — tap a song card to open it in Compose (where you pick Drums or Bass)!`
+        : `${(ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0]).artistName} — Tap any song card to open it in Compose (pick 🥁 Drums or 🎸 Bass, edit & play over it), or quick-add to your Timeline`;
     }
 
     if (songsToRender.length === 0) {
@@ -5487,26 +6675,29 @@
     }
 
     songsGridEl.innerHTML = songsToRender
-      .map(({ artist, song: s, idx }) => {
+      .map(({ artist, song: s }) => {
         const active = s.id === state.selectedSongId;
+        const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
+        const keyOverride = SONG_KEY_OVERRIDES[s.id];
+        const scaleBadge = keyOverride ? keyOverride.label : bProf.scaleLabel;
         const artistBadge = isFilteringAll
-          ? `<div style="font-size:11px;font-weight:800;color:#f0abfc;margin-bottom:2px;">${artist.artistName} · <span style="color:#d1d5db;font-weight:600;">${artist.drummer}</span></div>`
+          ? `<div style="font-size:11px;font-weight:800;color:#f0abfc;margin-bottom:2px;">${artist.artistName} · <span style="color:#d1d5db;font-weight:600;">${artist.drummer} / ${bProf.bassist}</span></div>`
           : '';
         return `
           <div class="fold-song-card ${active ? 'active' : ''}" data-song-id="${s.id}">
             ${artistBadge}
             <div class="song-top-row">
-              <span class="song-tempo-tag">${s.bpm} BPM · ${s.swing}% Swing</span>
-              ${active ? `<span class="song-active-badge">● EDITING</span>` : `<span style="font-size:11px;color:#84dcc6;font-weight:800;">🎛️ Tap to Select & Edit ↓</span>`}
+              <span class="song-tempo-tag">${s.bpm} BPM · ${s.swing}% Swing · 🎸 ${scaleBadge}</span>
+              ${active ? `<span class="song-active-badge">● LOADED IN COMPOSE</span>` : `<span style="font-size:11px;color:#84dcc6;font-weight:800;">🎛️ Tap to Open in Compose →</span>`}
             </div>
             <div class="song-title">${s.title}</div>
-            <div class="song-desc">${s.desc}</div>
+            <div class="song-desc">🥁 ${artist.drummer} · 🎸 ${bProf.bassist} — ${s.desc}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">
-              <span style="font-size:10px;font-weight:800;color:#84dcc6;">➕ TO TIMELINE:</span>
+              <span style="font-size:10px;font-weight:800;color:#84dcc6;">➕ QUICK ADD TO TIMELINE:</span>
               <div style="display:flex;align-items:center;gap:4px;">
-                <button type="button" class="fold-song-send-btn" data-card-add-tl="1" data-card-song="${s.id}" title="Add 1 Bar of ${s.title} to your Arrange Timeline">+ 1 Bar</button>
-                <button type="button" class="fold-song-send-btn" data-card-add-tl="4" data-card-song="${s.id}" title="Add 4 Bars of ${s.title} to your Arrange Timeline">+ 4 Bars</button>
-                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.18);" data-card-add-tl="16" data-card-song="${s.id}" title="Add All 16 Bars of ${s.title} to your Arrange Timeline">+ All 16B</button>
+                <button type="button" class="fold-song-send-btn" data-card-add-tl="1" data-card-song="${s.id}" title="Add 1 Bar of ${s.title} to your ${isBass ? 'Bass' : 'Drum'} Track">+ 1B</button>
+                <button type="button" class="fold-song-send-btn" data-card-add-tl="4" data-card-song="${s.id}" title="Add 4 Bars of ${s.title} to your ${isBass ? 'Bass' : 'Drum'} Track">+ 4B</button>
+                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.18);" data-card-add-tl="16" data-card-song="${s.id}" title="Add All 16 Bars of ${s.title} to your ${isBass ? 'Bass' : 'Drum'} Track">+ All 16B</button>
               </div>
             </div>
           </div>`;
@@ -5521,19 +6712,7 @@
         pushUndoState();
         loadSongGroove(cardEl.getAttribute('data-song-id'), true);
         if (state.autoCollapseSongsOnSelect !== false) {
-          const artistsCard = document.getElementById('card-artists');
-          if (artistsCard) {
-            artistsCard.classList.add('collapsed');
-            document
-              .querySelectorAll('.fold-collapse-btn[data-toggle-card="card-artists"]')
-              .forEach((btn) => {
-                btn.textContent = '🎸 Change Song ▼';
-              });
-          }
-          setTimeout(() => {
-            const dialsEl = document.getElementById('card-dials');
-            if (dialsEl) dialsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 50);
+          switchWorkspaceTab('compose');
         }
       });
     });
@@ -5543,7 +6722,7 @@
         e.stopPropagation();
         const sid = addBtn.getAttribute('data-card-song');
         const bars = Number(addBtn.getAttribute('data-card-add-tl')) || 4;
-        addComposeToTimeline(bars, sid, null);
+        addComposeToTimeline(bars, sid, null, state.composeInstrument);
         const orig = addBtn.textContent;
         addBtn.textContent = '✅ Added!';
         setTimeout(() => {
@@ -5554,7 +6733,7 @@
   }
 
   // ==========================================================================
-  // Collaborative Arrangement Timeline Addition, Removal & Reordering
+  // Collaborative Arrangement Timeline Addition, Removal & Reordering (Drums & Bass)
   // ==========================================================================
   function commitArrangementChange(activityDesc) {
     recordSessionHistoryEntry(activityDesc);
@@ -5567,78 +6746,105 @@
     }
   }
 
-  function addArrangementSection(roleId = 'chorus', songId = null, barsCount = 4) {
+  function addArrangementSection(roleId = 'chorus', songId = null, barsCount = 4, trackType = 'drums') {
     const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === roleId) || ARRANGEMENT_ROLES[1];
-    addComposeToTimeline(barsCount, songId || state.selectedSongId, roleObj.id);
+    addComposeToTimeline(barsCount, songId || state.selectedSongId, roleObj.id, trackType);
   }
 
-  function removeArrangementSection(secIdx) {
-    if (!Array.isArray(state.arrangementSections) || state.arrangementSections.length <= 1) return;
+  function removeArrangementSection(secIdx, trackType = 'drums') {
+    const isBass = trackType === 'bass';
+    const arr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    if (!Array.isArray(arr) || arr.length <= 1) return;
     pushUndoState();
-    const removed = state.arrangementSections.splice(secIdx, 1)[0];
-    if (state.selectedTimelineIdx >= state.arrangementSections.length) {
-      state.selectedTimelineIdx = Math.max(0, state.arrangementSections.length - 1);
+    const removed = arr.splice(secIdx, 1)[0];
+    if (isBass) {
+      if (state.selectedBassTimelineIdx >= arr.length) {
+        state.selectedBassTimelineIdx = Math.max(0, arr.length - 1);
+      }
+    } else {
+      if (state.selectedTimelineIdx >= arr.length) {
+        state.selectedTimelineIdx = Math.max(0, arr.length - 1);
+      }
     }
-    if (state.editingTimelineIdx === secIdx) {
-      state.editingTimelineIdx = null;
-    } else if (state.editingTimelineIdx !== null && state.editingTimelineIdx > secIdx) {
-      state.editingTimelineIdx--;
+    if (state.editingTimelineTrack === trackType) {
+      if (state.editingTimelineIdx === secIdx) {
+        state.editingTimelineIdx = null;
+      } else if (state.editingTimelineIdx !== null && state.editingTimelineIdx > secIdx) {
+        state.editingTimelineIdx--;
+      }
     }
-    if (state.modalSectionIdx === secIdx) {
-      closeSectionSequenceModal();
-    } else if (state.modalSectionIdx !== null && state.modalSectionIdx > secIdx) {
-      state.modalSectionIdx--;
+    if (state.modalTrack === trackType) {
+      if (state.modalSectionIdx === secIdx) {
+        closeSectionSequenceModal();
+      } else if (state.modalSectionIdx !== null && state.modalSectionIdx > secIdx) {
+        state.modalSectionIdx--;
+      }
     }
     const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === removed?.roleId) || ARRANGEMENT_ROLES[1];
-    commitArrangementChange(`Removed Timeline Block #${secIdx + 1} (${roleObj.label})`);
+    commitArrangementChange(`Removed ${isBass ? 'Bass' : 'Drum'} Block #${secIdx + 1} (${roleObj.label})`);
   }
 
-  function reorderArrangementSection(fromIdx, toIdx) {
-    if (!Array.isArray(state.arrangementSections)) return;
+  function reorderArrangementSection(fromIdx, toIdx, trackType = 'drums') {
+    const isBass = trackType === 'bass';
+    const arr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    if (!Array.isArray(arr)) return;
     if (
       fromIdx === toIdx ||
       fromIdx < 0 ||
       toIdx < 0 ||
-      fromIdx >= state.arrangementSections.length ||
-      toIdx >= state.arrangementSections.length
+      fromIdx >= arr.length ||
+      toIdx >= arr.length
     ) {
       return;
     }
     pushUndoState();
-    const [moved] = state.arrangementSections.splice(fromIdx, 1);
-    state.arrangementSections.splice(toIdx, 0, moved);
-    state.selectedTimelineIdx = toIdx;
-    if (state.editingTimelineIdx === fromIdx) {
-      state.editingTimelineIdx = toIdx;
-    } else if (state.editingTimelineIdx !== null) {
-      if (fromIdx < state.editingTimelineIdx && toIdx >= state.editingTimelineIdx) {
-        state.editingTimelineIdx--;
-      } else if (fromIdx > state.editingTimelineIdx && toIdx <= state.editingTimelineIdx) {
-        state.editingTimelineIdx++;
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, moved);
+    if (isBass) {
+      state.selectedBassTimelineIdx = toIdx;
+    } else {
+      state.selectedTimelineIdx = toIdx;
+    }
+    if (state.editingTimelineTrack === trackType) {
+      if (state.editingTimelineIdx === fromIdx) {
+        state.editingTimelineIdx = toIdx;
+      } else if (state.editingTimelineIdx !== null) {
+        if (fromIdx < state.editingTimelineIdx && toIdx >= state.editingTimelineIdx) {
+          state.editingTimelineIdx--;
+        } else if (fromIdx > state.editingTimelineIdx && toIdx <= state.editingTimelineIdx) {
+          state.editingTimelineIdx++;
+        }
       }
     }
-    if (state.modalSectionIdx === fromIdx) {
+    if (state.modalTrack === trackType && state.modalSectionIdx === fromIdx) {
       state.modalSectionIdx = toIdx;
     }
     const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === moved?.roleId) || ARRANGEMENT_ROLES[1];
-    commitArrangementChange(`Dragged Timeline Block #${fromIdx + 1} (${roleObj.label}) → #${toIdx + 1}`);
+    commitArrangementChange(`Dragged ${isBass ? 'Bass' : 'Drum'} Block #${fromIdx + 1} (${roleObj.label}) → #${toIdx + 1}`);
   }
 
-  function moveArrangementSection(secIdx, delta) {
-    reorderArrangementSection(secIdx, secIdx + delta);
+  function moveArrangementSection(secIdx, delta, trackType = 'drums') {
+    reorderArrangementSection(secIdx, secIdx + delta, trackType);
   }
 
-  function duplicateArrangementSection(secIdx) {
-    if (!Array.isArray(state.arrangementSections) || !state.arrangementSections[secIdx]) return;
+  function duplicateArrangementSection(secIdx, trackType = 'drums') {
+    const isBass = trackType === 'bass';
+    const arr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    if (!Array.isArray(arr) || !arr[secIdx]) return;
     pushUndoState();
-    const src = state.arrangementSections[secIdx];
+    const src = arr[secIdx];
     const copy = JSON.parse(JSON.stringify(src));
-    copy.id = `sec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+    copy.id = `sec_${trackType}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+    copy.trackType = trackType;
     copy.addedBy = state.playerName;
     copy.addedColor = state.playerColor;
-    state.arrangementSections.splice(secIdx + 1, 0, copy);
-    state.selectedTimelineIdx = secIdx + 1;
-    commitArrangementChange(`Duplicated Timeline Block #${secIdx + 1}`);
+    arr.splice(secIdx + 1, 0, copy);
+    if (isBass) {
+      state.selectedBassTimelineIdx = secIdx + 1;
+    } else {
+      state.selectedTimelineIdx = secIdx + 1;
+    }
+    commitArrangementChange(`Duplicated ${isBass ? 'Bass' : 'Drum'} Block #${secIdx + 1}`);
   }
 
   function randomize4SectionMashup() {
@@ -5654,14 +6860,29 @@
         ? state.arrangementSections.length
         : 4;
     const defaultRoles = ['intro', 'verse', 'chorus', 'bridge', 'breakdown', 'climax', 'outro'];
-    const nextArr = [];
+    const nextDrumArr = [];
+    const nextBassArr = [];
     for (let i = 0; i < currentLen; i++) {
       const pick = allSongs[Math.floor(Math.random() * allSongs.length)];
       const existingRole = state.arrangementSections?.[i]?.roleId || defaultRoles[i % defaultRoles.length];
       const existingBars = Number(state.arrangementSections?.[i]?.bars) || 4;
       const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === existingRole) || ARRANGEMENT_ROLES[1];
-      nextArr.push({
-        id: `sec_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+      nextDrumArr.push({
+        id: `sec_drums_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+        trackType: 'drums',
+        roleId: roleObj.id,
+        songId: pick.song.id,
+        sourceSlice: i % 4,
+        sourceBar: (i % 4) * 4,
+        bars: existingBars,
+        customEdited: false,
+        customGrid: null,
+        addedBy: state.playerName,
+        addedColor: state.playerColor
+      });
+      nextBassArr.push({
+        id: `sec_bass_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`,
+        trackType: 'bass',
         roleId: roleObj.id,
         songId: pick.song.id,
         sourceSlice: i % 4,
@@ -5673,13 +6894,14 @@
         addedColor: state.playerColor
       });
     }
-    state.arrangementSections = nextArr;
-    if (!state.timelineHasUserSection && nextArr[0]) {
-      const firstSong = findSongById(nextArr[0].songId).song;
+    state.arrangementSections = nextDrumArr;
+    state.bassArrangementSections = nextBassArr;
+    if (!state.timelineHasUserSection && nextDrumArr[0]) {
+      const firstSong = findSongById(nextDrumArr[0].songId).song;
       state.timelineHasUserSection = true;
       setGlobalTimelineBpm(firstSong ? firstSong.bpm : state.tempo, firstSong ? firstSong.title : 'Block #1');
     }
-    commitArrangementChange(`Randomized ${currentLen}-Block Timeline`);
+    commitArrangementChange(`Randomized ${currentLen}-Block Drum & Bass Timeline`);
   }
 
   // ==========================================================================
@@ -5688,15 +6910,23 @@
   let isPaintingModalSteps = false;
   let modalPaintTargetState = null;
 
-  function openSectionSequenceModal(secIdx) {
-    if (!Array.isArray(state.arrangementSections) || !state.arrangementSections[secIdx]) return;
-    state.selectedTimelineIdx = secIdx;
+  function openSectionSequenceModal(secIdx, trackType = 'drums') {
+    const isBass = trackType === 'bass';
+    const arr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    if (!Array.isArray(arr) || !arr[secIdx]) return;
+    state.modalTrack = trackType;
+    if (isBass) {
+      state.selectedBassTimelineIdx = secIdx;
+    } else {
+      state.selectedTimelineIdx = secIdx;
+    }
     state.modalSectionIdx = secIdx;
     state.modalSubSlice = 0;
 
-    const secItem = state.arrangementSections[secIdx];
+    const secItem = arr[secIdx];
+    secItem.trackType = trackType;
     if (!secItem.customGrid) {
-      secItem.customGrid = getTimelineBlockGrid(secItem);
+      secItem.customGrid = getTimelineBlockGrid(secItem, trackType);
     }
 
     const modalEl = document.getElementById('fold-section-modal');
@@ -5719,10 +6949,13 @@
   }
 
   function applyBrushToModalCell(secIdx, vIdx, stepIdx, forceState = null) {
-    const secItem = state.arrangementSections && state.arrangementSections[secIdx];
+    const trackType = state.modalTrack || 'drums';
+    const isBass = trackType === 'bass';
+    const arr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    const secItem = arr && arr[secIdx];
     if (!secItem) return null;
     if (!secItem.customGrid) {
-      secItem.customGrid = getTimelineBlockGrid(secItem);
+      secItem.customGrid = getTimelineBlockGrid(secItem, trackType);
     }
     if (!secItem.customGrid[vIdx] || !secItem.customGrid[vIdx][stepIdx]) {
       return null;
@@ -5768,7 +7001,15 @@
     if (updated.state > 0 && !state.phonePlayer.playing) {
       const ctx = getAudioCtx();
       const vel = updated.state === 2 ? 124 : updated.state === 3 ? 48 : 100;
-      triggerDrumVoice(ctx, DRUM_VOICES[vIdx].pitch, vel, ctx.currentTime);
+      const voices = getActiveVoices(trackType, secItem.songId || state.selectedSongId);
+      const voice = voices[vIdx] || voices[0];
+      if (isBass) {
+        const { artist } = findSongById(secItem.songId || state.selectedSongId);
+        const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
+        triggerBassVoice(ctx, voice.pitch, vel, ctx.currentTime, 0.25, bProf.bassKit);
+      } else {
+        triggerDrumVoice(ctx, voice.pitch, vel, ctx.currentTime);
+      }
     }
 
     savePersistedState();
@@ -5781,10 +7022,14 @@
     const gridContainer = document.getElementById('fold-modal-seq-grid');
     if (!gridContainer || state.modalSectionIdx === null) return;
     const secIdx = state.modalSectionIdx;
-    const secItem = state.arrangementSections && state.arrangementSections[secIdx];
+    const trackType = state.modalTrack || 'drums';
+    const isBass = trackType === 'bass';
+    const arr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    const secItem = arr && arr[secIdx];
     if (!secItem) return;
 
-    const blockGrid = getTimelineBlockGrid(secItem);
+    const voices = getActiveVoices(trackType, secItem.songId || state.selectedSongId);
+    const blockGrid = getTimelineBlockGrid(secItem, trackType);
     secItem.customGrid = blockGrid;
     const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
     const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
@@ -5792,7 +7037,7 @@
     if (bars === 1) {
       // 1-Bar (16-step) high-visibility step grid
       let html = `<div class="drum-seq-header-row">
-        <div class="drum-lane-controls-header" style="color:${roleObj.color};">1-BAR SECTION · 16 STEPS</div>
+        <div class="drum-lane-controls-header" style="color:${roleObj.color};">1-BAR ${isBass ? 'BASS' : 'DRUM'} SECTION · 16 STEPS</div>
         <div class="drum-steps-row">`;
       for (let s = 0; s < 16; s++) {
         const isBeat = s % 4 === 0;
@@ -5801,8 +7046,8 @@
       }
       html += `</div></div>`;
 
-      for (let vIdx = 0; vIdx < DRUM_VOICES.length; vIdx++) {
-        const voice = DRUM_VOICES[vIdx];
+      for (let vIdx = 0; vIdx < voices.length; vIdx++) {
+        const voice = voices[vIdx];
         const muted = state.mutedLanes[vIdx];
         html += `
           <div class="drum-seq-row ${muted ? 'muted' : ''}">
@@ -5845,7 +7090,7 @@
       let html = `<div class="drum-seq-64-wrapper" style="border-left:4px solid ${roleObj.color};padding-left:8px;">`;
       html += `<div class="drum-seq-row-64 header">
         <div class="drum-lane-controls-header" style="color:${roleObj.color};">
-          ${bars === 16 ? `SLICE ${subSlice + 1} (BARS ${startBarInBlock + 1}–${startBarInBlock + 4})` : `4-BAR SECTION`}<br>
+          ${bars === 16 ? `SLICE ${subSlice + 1} (BARS ${startBarInBlock + 1}–${startBarInBlock + 4})` : `4-BAR ${isBass ? 'BASS' : 'DRUM'} SECTION`}<br>
           <span style="font-size:9px;color:#9ca3af;">Steps ${startStepInBlock + 1}–${startStepInBlock + 64}</span>
         </div>
         <div class="drum-bars-4-grid">
@@ -5856,8 +7101,8 @@
         </div>
       </div>`;
 
-      for (let vIdx = 0; vIdx < DRUM_VOICES.length; vIdx++) {
-        const voice = DRUM_VOICES[vIdx];
+      for (let vIdx = 0; vIdx < voices.length; vIdx++) {
+        const voice = voices[vIdx];
         const muted = state.mutedLanes[vIdx];
         html += `
           <div class="drum-seq-row-64 ${muted ? 'muted' : ''}">
@@ -5904,7 +7149,14 @@
       btn.addEventListener('click', () => {
         const vIdx = Number(btn.getAttribute('data-modal-audition'));
         const ctx = getAudioCtx();
-        triggerDrumVoice(ctx, DRUM_VOICES[vIdx].pitch, 118, ctx.currentTime);
+        const voice = voices[vIdx] || voices[0];
+        if (isBass) {
+          const { artist } = findSongById(secItem.songId || state.selectedSongId);
+          const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
+          triggerBassVoice(ctx, voice.pitch, 118, ctx.currentTime, 0.25, bProf.bassKit);
+        } else {
+          triggerDrumVoice(ctx, voice.pitch, 118, ctx.currentTime);
+        }
       });
     });
 
@@ -5919,7 +7171,7 @@
     gridContainer.querySelectorAll('[data-modal-clear-lane]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const vIdx = Number(btn.getAttribute('data-modal-clear-lane'));
-        if (!secItem.customGrid) secItem.customGrid = getTimelineBlockGrid(secItem);
+        if (!secItem.customGrid) secItem.customGrid = getTimelineBlockGrid(secItem, trackType);
         const totalSteps = secItem.customGrid[vIdx] ? secItem.customGrid[vIdx].length : 64;
         for (let s = 0; s < totalSteps; s++) {
           secItem.customGrid[vIdx][s] = { state: 0, sub: 1 };
@@ -5957,7 +7209,9 @@
     const contentEl = document.getElementById('fold-section-modal-content');
     if (!contentEl || state.modalSectionIdx === null) return;
     const secIdx = state.modalSectionIdx;
-    const arr = state.arrangementSections || [];
+    const trackType = state.modalTrack || 'drums';
+    const isBass = trackType === 'bass';
+    const arr = (isBass ? state.bassArrangementSections : state.arrangementSections) || [];
     const secItem = arr[secIdx];
     if (!secItem) {
       closeSectionSequenceModal();
@@ -5967,6 +7221,9 @@
     const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
     const curSongId = secItem.songId || state.selectedSongId;
     const { artist, song } = findSongById(curSongId);
+    const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
+    const keyOverride = SONG_KEY_OVERRIDES[curSongId];
+    const scaleBadge = keyOverride ? keyOverride.label : bProf.scaleLabel;
     const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
     const sliceIdx = Math.max(0, Math.min(3, Number(secItem.sourceSlice ?? 0)));
     const sourceBarIdx = Math.max(0, Math.min(15, Number(secItem.sourceBar ?? sliceIdx * 4)));
@@ -5978,12 +7235,12 @@
     const endBarNum = startBarNum + bars - 1;
     const barRangeText = bars === 1 ? `Timeline Bar ${startBarNum}` : `Timeline Bars ${startBarNum}–${endBarNum}`;
 
-    const songOptionsHtml = ARTIST_CATALOG.map(
-      (a) =>
-        `<optgroup label="${a.artistName} (${a.drummer})">${a.songs
-          .map((s) => `<option value="${s.id}" ${s.id === curSongId ? 'selected' : ''}>${s.title}</option>`)
-          .join('')}</optgroup>`
-    ).join('');
+    const songOptionsHtml = ARTIST_CATALOG.map((a) => {
+      const bp = ARTIST_BASS_PROFILES[a.artistId] || ARTIST_BASS_PROFILES.zeppelin;
+      return `<optgroup label="${a.artistName} (${isBass ? bp.bassist : a.drummer})">${a.songs
+        .map((s) => `<option value="${s.id}" ${s.id === curSongId ? 'selected' : ''}>${s.title}</option>`)
+        .join('')}</optgroup>`;
+    }).join('');
 
     const sliceLabels = [
       'Sec 1: Intro / Verse (Bars 1–4)',
@@ -6019,14 +7276,21 @@
         </div>`;
     }
 
-    const isThisSectionLooped = state.timelineLoopSingle && state.selectedTimelineIdx === secIdx;
+    const selIdx = isBass ? state.selectedBassTimelineIdx : state.selectedTimelineIdx;
+    const isThisSectionLooped =
+      state.timelineLoopSingle && state.timelineLoopTrack === trackType && selIdx === secIdx;
+    const trackBadgeHtml = isBass
+      ? `<span style="font-size:12px;font-weight:900;color:#fff;background:#0284c7;padding:4px 9px;border-radius:7px;">🎸 BASS TRACK</span>`
+      : `<span style="font-size:12px;font-weight:900;color:#fff;background:#0d9488;padding:4px 9px;border-radius:7px;">🥁 DRUM TRACK</span>`;
 
     contentEl.innerHTML = `
       <!-- Modal Top Header with Clear Top-Right Close Button -->
       <div style="position:sticky;top:0;z-index:10;background:#141621;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:10px;border-bottom:1.5px solid rgba(255,255,255,0.15);">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${trackBadgeHtml}
           <span style="font-size:13px;font-weight:900;color:#fff;background:${roleObj.color};padding:4px 10px;border-radius:7px;">SECTION #${secIdx + 1}</span>
           <strong style="font-size:15px;color:#fff;">${artist.artistName} — ${song.title}</strong>
+          ${isBass ? `<span style="font-size:11px;font-weight:800;color:#38bdf8;background:rgba(56,189,248,0.14);padding:3px 8px;border-radius:6px;">🎸 ${bProf.bassist} · ${scaleBadge}</span>` : ''}
           <span style="font-size:12px;font-weight:800;color:#fbbf24;background:rgba(251,191,36,0.16);padding:3px 9px;border-radius:6px;">${barRangeText} (${bars}B)</span>
           <span id="fold-modal-bpm-badge" style="font-size:12px;font-weight:800;color:#84dcc6;background:rgba(132,220,198,0.14);padding:3px 9px;border-radius:6px;">⏱️ ${state.tempo} BPM</span>
           ${
@@ -6036,7 +7300,7 @@
           }
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;">
-          <button type="button" id="fold-modal-play-btn" class="fold-btn primary">▶ Play Section #${secIdx + 1}</button>
+          <button type="button" id="fold-modal-play-btn" class="fold-btn primary">▶ Play ${isBass ? 'Bass' : 'Drum'} Section #${secIdx + 1}</button>
           <button type="button" id="fold-modal-loop-toggle-btn" class="fold-btn">🔁 Loop This Section</button>
           <button type="button" id="fold-modal-close-btn" class="fold-modal-close-x" title="Close Section Editor (Esc)">✕ Close</button>
         </div>
@@ -6070,7 +7334,7 @@
           <button type="button" id="fold-modal-move-right" class="fold-btn" title="Move Section Later in Timeline" ${secIdx >= arr.length - 1 ? 'disabled' : ''}>Move Right →</button>
           <button type="button" id="fold-modal-dup-btn" class="fold-btn" title="Duplicate this Section on Timeline">📋 Duplicate</button>
           <button type="button" id="fold-modal-reset-btn" class="fold-btn" title="Reset this section back to the factory pattern of its selected song">🔄 Reset</button>
-          <button type="button" id="fold-modal-open-compose-btn" class="fold-btn teal" title="Open this section in Compose to tweak drummer dials or record finger pads">🎛️ Dials & Pads</button>
+          <button type="button" id="fold-modal-open-compose-btn" class="fold-btn teal" title="Open this section in Compose to tweak dials or record finger pads">🎛️ Dials & Pads</button>
           <button type="button" id="fold-modal-delete-btn" class="fold-btn" style="border-color:rgba(244,63,94,0.5);color:#fda4af;background:rgba(244,63,94,0.14);" title="Remove this Section from Timeline" ${arr.length <= 1 ? 'disabled' : ''}>🗑️ Delete</button>
         </div>
       </div>
@@ -6085,7 +7349,7 @@
           <button type="button" class="fold-btn ${state.brushMode === 'roll2' ? 'chip-on' : ''}" data-modal-brush="roll2">⚡ 32nd (2x)</button>
           <button type="button" class="fold-btn ${state.brushMode === 'roll3' ? 'chip-on' : ''}" data-modal-brush="roll3">⚡ Triplet (3x)</button>
         </div>
-        <span style="font-size:11px;color:#d1d5db;">💡 Edits save automatically to Section #${secIdx + 1} on your timeline</span>
+        <span style="font-size:11px;color:#d1d5db;">💡 Edits save automatically to ${isBass ? 'Bass' : 'Drum'} Section #${secIdx + 1} on your timeline</span>
       </div>
 
       <!-- Interactive Step Sequencer Grid for this Section -->
@@ -6098,14 +7362,18 @@
     // Wire up modal controls
     document.getElementById('fold-modal-close-btn')?.addEventListener('click', closeSectionSequenceModal);
     document.getElementById('fold-modal-play-btn')?.addEventListener('click', () => {
+      const curSel = isBass ? state.selectedBassTimelineIdx : state.selectedTimelineIdx;
       const isPlayingThis =
         state.phonePlayer.playing &&
         state.playbackMode === 'timeline' &&
-        state.selectedTimelineIdx === secIdx;
+        state.timelineLoopTrack === trackType &&
+        curSel === secIdx;
       if (isPlayingThis) {
         stopPhonePlayback();
       } else {
-        state.selectedTimelineIdx = secIdx;
+        if (isBass) state.selectedBassTimelineIdx = secIdx;
+        else state.selectedTimelineIdx = secIdx;
+        state.timelineLoopTrack = trackType;
         state.timelineLoopSingle = true;
         startPhonePlayback('timeline');
       }
@@ -6114,10 +7382,13 @@
     });
 
     document.getElementById('fold-modal-loop-toggle-btn')?.addEventListener('click', () => {
-      if (state.timelineLoopSingle && state.selectedTimelineIdx === secIdx) {
+      const curSel = isBass ? state.selectedBassTimelineIdx : state.selectedTimelineIdx;
+      if (state.timelineLoopSingle && state.timelineLoopTrack === trackType && curSel === secIdx) {
         state.timelineLoopSingle = false;
       } else {
-        state.selectedTimelineIdx = secIdx;
+        if (isBass) state.selectedBassTimelineIdx = secIdx;
+        else state.selectedTimelineIdx = secIdx;
+        state.timelineLoopTrack = trackType;
         state.timelineLoopSingle = true;
       }
       if (state.phonePlayer.playing && state.playbackMode === 'timeline') {
@@ -6132,45 +7403,45 @@
 
     document.getElementById('fold-modal-move-left')?.addEventListener('click', () => {
       if (secIdx > 0) {
-        moveArrangementSection(secIdx, -1);
+        moveArrangementSection(secIdx, -1, trackType);
         renderSectionSequenceModal();
       }
     });
 
     document.getElementById('fold-modal-move-right')?.addEventListener('click', () => {
-      if (secIdx < (state.arrangementSections?.length || 1) - 1) {
-        moveArrangementSection(secIdx, 1);
+      if (secIdx < arr.length - 1) {
+        moveArrangementSection(secIdx, 1, trackType);
         renderSectionSequenceModal();
       }
     });
 
     document.getElementById('fold-modal-dup-btn')?.addEventListener('click', () => {
-      duplicateArrangementSection(secIdx);
+      duplicateArrangementSection(secIdx, trackType);
       state.modalSectionIdx = secIdx + 1;
       renderSectionSequenceModal();
     });
 
     document.getElementById('fold-modal-delete-btn')?.addEventListener('click', () => {
-      removeArrangementSection(secIdx);
+      removeArrangementSection(secIdx, trackType);
     });
 
     document.getElementById('fold-modal-reset-btn')?.addEventListener('click', () => {
       secItem.customGrid = null;
       secItem.customEdited = false;
-      secItem.customGrid = getTimelineBlockGrid(secItem);
-      commitArrangementChange(`Reset Section #${secIdx + 1} Sequence`);
+      secItem.customGrid = getTimelineBlockGrid(secItem, trackType);
+      commitArrangementChange(`Reset ${isBass ? 'Bass' : 'Drum'} Section #${secIdx + 1} Sequence`);
       renderSectionSequenceModal();
     });
 
     document.getElementById('fold-modal-open-compose-btn')?.addEventListener('click', () => {
       closeSectionSequenceModal();
-      openTimelineBlockInCompose(secIdx);
+      openTimelineBlockInCompose(secIdx, trackType);
     });
 
     document.getElementById('fold-modal-role-select')?.addEventListener('change', (e) => {
       const newRole = ARRANGEMENT_ROLES.find((r) => r.id === e.target.value) || ARRANGEMENT_ROLES[1];
       secItem.roleId = newRole.id;
-      commitArrangementChange(`Changed Section #${secIdx + 1} Role → ${newRole.label}`);
+      commitArrangementChange(`Changed ${isBass ? 'Bass' : 'Drum'} Section #${secIdx + 1} Role → ${newRole.label}`);
       renderSectionSequenceModal();
     });
 
@@ -6180,8 +7451,8 @@
         secItem.bars = newBars;
         secItem.customGrid = null;
         secItem.customEdited = false;
-        secItem.customGrid = getTimelineBlockGrid(secItem);
-        commitArrangementChange(`Changed Section #${secIdx + 1} Length → ${newBars} Bar(s)`);
+        secItem.customGrid = getTimelineBlockGrid(secItem, trackType);
+        commitArrangementChange(`Changed ${isBass ? 'Bass' : 'Drum'} Section #${secIdx + 1} Length → ${newBars} Bar(s)`);
         renderSectionSequenceModal();
       });
     });
@@ -6190,9 +7461,9 @@
       secItem.songId = e.target.value;
       secItem.customGrid = null;
       secItem.customEdited = false;
-      secItem.customGrid = getTimelineBlockGrid(secItem);
+      secItem.customGrid = getTimelineBlockGrid(secItem, trackType);
       const { song: newSong } = findSongById(e.target.value);
-      commitArrangementChange(`Changed Section #${secIdx + 1} Song → ${newSong.title}`);
+      commitArrangementChange(`Changed ${isBass ? 'Bass' : 'Drum'} Section #${secIdx + 1} Song → ${newSong.title}`);
       renderSectionSequenceModal();
     });
 
@@ -6200,8 +7471,8 @@
       secItem.sourceBar = Number(e.target.value);
       secItem.customGrid = null;
       secItem.customEdited = false;
-      secItem.customGrid = getTimelineBlockGrid(secItem);
-      commitArrangementChange(`Changed Section #${secIdx + 1} Source Bar → Bar ${Number(e.target.value) + 1}`);
+      secItem.customGrid = getTimelineBlockGrid(secItem, trackType);
+      commitArrangementChange(`Changed ${isBass ? 'Bass' : 'Drum'} Section #${secIdx + 1} Source Bar → Bar ${Number(e.target.value) + 1}`);
       renderSectionSequenceModal();
     });
 
@@ -6209,8 +7480,8 @@
       secItem.sourceSlice = Number(e.target.value);
       secItem.customGrid = null;
       secItem.customEdited = false;
-      secItem.customGrid = getTimelineBlockGrid(secItem);
-      commitArrangementChange(`Changed Section #${secIdx + 1} 4-Bar Slice`);
+      secItem.customGrid = getTimelineBlockGrid(secItem, trackType);
+      commitArrangementChange(`Changed ${isBass ? 'Bass' : 'Drum'} Section #${secIdx + 1} 4-Bar Slice`);
       renderSectionSequenceModal();
     });
 
@@ -6232,16 +7503,17 @@
     });
   }
 
-  function renderBlockMiniWaveformHtml(secItem) {
-    const blockGrid = getTimelineBlockGrid(secItem);
+  function renderBlockMiniWaveformHtml(secItem, trackType = 'drums') {
+    const isBass = trackType === 'bass';
+    const blockGrid = getTimelineBlockGrid(secItem, trackType);
     const totalSteps = blockGrid[0] ? blockGrid[0].length : 64;
     const bucketCount = 16;
     const stepsPerBucket = Math.max(1, Math.floor(totalSteps / bucketCount));
     let spans = '';
     for (let b = 0; b < bucketCount; b++) {
       let density = 0;
-      let hasKick = false;
-      let hasSnare = false;
+      let hasLow = false;
+      let hasMid = false;
       const startS = b * stepsPerBucket;
       const endS = Math.min(totalSteps, startS + stepsPerBucket);
       for (let s = startS; s < endS; s++) {
@@ -6249,19 +7521,34 @@
           const cell = blockGrid[v] && blockGrid[v][s];
           if (cell && cell.state > 0) {
             density++;
-            if (v === 0) hasKick = true;
-            if (v === 2 || v === 1) hasSnare = true;
+            if (v === 0) hasLow = true;
+            if (v === 2 || v === 1 || v === 3) hasMid = true;
           }
         }
       }
       const norm = Math.min(100, density === 0 ? 14 : Math.round(24 + (density / stepsPerBucket) * 26));
-      const color = hasKick ? '#f43f5e' : hasSnare ? '#fbbf24' : density > 0 ? '#38bdf8' : 'rgba(255,255,255,0.12)';
+      const color = isBass
+        ? hasLow
+          ? '#38bdf8'
+          : hasMid
+          ? '#a855f7'
+          : density > 0
+          ? '#e73ff6'
+          : 'rgba(255,255,255,0.12)'
+        : hasLow
+        ? '#f43f5e'
+        : hasMid
+        ? '#fbbf24'
+        : density > 0
+        ? '#38bdf8'
+        : 'rgba(255,255,255,0.12)';
       spans += `<span style="height:${norm}%;background:${color};border-radius:2px;display:block;width:100%;"></span>`;
     }
     return `<div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px;height:24px;align-items:end;margin-top:4px;">${spans}</div>`;
   }
 
   let draggedTimelineBlockIdx = null;
+  let draggedTimelineTrack = 'drums';
   let pointerDragState = null;
 
   function wireTimelineDragAndClick(containerEl, selector, attrName) {
@@ -6270,6 +7557,7 @@
 
     items.forEach((itemEl) => {
       const idx = Number(itemEl.getAttribute(attrName));
+      const trackType = itemEl.getAttribute('data-tl-track') || 'drums';
 
       // 1. HTML5 Drag & Drop (Desktop Mouse)
       itemEl.addEventListener('dragstart', (e) => {
@@ -6278,6 +7566,7 @@
           return;
         }
         draggedTimelineBlockIdx = idx;
+        draggedTimelineTrack = trackType;
         itemEl.classList.add('dragging-tl-block');
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
@@ -6288,7 +7577,9 @@
       });
 
       itemEl.addEventListener('dragover', (e) => {
-        if (draggedTimelineBlockIdx === null || draggedTimelineBlockIdx === idx) return;
+        if (draggedTimelineBlockIdx === null || draggedTimelineTrack !== trackType || draggedTimelineBlockIdx === idx) {
+          return;
+        }
         e.preventDefault();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         const rect = itemEl.getBoundingClientRect();
@@ -6305,9 +7596,10 @@
         e.preventDefault();
         itemEl.classList.remove('drag-over-left', 'drag-over-right');
         const fromIdx = draggedTimelineBlockIdx;
+        const fromTrack = draggedTimelineTrack;
         draggedTimelineBlockIdx = null;
-        if (fromIdx === null || fromIdx === idx) return;
-        reorderArrangementSection(fromIdx, idx);
+        if (fromIdx === null || fromTrack !== trackType || fromIdx === idx) return;
+        reorderArrangementSection(fromIdx, idx, trackType);
       });
 
       itemEl.addEventListener('dragend', () => {
@@ -6321,6 +7613,7 @@
         if (e.target.closest('button, select, input')) return;
         pointerDragState = {
           fromIdx: idx,
+          trackType,
           startX: e.clientX,
           startY: e.clientY,
           moved: false,
@@ -6346,8 +7639,13 @@
       const underEl = document.elementFromPoint(e.clientX, e.clientY);
       const targetBlock = underEl && underEl.closest('[data-tl-block]');
       if (targetBlock) {
+        const targetTrack = targetBlock.getAttribute('data-tl-track') || 'drums';
         const targetIdx = Number(targetBlock.getAttribute('data-tl-block'));
-        if (!Number.isNaN(targetIdx) && targetIdx !== pointerDragState.fromIdx) {
+        if (
+          targetTrack === pointerDragState.trackType &&
+          !Number.isNaN(targetIdx) &&
+          targetIdx !== pointerDragState.fromIdx
+        ) {
           pointerDragState.overIdx = targetIdx;
           const rect = targetBlock.getBoundingClientRect();
           const isAfter = e.clientX > rect.left + rect.width / 2;
@@ -6367,28 +7665,104 @@
     });
     if (st.moved) {
       if (st.overIdx !== st.fromIdx) {
-        reorderArrangementSection(st.fromIdx, st.overIdx);
+        reorderArrangementSection(st.fromIdx, st.overIdx, st.trackType || 'drums');
       }
     } else if (st.sourceEl && st.sourceEl.hasAttribute('data-tl-block')) {
       // Touch/click on a Timeline Block opens the Section Sequence Modal Card!
-      openSectionSequenceModal(st.fromIdx);
+      openSectionSequenceModal(st.fromIdx, st.trackType || 'drums');
     }
   });
+
+  function renderTimelineTrackRowHtml(arr, trackType = 'drums') {
+    const isBass = trackType === 'bass';
+    let runningBar = 1;
+    return arr
+      .map((secItem, secIdx) => {
+        const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
+        const startBar = runningBar;
+        const endBar = runningBar + bars - 1;
+        runningBar = endBar + 1;
+        const barLabel = bars === 1 ? `Bar ${startBar}` : `Bars ${startBar}–${endBar}`;
+        const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
+        const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
+        const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
+        const cleanArtist = artist.artistName.replace(/^[^\w]+/, '').trim();
+        const selIdx = isBass ? state.selectedBassTimelineIdx : state.selectedTimelineIdx;
+        const isSelected = secIdx === selIdx;
+        const isLooped =
+          state.timelineLoopSingle && state.timelineLoopTrack === trackType && secIdx === selIdx;
+        const activeIdx = isBass ? state.activeBassTimelineIdx : state.activeTimelineIdx;
+        const isPlaying =
+          state.phonePlayer.playing && state.playbackMode === 'timeline' && activeIdx === secIdx;
+        const flexWeight = bars === 1 ? 1.45 : bars === 16 ? 3.6 : 2.15;
+        const minW = bars === 1 ? 150 : bars === 16 ? 250 : 185;
+
+        return `
+          <div class="fold-tl-block ${isSelected ? 'selected-tl-block' : ''} ${isLooped ? 'looping-tl-block' : ''} ${isPlaying ? 'playing-tl-block' : ''}"
+               data-tl-block="${secIdx}"
+               data-tl-track="${trackType}"
+               draggable="true"
+               title="Drag to reorder · Tap/Click to open ${isBass ? 'Bass' : 'Drum'} Section Sequence Modal"
+               style="flex:${flexWeight} 1 ${minW}px;min-width:${minW}px;border-top:4px solid ${roleObj.color};position:relative;overflow:hidden;">
+            <div class="fold-tl-needle" style="display:${isPlaying ? 'block' : 'none'};left:0%;"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+              <span style="font-size:11px;font-weight:900;color:${isBass ? '#38bdf8' : '#fbbf24'};">${isBass ? '🎸' : '🥁'} ${barLabel} (${bars}B)</span>
+              <button type="button"
+                      data-tl-loop-toggle="${secIdx}"
+                      data-tl-loop-track="${trackType}"
+                      title="${isLooped ? 'Tap to Disable Section Loop' : 'Tap to Loop Only This Section'}"
+                      style="border:1px solid ${isLooped ? '#fbbf24' : 'rgba(255,255,255,0.2)'};background:${
+                        isLooped ? '#fbbf24' : 'rgba(255,255,255,0.08)'
+                      };color:${isLooped ? '#000' : '#d1d5db'};border-radius:999px;padding:2px 7px;font-size:10px;font-weight:900;cursor:pointer;">
+                ${isLooped ? '🔁 LOOPING · ✕ Off' : '🔁 Loop'}
+              </button>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px;">
+              <strong style="font-size:13px;color:#fff;">#${secIdx + 1} ${roleObj.label}</strong>
+              ${secItem.customEdited ? `<span style="font-size:9px;font-weight:800;background:rgba(231,63,246,0.28);color:#f5d0fe;padding:1px 5px;border-radius:4px;">✏️ EDITED</span>` : ''}
+            </div>
+            <div style="font-size:11px;font-weight:700;color:${isBass ? '#38bdf8' : '#84dcc6'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${cleanArtist} — ${song.title}">
+              ${song.title} <span style="color:#9ca3af;font-weight:500;">· ${isBass ? bProf.bassist : cleanArtist}</span>
+            </div>
+            ${renderBlockMiniWaveformHtml(secItem, trackType)}
+          </div>`;
+      })
+      .join('');
+  }
 
   function renderSongBuilderAndClipsUI() {
     const visualTimelineEl = document.getElementById('fold-visual-timeline');
     if (!Array.isArray(state.arrangementSections) || state.arrangementSections.length === 0) {
-      state.arrangementSections = createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor);
+      state.arrangementSections = createDefaultArrangementSections(
+        state.selectedSongId,
+        state.playerName,
+        state.playerColor,
+        'drums'
+      );
     }
-    const arr = state.arrangementSections;
-    if (state.selectedTimelineIdx >= arr.length) {
-      state.selectedTimelineIdx = Math.max(0, arr.length - 1);
+    if (!Array.isArray(state.bassArrangementSections) || state.bassArrangementSections.length === 0) {
+      state.bassArrangementSections = createDefaultArrangementSections(
+        state.selectedSongId,
+        state.playerName,
+        state.playerColor,
+        'bass'
+      );
     }
-    const totalBars = arr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
+    const drumArr = state.arrangementSections;
+    const bassArr = state.bassArrangementSections;
+    if (state.selectedTimelineIdx >= drumArr.length) {
+      state.selectedTimelineIdx = Math.max(0, drumArr.length - 1);
+    }
+    if (state.selectedBassTimelineIdx >= bassArr.length) {
+      state.selectedBassTimelineIdx = Math.max(0, bassArr.length - 1);
+    }
+    const drumBars = drumArr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
+    const bassBars = bassArr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
+    const totalBars = Math.max(drumBars, bassBars);
 
     const arrangeSummaryEl = document.getElementById('fold-summary-arrange');
     if (arrangeSummaryEl) {
-      arrangeSummaryEl.textContent = `${arr.length} Sections · ${totalBars} Bars · ${state.tempo} BPM`;
+      arrangeSummaryEl.textContent = `🥁 Drums (${drumBars}B) + 🎸 Bass (${bassBars}B) · ${state.tempo} BPM`;
     }
     const arrangeBadgeEl = document.getElementById('fold-tab-badge-arrange');
     if (arrangeBadgeEl) {
@@ -6402,7 +7776,7 @@
     if (tlBpmSlider) tlBpmSlider.value = state.tempo;
     if (tlBpmVal) tlBpmVal.textContent = `${state.tempo} BPM`;
     if (tlBpmSource) {
-      const firstBlockSong = arr[0] ? findSongById(arr[0].songId || state.selectedSongId).song : null;
+      const firstBlockSong = drumArr[0] ? findSongById(drumArr[0].songId || state.selectedSongId).song : null;
       const srcTitle = state.timelineBpmSourceTitle || (firstBlockSong ? firstBlockSong.title : '1st Section');
       tlBpmSource.textContent = state.timelineHasUserSection
         ? `Locked by 1st Section (${srcTitle})`
@@ -6411,63 +7785,98 @@
 
     updatePlayerButtons();
 
-    // Render Horizontal Proportional Song Arrangement Timeline (#fold-visual-timeline)
+    // Render Multi-Track Horizontal Song Arrangement Timeline (Track 1: Drums, Track 2: Bass)
     if (visualTimelineEl) {
-      let runningBar = 1;
-      visualTimelineEl.innerHTML = arr
-        .map((secItem, secIdx) => {
-          const bars = Math.max(1, Math.min(16, Number(secItem.bars) || 4));
-          const startBar = runningBar;
-          const endBar = runningBar + bars - 1;
-          runningBar = endBar + 1;
-          const barLabel = bars === 1 ? `Bar ${startBar}` : `Bars ${startBar}–${endBar}`;
-          const roleObj = ARRANGEMENT_ROLES.find((r) => r.id === secItem.roleId) || ARRANGEMENT_ROLES[1];
-          const { artist, song } = findSongById(secItem.songId || state.selectedSongId);
-          const cleanArtist = artist.artistName.replace(/^[^\w]+/, '').trim();
-          const isSelected = secIdx === state.selectedTimelineIdx;
-          const isLooped = state.timelineLoopSingle && secIdx === state.selectedTimelineIdx;
-          const isPlaying = state.phonePlayer.playing && state.playbackMode === 'timeline' && state.activeTimelineIdx === secIdx;
-          const flexWeight = bars === 1 ? 1.45 : bars === 16 ? 3.6 : 2.15;
-          const minW = bars === 1 ? 150 : bars === 16 ? 250 : 185;
+      visualTimelineEl.style.flexDirection = 'column';
+      visualTimelineEl.style.gap = '12px';
+      visualTimelineEl.innerHTML = `
+        <!-- TRACK 1: DRUM TRACK -->
+        <div style="background:rgba(13,148,136,0.08);border:1px solid rgba(132,220,198,0.28);border-radius:10px;padding:9px 10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:7px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span style="font-size:12px;font-weight:900;color:#fff;background:#0d9488;padding:3px 9px;border-radius:6px;">🥁 TRACK 1: DRUM TRACK</span>
+              <span style="font-size:11px;font-weight:800;color:#84dcc6;">${drumArr.length} Section${drumArr.length === 1 ? '' : 's'} · ${drumBars} Bars</span>
+              <button type="button" id="fold-tl-mute-drums-btn" class="fold-btn ${state.muteDrumTrackInTimeline ? 'amber' : ''}" style="padding:3px 9px;font-size:11px;">
+                ${state.muteDrumTrackInTimeline ? '🔇 Drum Track Muted (Tap to Unmute)' : '🔊 Drum Track: ON'}
+              </button>
+            </div>
+            <div class="fold-btn-row" style="gap:4px;">
+              <span style="font-size:10px;font-weight:800;color:#84dcc6;">+ ADD CURRENT SONG DRUMS:</span>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="1" data-tl-add-role="fill">+ 1B Fill</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="4" data-tl-add-role="verse">+ 4B Verse</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="4" data-tl-add-role="chorus">+ 4B Chorus</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="16" data-tl-add-role="verse">+ All 16B</button>
+            </div>
+          </div>
+          <div class="fold-tl-track" style="${state.muteDrumTrackInTimeline ? 'opacity:0.45;' : ''}">
+            ${renderTimelineTrackRowHtml(drumArr, 'drums')}
+          </div>
+        </div>
 
-          return `
-            <div class="fold-tl-block ${isSelected ? 'selected-tl-block' : ''} ${isLooped ? 'looping-tl-block' : ''} ${isPlaying ? 'playing-tl-block' : ''}"
-                 data-tl-block="${secIdx}"
-                 draggable="true"
-                 title="Drag to reorder · Tap/Click to open Section Sequence Modal"
-                 style="flex:${flexWeight} 1 ${minW}px;min-width:${minW}px;border-top:4px solid ${roleObj.color};position:relative;overflow:hidden;">
-              <div class="fold-tl-needle" style="display:${isPlaying ? 'block' : 'none'};left:0%;"></div>
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
-                <span style="font-size:11px;font-weight:900;color:#fbbf24;">⠿ ${barLabel} (${bars}B)</span>
-                <button type="button"
-                        data-tl-loop-toggle="${secIdx}"
-                        title="${isLooped ? 'Tap to Disable Section Loop' : 'Tap to Loop Only This Section'}"
-                        style="border:1px solid ${isLooped ? '#fbbf24' : 'rgba(255,255,255,0.2)'};background:${
-                          isLooped ? '#fbbf24' : 'rgba(255,255,255,0.08)'
-                        };color:${isLooped ? '#000' : '#d1d5db'};border-radius:999px;padding:2px 7px;font-size:10px;font-weight:900;cursor:pointer;">
-                  ${isLooped ? '🔁 LOOPING · ✕ Off' : '🔁 Loop'}
-                </button>
-              </div>
-              <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px;">
-                <strong style="font-size:13px;color:#fff;">#${secIdx + 1} ${roleObj.label}</strong>
-                ${secItem.customEdited ? `<span style="font-size:9px;font-weight:800;background:rgba(231,63,246,0.28);color:#f5d0fe;padding:1px 5px;border-radius:4px;">✏️ EDITED</span>` : ''}
-              </div>
-              <div style="font-size:11px;font-weight:700;color:#84dcc6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${cleanArtist} — ${song.title}">
-                ${song.title} <span style="color:#9ca3af;font-weight:500;">· ${cleanArtist}</span>
-              </div>
-              ${renderBlockMiniWaveformHtml(secItem)}
-            </div>`;
-        })
-        .join('');
+        <!-- TRACK 2: BASS TRACK -->
+        <div style="background:rgba(2,132,199,0.09);border:1px solid rgba(56,189,248,0.32);border-radius:10px;padding:9px 10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:7px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span style="font-size:12px;font-weight:900;color:#fff;background:#0284c7;padding:3px 9px;border-radius:6px;">🎸 TRACK 2: BASS TRACK</span>
+              <span style="font-size:11px;font-weight:800;color:#38bdf8;">${bassArr.length} Section${bassArr.length === 1 ? '' : 's'} · ${bassBars} Bars</span>
+              <button type="button" id="fold-tl-mute-bass-btn" class="fold-btn ${state.muteBassTrackInTimeline ? 'amber' : ''}" style="padding:3px 9px;font-size:11px;">
+                ${state.muteBassTrackInTimeline ? '🔇 Bass Track Muted (Tap to Unmute)' : '🔊 Bass Track: ON'}
+              </button>
+              <button type="button" id="fold-tl-match-bass-btn" class="fold-btn teal" style="padding:3px 9px;font-size:11px;" title="Copy all songs, roles, and bar lengths from your Drum Track so the Bass Track locks in with your Drums!">
+                🪄 Match Drum Timeline
+              </button>
+            </div>
+            <div class="fold-btn-row" style="gap:4px;">
+              <span style="font-size:10px;font-weight:800;color:#38bdf8;">+ ADD CURRENT SONG BASSLINE:</span>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="1" data-tl-add-role="fill">+ 1B Fill</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="4" data-tl-add-role="verse">+ 4B Verse</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="4" data-tl-add-role="chorus">+ 4B Chorus</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="16" data-tl-add-role="verse">+ All 16B</button>
+            </div>
+          </div>
+          <div class="fold-tl-track" style="${state.muteBassTrackInTimeline ? 'opacity:0.45;' : ''}">
+            ${renderTimelineTrackRowHtml(bassArr, 'bass')}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('fold-tl-mute-drums-btn')?.addEventListener('click', () => {
+        state.muteDrumTrackInTimeline = !state.muteDrumTrackInTimeline;
+        savePersistedState();
+        renderSongBuilderAndClipsUI();
+      });
+
+      document.getElementById('fold-tl-mute-bass-btn')?.addEventListener('click', () => {
+        state.muteBassTrackInTimeline = !state.muteBassTrackInTimeline;
+        savePersistedState();
+        renderSongBuilderAndClipsUI();
+      });
+
+      document.getElementById('fold-tl-match-bass-btn')?.addEventListener('click', () => {
+        matchBassTimelineToDrums();
+      });
+
+      visualTimelineEl.querySelectorAll('[data-tl-add-track]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const track = btn.getAttribute('data-tl-add-track') || 'drums';
+          const bars = Number(btn.getAttribute('data-tl-add-bars')) || 4;
+          const role = btn.getAttribute('data-tl-add-role') || 'verse';
+          addComposeToTimeline(bars, state.selectedSongId, role, track);
+        });
+      });
 
       visualTimelineEl.querySelectorAll('[data-tl-loop-toggle]').forEach((loopBtn) => {
         loopBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           const idx = Number(loopBtn.getAttribute('data-tl-loop-toggle'));
-          if (state.timelineLoopSingle && state.selectedTimelineIdx === idx) {
+          const trackType = loopBtn.getAttribute('data-tl-loop-track') || 'drums';
+          const curSel = trackType === 'bass' ? state.selectedBassTimelineIdx : state.selectedTimelineIdx;
+          if (state.timelineLoopSingle && state.timelineLoopTrack === trackType && curSel === idx) {
             state.timelineLoopSingle = false;
           } else {
-            state.selectedTimelineIdx = idx;
+            if (trackType === 'bass') state.selectedBassTimelineIdx = idx;
+            else state.selectedTimelineIdx = idx;
+            state.timelineLoopTrack = trackType;
             state.timelineLoopSingle = true;
           }
           if (state.phonePlayer.playing && state.playbackMode === 'timeline') {
@@ -6661,7 +8070,13 @@
     if (updated.state > 0 && !state.phonePlayer.playing) {
       const ctx = getAudioCtx();
       const vel = updated.state === 2 ? 124 : updated.state === 3 ? 48 : 100;
-      triggerDrumVoice(ctx, DRUM_VOICES[vIdx].pitch, vel, ctx.currentTime);
+      const voices = getActiveVoices(state.composeInstrument, state.selectedSongId);
+      const voice = voices[vIdx] || voices[0];
+      if (state.composeInstrument === 'bass') {
+        triggerBassVoice(ctx, voice.pitch, vel, ctx.currentTime, 0.25, state.bassKitId);
+      } else {
+        triggerDrumVoice(ctx, voice.pitch, vel, ctx.currentTime);
+      }
     }
 
     syncEditingTimelineBlockFromCompose();
@@ -6693,6 +8108,7 @@
   function render4BarSectionBlock(secIdx) {
     const sec = SONG_SECTIONS[secIdx] || SONG_SECTIONS[0];
     const startBar = sec.startBar;
+    const voices = getActiveVoices(state.composeInstrument, state.selectedSongId);
     let html = `<div class="drum-seq-64-wrapper" style="border-left: 4px solid ${sec.color}; padding-left: 8px; margin-bottom: 10px;">`;
     html += `<div class="drum-seq-row-64 header">
       <div class="drum-lane-controls-header" style="color:${sec.color};">${sec.name}<br><span style="font-size:9px;color:#9ca3af;">Steps ${sec.startStep + 1}–${sec.endStep + 1}</span></div>
@@ -6704,8 +8120,8 @@
       </div>
     </div>`;
 
-    for (let vIdx = 0; vIdx < DRUM_VOICES.length; vIdx++) {
-      const voice = DRUM_VOICES[vIdx];
+    for (let vIdx = 0; vIdx < voices.length; vIdx++) {
+      const voice = voices[vIdx];
       const muted = state.mutedLanes[vIdx];
       const owned = isVoiceOwnedByCurrentPlayer(vIdx);
       const roleTag =
@@ -6761,6 +8177,7 @@
   function renderSequencerGrid() {
     const container = document.getElementById('fold-sequencer-grid');
     if (!container) return;
+    const voices = getActiveVoices(state.composeInstrument, state.selectedSongId);
 
     if (state.viewMode === 'section4') {
       container.innerHTML = render4BarSectionBlock(state.activeSection);
@@ -6781,8 +8198,8 @@
       }
       html += `</div></div>`;
 
-      for (let vIdx = 0; vIdx < DRUM_VOICES.length; vIdx++) {
-        const voice = DRUM_VOICES[vIdx];
+      for (let vIdx = 0; vIdx < voices.length; vIdx++) {
+        const voice = voices[vIdx];
         const muted = state.mutedLanes[vIdx];
         html += `
           <div class="drum-seq-row ${muted ? 'muted' : ''}">
@@ -6824,7 +8241,12 @@
       btn.addEventListener('click', () => {
         const vIdx = Number(btn.getAttribute('data-voice-audition'));
         const ctx = getAudioCtx();
-        triggerDrumVoice(ctx, DRUM_VOICES[vIdx].pitch, 118, ctx.currentTime);
+        const voice = voices[vIdx] || voices[0];
+        if (state.composeInstrument === 'bass') {
+          triggerBassVoice(ctx, voice.pitch, 118, ctx.currentTime, 0.28, state.bassKitId);
+        } else {
+          triggerDrumVoice(ctx, voice.pitch, 118, ctx.currentTime);
+        }
       });
     });
 
@@ -6913,14 +8335,19 @@
   }
 
   // ==========================================================================
-  // 11. Finger Drum Pads + Play-Along Overdub
+  // 11. Finger Drum & Bass Pads + Play-Along Overdub
   // ==========================================================================
   const activePadRepeats = {};
 
   function triggerFingerPad(vIdx, velocity = 118) {
     const ctx = getAudioCtx();
-    const voice = DRUM_VOICES[vIdx];
-    triggerDrumVoice(ctx, voice.pitch, velocity, ctx.currentTime);
+    const voices = getActiveVoices(state.composeInstrument, state.selectedSongId);
+    const voice = voices[vIdx] || voices[0];
+    if (state.composeInstrument === 'bass') {
+      triggerBassVoice(ctx, voice.pitch, velocity, ctx.currentTime, 0.3, state.bassKitId);
+    } else {
+      triggerDrumVoice(ctx, voice.pitch, velocity, ctx.currentTime);
+    }
 
     if (!state.suppressJamBroadcast) {
       emitJamEvent({
@@ -6928,7 +8355,7 @@
         vIdx,
         pitch: voice.pitch,
         velocity,
-        kitId: state.kitId
+        kitId: state.composeInstrument === 'bass' ? state.bassKitId : state.kitId
       });
     }
 
@@ -6974,23 +8401,25 @@
 
   function updateHeaderSummaries() {
     const { artist, song } = findSongById(state.selectedSongId);
-    const kit = getActiveKitProfile();
+    const isBass = state.composeInstrument === 'bass';
+    const bProf = ARTIST_BASS_PROFILES[artist.artistId] || ARTIST_BASS_PROFILES.zeppelin;
+    const kit = isBass ? getActiveBassKitProfile() : getActiveKitProfile();
     const sec = SONG_SECTIONS[state.activeSection] || SONG_SECTIONS[0];
     const nowPlayingEl = document.getElementById('fold-now-playing-pill');
     if (nowPlayingEl && artist && song) {
-      nowPlayingEl.textContent = `${artist.artistName} — ${song.title} (${state.tempo} BPM · ${sec.badge})`;
+      nowPlayingEl.textContent = `${artist.artistName} — ${song.title} (${state.tempo} BPM · ${isBass ? '🎸 Bass' : '🥁 Drums'} · ${sec.badge})`;
     }
     const sumArtistEl = document.getElementById('fold-summary-artist');
     if (sumArtistEl && artist && song) {
-      sumArtistEl.textContent = `${artist.artistName} · ${song.title} (${state.tempo} BPM · 16 Bars)`;
+      sumArtistEl.textContent = `${artist.artistName} · ${song.title} (${state.tempo} BPM · 🥁 ${artist.drummer} / 🎸 ${bProf.bassist})`;
     }
     const sumDialsEl = document.getElementById('fold-summary-dials');
     if (sumDialsEl && kit) {
-      sumDialsEl.textContent = `Intensity ${state.intensityPct}% · Swing ${state.swingPct}% · Fill ${state.fillPct}%`;
+      sumDialsEl.textContent = `${kit.name} · Intensity ${state.intensityPct}% · Swing ${state.swingPct}% · Fill ${state.fillPct}%`;
     }
     const sumSeqEl = document.getElementById('fold-summary-seq');
     if (sumSeqEl) {
-      sumSeqEl.textContent = `${sec.shortTitle} · Loop: ${state.loopMode === 'all16' ? '16 Bars' : state.loopMode === 'bars8' ? '8 Bars' : '4-Bar Section'}`;
+      sumSeqEl.textContent = `${isBass ? '🎸 Bassline' : '🥁 Drum Groove'} · ${sec.shortTitle} · Loop: ${state.loopMode === 'all16' ? '16 Bars' : state.loopMode === 'bars8' ? '8 Bars' : '4-Bar Section'}`;
     }
   }
 
@@ -7009,8 +8438,7 @@
     setDial('dial-pocket', 'val-pocket', state.pocketPct, '%');
     setDial('dial-bpm', 'val-bpm', state.tempo, ' BPM');
 
-    const kitSelect = document.getElementById('fold-kit-select');
-    if (kitSelect) kitSelect.value = state.kitId;
+    renderComposeInstrumentUI();
     updateHeaderSummaries();
   }
 
@@ -7036,22 +8464,39 @@
 
   function renderAbletonTargetSelectors() {
     const trackSel = document.getElementById('fold-target-track-select');
+    const bassTrackSel = document.getElementById('fold-target-bass-track-select');
     const slotSel = document.getElementById('fold-target-slot-select');
+    const midiTracks = (state.abletonTracks || []).filter((t) => t.isMidi);
+
     if (trackSel) {
       const selTrackLabel = state.abletonConnected
-        ? `🎯 Selected Track (#${state.abletonSelectedTrackIndex + 1}: ${state.abletonSelectedTrackName})`
-        : '🎯 Selected Track in Ableton';
-      const midiTracks = (state.abletonTracks || []).filter((t) => t.isMidi);
+        ? `🥁 Drums → Selected Track (#${state.abletonSelectedTrackIndex + 1}: ${state.abletonSelectedTrackName})`
+        : '🥁 Drums → Selected Track in Ableton';
       const trackOptions = [
         `<option value="selected">${selTrackLabel}</option>`,
         ...midiTracks.map(
           (t) =>
-            `<option value="${t.index}">🎹 Track #${t.index + 1}: ${t.name}${t.armed ? ' (● Armed)' : ''}</option>`
+            `<option value="${t.index}">🥁 Drums → Track #${t.index + 1}: ${t.name}${t.armed ? ' (● Armed)' : ''}</option>`
         )
       ];
       const prevVal = state.targetTrack;
       trackSel.innerHTML = trackOptions.join('');
       trackSel.value = trackOptions.some((o) => o.includes(`value="${prevVal}"`)) ? prevVal : 'selected';
+    }
+    if (bassTrackSel) {
+      const bassTrackOptions = [
+        `<option value="auto_bass">🎸 Bass → Auto 2nd MIDI Track (or Create Bass Track)</option>`,
+        `<option value="new_midi">🎸 Bass → ➕ Create New MIDI Track in Ableton</option>`,
+        ...midiTracks.map(
+          (t) =>
+            `<option value="${t.index}">🎸 Bass → Track #${t.index + 1}: ${t.name}${t.armed ? ' (● Armed)' : ''}</option>`
+        )
+      ];
+      const prevBassVal = state.targetBassTrack || 'auto_bass';
+      bassTrackSel.innerHTML = bassTrackOptions.join('');
+      bassTrackSel.value = bassTrackOptions.some((o) => o.includes(`value="${prevBassVal}"`))
+        ? prevBassVal
+        : 'auto_bass';
     }
     if (slotSel) {
       const selSceneLabel = state.abletonConnected
@@ -8403,8 +9848,8 @@
         }
         #fold-nav-rail .fold-ws-tab-list {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 5px;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 4px;
           width: 100%;
         }
         #fold-nav-rail .fold-ws-tab-btn {
@@ -8659,17 +10104,24 @@
       <!-- Responsive Navigation Rail: Left Menu on Desktop, Bottom Tab Bar on Mobile (No Numbers) -->
       <div id="fold-nav-rail" role="navigation" aria-label="Workspace Navigation">
         <div class="fold-ws-tab-list">
-          <button type="button" class="fold-ws-tab-btn active" data-ws-tab="compose">
+          <button type="button" class="fold-ws-tab-btn active" data-ws-tab="songs">
             <div class="fold-ws-tab-main">
-              <span class="fold-ws-tab-label">🎛️ Compose</span>
-              <span class="fold-ws-tab-sub">Select, edit, tweak & play over</span>
+              <span class="fold-ws-tab-label">🎵 Songs</span>
+              <span class="fold-ws-tab-sub">Select band & song groove</span>
             </div>
             <span class="fold-ws-tab-badge">105 Songs</span>
+          </button>
+          <button type="button" class="fold-ws-tab-btn" data-ws-tab="compose">
+            <div class="fold-ws-tab-main">
+              <span class="fold-ws-tab-label">🎛️ Compose</span>
+              <span class="fold-ws-tab-sub">Pick Drums or Bass, tweak & play</span>
+            </div>
+            <span id="fold-tab-badge-compose" class="fold-ws-tab-badge">🥁 Drums</span>
           </button>
           <button type="button" class="fold-ws-tab-btn" data-ws-tab="arrange">
             <div class="fold-ws-tab-main">
               <span class="fold-ws-tab-label">🎬 Arrange</span>
-              <span class="fold-ws-tab-sub">Timeline review, play & Ableton</span>
+              <span class="fold-ws-tab-sub">Multi-track timeline & Ableton</span>
             </div>
             <span id="fold-tab-badge-arrange" class="fold-ws-tab-badge">16 Bars</span>
           </button>
@@ -8689,31 +10141,31 @@
           </button>
         </div>
         <div class="fold-nav-footer">
-          <button type="button" id="fold-layout-mode-btn" class="fold-btn" style="width:100%;" title="Switch between focused 4-Tab View or showing All Zones stacked">⊞ Show All Zones</button>
+          <button type="button" id="fold-layout-mode-btn" class="fold-btn" style="width:100%;" title="Switch between focused 5-Tab View or showing All Zones stacked">⊞ Show All Zones</button>
           <button type="button" id="fold-collapse-all-btn" class="fold-btn" style="width:100%;" title="Collapse or Expand All Panels">↕ Collapse All</button>
           <button type="button" id="fold-close-desktop-menu-btn" class="fold-btn" style="width:100%;border-color:rgba(231,63,246,0.45);color:#f5d0fe;" title="Close Left Menu on Desktop">✕ Close Menu</button>
         </div>
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (STEP 1): SELECT SONG & COLLAPSE TO EDIT            -->
+      <!-- TAB: SONGS: SELECT ARTIST & SONG (21 BANDS · 105 SONGS)          -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-artists">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-artists">
-            <h3>🎸 1. Select Song Groove (21 Bands · 105 Songs)</h3>
+            <h3>🎵 Select Artist & Song (21 Bands · 105 Songs)</h3>
             <span id="fold-summary-artist" class="fold-panel-summary">🔨 Led Zeppelin · When the Levee Breaks (71 BPM · 16 Bars)</span>
           </div>
           <div class="fold-btn-row">
-            <button type="button" id="fold-auto-collapse-songs-btn" class="fold-btn chip-on" title="Automatically collapse this song picker when you tap a song so you can immediately tweak, edit & play over it">⚡ Auto-Collapse on Select: ON</button>
-            <button type="button" id="fold-random-groove-btn" class="fold-btn amber" title="Pick a random iconic groove from all 105 songs">🎲 Random Song</button>
-            <button class="fold-collapse-btn" data-toggle-card="card-artists">▲ Collapse & Edit</button>
+            <button type="button" id="fold-auto-collapse-songs-btn" class="fold-btn chip-on" title="Automatically jump to the Compose tab when you tap a song so you can immediately pick Drums or Bass, tweak, edit & play over it">⚡ Open in Compose on Select: ON</button>
+            <button type="button" id="fold-random-groove-btn" class="fold-btn amber" title="Pick a random iconic song from all 105 songs">🎲 Random Song</button>
+            <button type="button" id="fold-songs-go-compose-btn" class="fold-btn primary">🎛️ Go to Compose (Drums / Bass) →</button>
           </div>
         </div>
         <div class="fold-card-body">
           <!-- Search & Tempo Filter Bar -->
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.28);padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);">
-            <input id="fold-song-search-input" class="fold-crate-input" type="text" placeholder="🔍 Search 105 songs, 21 bands, or drummers (e.g. Tame Impala, Paul Simon, Nirvana, Gadd, Grohl)...">
+            <input id="fold-song-search-input" class="fold-crate-input" type="text" placeholder="🔍 Search 105 songs, 21 bands, drummers, or bassists (e.g. Tame Impala, Paul Simon, Nirvana, Flea, John Paul Jones)...">
             <div class="fold-btn-row">
               <span style="font-size:11px;font-weight:800;color:#84dcc6;">TEMPO:</span>
               <button type="button" class="fold-btn chip-on" data-tempo-filter="all">All (105)</button>
@@ -8723,12 +10175,30 @@
               <button type="button" id="fold-clear-song-filter-btn" class="fold-btn">✕ Clear</button>
             </div>
           </div>
-          <div id="fold-song-filter-count" style="font-size:11px;color:#9ca3af;font-weight:700;">Showing 5 signature grooves — tap any song to collapse this picker & start editing!</div>
+          <div id="fold-song-filter-count" style="font-size:11px;color:#9ca3af;font-weight:700;">Tap any song card to load it and open Compose (where you pick 🥁 Drums or 🎸 Bass)!</div>
 
           <!-- 21 Artist Pills -->
           <div id="fold-artist-tabs"></div>
           <!-- Song Groove Cards -->
           <div id="fold-artist-songs"></div>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- TAB: COMPOSE (TOP BAR): PICK DRUMS OR BASS & ACTIVE SONG         -->
+      <!-- ================================================================ -->
+      <div class="fold-card" id="card-compose-inst" style="background:linear-gradient(135deg, rgba(231,63,246,0.22), rgba(2,132,199,0.22));border:2px solid rgba(231,63,246,0.55);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <strong style="font-size:13px;color:#fff;">🎛️ Compose Instrument:</strong>
+            <button type="button" class="fold-btn chip-on" data-compose-inst="drums" style="font-size:13px;padding:8px 16px;">🥁 Drums (Groove & Kit)</button>
+            <button type="button" class="fold-btn" data-compose-inst="bass" style="font-size:13px;padding:8px 16px;">🎸 Bass (Bassline & Rig)</button>
+            <button type="button" id="fold-compose-play-both-btn" class="fold-btn chip-on" title="Hear both the song's Drums and Bassline together while you compose">🔊 Hear Drums + Bass Together: ON</button>
+          </div>
+          <div class="fold-btn-row">
+            <span id="fold-compose-inst-summary" style="font-size:12px;font-weight:800;color:#84dcc6;background:rgba(0,0,0,0.35);padding:5px 10px;border-radius:8px;border:1px solid rgba(132,220,198,0.35);">🥁 Drums Mode · Led Zeppelin — When the Levee Breaks</span>
+            <button type="button" id="fold-compose-change-song-btn" class="fold-btn" style="border-color:#84dcc6;color:#84dcc6;">🎵 Change Song</button>
+          </div>
         </div>
       </div>
 
@@ -8918,18 +10388,19 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: ARRANGE: VISUAL SONG TIMELINE, PLAYBACK & SEND TO ABLETON   -->
+      <!-- TAB: ARRANGE: MULTI-TRACK TIMELINE, PLAYBACK & SEND TO ABLETON   -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-builder">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-builder">
-            <h3>🎬 Arrange — Song Timeline Review, Playback & Send to Ableton</h3>
-            <span id="fold-summary-arrange" class="fold-panel-summary">4 Blocks · 16 Bars Total</span>
+            <h3>🎬 Arrange — Multi-Track Timeline (🥁 Drums + 🎸 Bass), Playback & Send to Ableton</h3>
+            <span id="fold-summary-arrange" class="fold-panel-summary">🥁 Drums (16B) + 🎸 Bass (16B)</span>
           </div>
           <div class="fold-btn-row">
-            <button type="button" id="fold-arrange-back-compose-btn" class="fold-btn">🎸 + Pick & Edit Another Song in Compose</button>
-            <button type="button" id="fold-random-mashup-btn" class="fold-btn amber" title="Randomize songs across all blocks in the current timeline">🎲 Randomize Timeline</button>
-            <button type="button" id="fold-timeline-clear-btn" class="fold-btn" title="Reset timeline to 1 block so you can build from scratch">🧹 Start Fresh (1 Block)</button>
+            <button type="button" id="fold-arrange-back-songs-btn" class="fold-btn">🎵 + Pick Another Song</button>
+            <button type="button" id="fold-arrange-back-compose-btn" class="fold-btn">🎛️ Open Compose (Drums / Bass)</button>
+            <button type="button" id="fold-random-mashup-btn" class="fold-btn amber" title="Randomize songs across all blocks in the Drum & Bass timeline">🎲 Randomize Timeline</button>
+            <button type="button" id="fold-timeline-clear-btn" class="fold-btn" title="Reset Drum & Bass timeline to 1 block so you can build from scratch">🧹 Start Fresh (1 Block)</button>
             <button class="fold-collapse-btn" data-toggle-card="card-builder">▼ Collapse</button>
           </div>
         </div>
@@ -8938,16 +10409,22 @@
           <div style="background:linear-gradient(135deg, rgba(231,63,246,0.18), rgba(13,148,136,0.18));border:1.5px solid rgba(231,63,246,0.45);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:9px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <div class="fold-btn-row">
-                <button type="button" id="fold-timeline-play-btn" class="fold-btn primary" style="font-size:13px;padding:8px 14px;">▶ Play Full Timeline (16 Bars)</button>
-                <button type="button" id="fold-timeline-loop-mode-btn" class="fold-btn">🔁 Loop: Full Timeline (4 Blocks)</button>
+                <button type="button" id="fold-timeline-play-btn" class="fold-btn primary" style="font-size:13px;padding:8px 14px;">▶ Play Full Timeline (Drums + Bass)</button>
+                <button type="button" id="fold-timeline-loop-mode-btn" class="fold-btn">🔁 Loop: Full Timeline</button>
                 <button type="button" id="fold-disable-sec-loop-btn" class="fold-btn amber" style="display:none;border-color:#f59e0b;background:rgba(245,158,11,0.28);color:#fff;font-weight:900;">✕ Disable Section Loop</button>
-                <span id="fold-timeline-hud-pill" class="fold-panel-summary" style="border:1px solid rgba(255,255,255,0.2);font-size:12px;">⏸ Ready (4 Blocks · 16 Bars Total)</span>
+                <span id="fold-timeline-hud-pill" class="fold-panel-summary" style="border:1px solid rgba(255,255,255,0.2);font-size:12px;">⏸ Ready (🥁 Drums + 🎸 Bass)</span>
               </div>
-              <div class="fold-btn-row">
-                <select id="fold-target-track-select" class="fold-top-select" title="Target Ableton MIDI Track (Default: follows whichever track is currently selected in Ableton Live)">
-                  <option value="selected">🎯 Selected Track in Ableton</option>
+              <div class="fold-btn-row" style="gap:6px;">
+                <select id="fold-target-track-select" class="fold-top-select" title="Target Ableton MIDI Track for Drum Track">
+                  <option value="selected">🥁 Drums → Selected Track</option>
                 </select>
-                <button type="button" id="fold-builder-send-full-btn" class="fold-btn teal" style="font-size:13px;padding:8px 14px;" title="Write the entire arranged timeline as a continuous MIDI clip into your target Ableton track">🚀 Send Arrangement (16 Bars) → 🎯 Selected Track</button>
+                <select id="fold-target-bass-track-select" class="fold-top-select" style="border-color:rgba(56,189,248,0.6);color:#38bdf8;" title="Target Ableton MIDI Track for Bass Track (separate track from Drums)">
+                  <option value="auto_bass">🎸 Bass → Auto 2nd MIDI Track</option>
+                  <option value="new_midi">🎸 Bass → ➕ Create New MIDI Track</option>
+                </select>
+                <button type="button" id="fold-builder-send-drums-btn" class="fold-btn" style="border-color:#84dcc6;color:#84dcc6;" title="Send only the Drum Track to Ableton">🥁 Send Drums</button>
+                <button type="button" id="fold-builder-send-bass-btn" class="fold-btn" style="border-color:#38bdf8;color:#38bdf8;" title="Send only the Bass Track to a separate MIDI track in Ableton">🎸 Send Bass</button>
+                <button type="button" id="fold-builder-send-full-btn" class="fold-btn teal" style="font-size:13px;padding:8px 14px;" title="Write both the Drum Track and Bass Track as continuous MIDI clips into separate tracks in Ableton Live">🚀 Send Both (Drums + Bass) → Ableton</button>
               </div>
             </div>
 
@@ -8962,20 +10439,12 @@
             </div>
           </div>
 
-          <!-- Horizontal Proportional Song Arrangement Timeline (Touch/Click any Section to Open Modal Card) -->
+          <!-- Horizontal Multi-Track Song Arrangement Timeline (Touch/Click any Drum or Bass Section to Open Modal Card) -->
           <div style="background:rgba(0,0,0,0.32);border:1px solid rgba(255,255,255,0.11);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <div>
-                <strong style="font-size:13px;color:#fff;">📏 Horizontal Song Arrangement Timeline (✋ Drag to Reorder · 🎹 Touch/Click Section to Manage & Edit in Modal Card)</strong>
-                <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Touch any section in the timeline to edit its sequence, loop it, resize (1B/4B/16B), swap song/role, duplicate, or delete</span>
-              </div>
-              <div class="fold-btn-row">
-                <span style="font-size:11px;font-weight:800;color:#84dcc6;">QUICK ADD CURRENT SONG:</span>
-                <button type="button" class="fold-btn" data-quick-tl-bars="1" data-quick-tl-role="fill">+ 1B Fill</button>
-                <button type="button" class="fold-btn" data-quick-tl-bars="4" data-quick-tl-role="verse">+ 4B Verse</button>
-                <button type="button" class="fold-btn" data-quick-tl-bars="4" data-quick-tl-role="chorus">+ 4B Chorus</button>
-                <button type="button" class="fold-btn" data-quick-tl-bars="4" data-quick-tl-role="bridge">+ 4B Bridge</button>
-                <button type="button" class="fold-btn" data-quick-tl-bars="16" data-quick-tl-role="verse">+ All 16B</button>
+                <strong style="font-size:13px;color:#fff;">📏 Multi-Track Song Arrangement Timeline (✋ Drag to Reorder · 🎹 Touch/Click Any Drum or Bass Section to Open Modal Card)</strong>
+                <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Touch any section in either the Drum Track or Bass Track to edit its sequence, loop it, resize (1B/4B/16B), swap song/role, duplicate, or delete</span>
               </div>
             </div>
             <div id="fold-visual-timeline" class="fold-tl-track"></div>
@@ -9202,18 +10671,49 @@
       });
     }
 
-    // Wire Up Search, Tempo Filter, Auto-Collapse & Random Groove in Compose Tab
+    // Wire Up Compose Instrument Switcher (Drums vs Bass) & Hear Both Toggle
+    dock.querySelectorAll('[data-compose-inst]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const inst = btn.getAttribute('data-compose-inst');
+        setComposeInstrument(inst);
+      });
+    });
+
+    const composePlayBothBtn = document.getElementById('fold-compose-play-both-btn');
+    if (composePlayBothBtn) {
+      composePlayBothBtn.addEventListener('click', () => {
+        state.playBothInCompose = !state.playBothInCompose;
+        renderComposeInstrumentUI();
+        savePersistedState();
+      });
+    }
+
+    const composeChangeSongBtn = document.getElementById('fold-compose-change-song-btn');
+    if (composeChangeSongBtn) {
+      composeChangeSongBtn.addEventListener('click', () => {
+        switchWorkspaceTab('songs');
+      });
+    }
+
+    const songsGoComposeBtn = document.getElementById('fold-songs-go-compose-btn');
+    if (songsGoComposeBtn) {
+      songsGoComposeBtn.addEventListener('click', () => {
+        switchWorkspaceTab('compose');
+      });
+    }
+
+    // Wire Up Search, Tempo Filter, Auto-Jump to Compose & Random Groove in Songs Tab
     if (state.autoCollapseSongsOnSelect === undefined) {
       state.autoCollapseSongsOnSelect = true;
     }
     const autoCollapseSongsBtn = document.getElementById('fold-auto-collapse-songs-btn');
     if (autoCollapseSongsBtn) {
       autoCollapseSongsBtn.classList.toggle('chip-on', state.autoCollapseSongsOnSelect !== false);
-      autoCollapseSongsBtn.textContent = `⚡ Auto-Collapse on Select: ${state.autoCollapseSongsOnSelect !== false ? 'ON' : 'OFF'}`;
+      autoCollapseSongsBtn.textContent = `⚡ Open in Compose on Select: ${state.autoCollapseSongsOnSelect !== false ? 'ON' : 'OFF'}`;
       autoCollapseSongsBtn.addEventListener('click', () => {
         state.autoCollapseSongsOnSelect = state.autoCollapseSongsOnSelect === false;
         autoCollapseSongsBtn.classList.toggle('chip-on', state.autoCollapseSongsOnSelect);
-        autoCollapseSongsBtn.textContent = `⚡ Auto-Collapse on Select: ${state.autoCollapseSongsOnSelect ? 'ON' : 'OFF'}`;
+        autoCollapseSongsBtn.textContent = `⚡ Open in Compose on Select: ${state.autoCollapseSongsOnSelect ? 'ON' : 'OFF'}`;
       });
     }
 
@@ -9253,7 +10753,7 @@
         pushUndoState();
         loadSongGroove(pick, true);
         if (state.autoCollapseSongsOnSelect !== false) {
-          setCardCollapsed(document.getElementById('card-artists'), true);
+          switchWorkspaceTab('compose');
         }
       });
     }
@@ -9288,11 +10788,7 @@
     const changeSongFromPadsBtn = document.getElementById('fold-change-song-from-pads-btn');
     if (changeSongFromPadsBtn) {
       changeSongFromPadsBtn.addEventListener('click', () => {
-        const artistsCard = document.getElementById('card-artists');
-        if (artistsCard) {
-          setCardCollapsed(artistsCard, false);
-          artistsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        switchWorkspaceTab('songs');
       });
     }
 
@@ -9363,15 +10859,17 @@
       });
     }
 
+    const arrangeBackSongsBtn = document.getElementById('fold-arrange-back-songs-btn');
+    if (arrangeBackSongsBtn) {
+      arrangeBackSongsBtn.addEventListener('click', () => {
+        switchWorkspaceTab('songs');
+      });
+    }
+
     const arrangeBackComposeBtn = document.getElementById('fold-arrange-back-compose-btn');
     if (arrangeBackComposeBtn) {
       arrangeBackComposeBtn.addEventListener('click', () => {
         switchWorkspaceTab('compose');
-        const artistsCard = document.getElementById('card-artists');
-        if (artistsCard) {
-          setCardCollapsed(artistsCard, false);
-          artistsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
       });
     }
 
@@ -9379,17 +10877,22 @@
     if (timelineClearBtn) {
       timelineClearBtn.addEventListener('click', () => {
         pushUndoState();
-        const firstBlock =
+        const firstDrumBlock =
           Array.isArray(state.arrangementSections) && state.arrangementSections[0]
             ? state.arrangementSections[0]
-            : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor)[0];
-        state.arrangementSections = [firstBlock];
+            : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor, 'drums')[0];
+        const firstBassBlock =
+          Array.isArray(state.bassArrangementSections) && state.bassArrangementSections[0]
+            ? state.bassArrangementSections[0]
+            : createDefaultArrangementSections(state.selectedSongId, state.playerName, state.playerColor, 'bass')[0];
+        state.arrangementSections = [firstDrumBlock];
+        state.bassArrangementSections = [firstBassBlock];
         state.selectedTimelineIdx = 0;
         state.editingTimelineIdx = null;
         state.timelineHasUserSection = false;
         state.timelineBpm = null;
         state.timelineBpmSourceTitle = '';
-        commitArrangementChange('Reset Arrange Timeline to 1 Block (Next Section Defines Global BPM)');
+        commitArrangementChange('Reset Multi-Track Arrange Timeline to 1 Block (Next Section Defines Global BPM)');
       });
     }
 
@@ -9406,7 +10909,7 @@
       btn.addEventListener('click', () => {
         const bars = Number(btn.getAttribute('data-quick-tl-bars')) || 4;
         const roleId = btn.getAttribute('data-quick-tl-role') || 'chorus';
-        addComposeToTimeline(bars, state.selectedSongId, roleId);
+        addComposeToTimeline(bars, state.selectedSongId, roleId, state.composeInstrument);
       });
     });
 
@@ -9424,13 +10927,36 @@
       });
     }
 
+    const builderSendDrumsBtn = document.getElementById('fold-builder-send-drums-btn');
+    if (builderSendDrumsBtn) {
+      builderSendDrumsBtn.addEventListener('click', async () => {
+        builderSendDrumsBtn.textContent = '⏳ Sending Drums...';
+        await sendCurrentBeatToAbleton(true, true);
+        builderSendDrumsBtn.textContent = '✅ Drum Track Sent!';
+        setTimeout(() => {
+          renderSongBuilderAndClipsUI();
+        }, 1800);
+      });
+    }
+
+    const builderSendBassBtn = document.getElementById('fold-builder-send-bass-btn');
+    if (builderSendBassBtn) {
+      builderSendBassBtn.addEventListener('click', async () => {
+        builderSendBassBtn.textContent = '⏳ Sending Bass...';
+        await sendBassTimelineToAbleton(true);
+        builderSendBassBtn.textContent = '✅ Bass Track Sent!';
+        setTimeout(() => {
+          renderSongBuilderAndClipsUI();
+        }, 1800);
+      });
+    }
+
     const builderSendFullBtn = document.getElementById('fold-builder-send-full-btn');
     if (builderSendFullBtn) {
       builderSendFullBtn.addEventListener('click', async () => {
-        const orig = builderSendFullBtn.textContent;
-        builderSendFullBtn.textContent = '⏳ Sending Full Timeline...';
-        await sendCurrentBeatToAbleton(true, true);
-        builderSendFullBtn.textContent = '✅ Full Timeline Sent to Ableton!';
+        builderSendFullBtn.textContent = '⏳ Sending Drums + Bass...';
+        await sendBothTracksToAbleton(true);
+        builderSendFullBtn.textContent = '✅ Drums + Bass Sent to Ableton!';
         setTimeout(() => {
           renderSongBuilderAndClipsUI();
         }, 1800);
@@ -9451,7 +10977,7 @@
         const customTitle =
           titleInput && titleInput.value.trim()
             ? titleInput.value.trim()
-            : `Arrangement (${(state.arrangementSections || []).length} Blocks · ${state.tempo} BPM)`;
+            : `Arrangement (${(state.arrangementSections || []).length} Drum + ${(state.bassArrangementSections || []).length} Bass · ${state.tempo} BPM)`;
         await saveCurrentIdeaToCrate({
           customTitle,
           queuedForOutbox: false
@@ -9471,7 +10997,7 @@
         const customTitle =
           titleInput && titleInput.value.trim()
             ? titleInput.value.trim()
-            : `Arrangement (${(state.arrangementSections || []).length} Blocks · ${state.tempo} BPM)`;
+            : `Arrangement (${(state.arrangementSections || []).length} Drum + ${(state.bassArrangementSections || []).length} Bass · ${state.tempo} BPM)`;
         await saveCurrentIdeaToCrate({
           customTitle,
           queuedForOutbox: true
@@ -9664,13 +11190,23 @@
     });
 
     document.getElementById('fold-kit-select').addEventListener('change', (e) => {
-      state.kitId = e.target.value;
+      if (state.composeInstrument === 'bass') {
+        state.bassKitId = e.target.value;
+      } else {
+        state.kitId = e.target.value;
+      }
       syncSequencerNotes();
       updateHeaderSummaries();
       if (!state.phonePlayer.playing) {
         const ctx = getAudioCtx();
-        triggerDrumVoice(ctx, 36, 118, ctx.currentTime);
-        triggerDrumVoice(ctx, 38, 115, ctx.currentTime + 0.18);
+        if (state.composeInstrument === 'bass') {
+          const bVoices = getActiveVoices('bass', state.selectedSongId);
+          triggerBassVoice(ctx, bVoices[0].midi, 118, ctx.currentTime, state.bassKitId);
+          triggerBassVoice(ctx, bVoices[4].midi, 114, ctx.currentTime + 0.18, state.bassKitId);
+        } else {
+          triggerDrumVoice(ctx, 36, 118, ctx.currentTime);
+          triggerDrumVoice(ctx, 38, 115, ctx.currentTime + 0.18);
+        }
       }
     });
 
@@ -9773,7 +11309,8 @@
       pushUndoState();
       const srcStart = state.zoomedBar * 16;
       const secStartBar = state.activeSection * 4;
-      for (let v = 0; v < DRUM_VOICES.length; v++) {
+      const voices = getActiveVoices();
+      for (let v = 0; v < voices.length; v++) {
         for (let b = secStartBar; b < secStartBar + 4; b++) {
           if (b === state.zoomedBar) continue;
           for (let i = 0; i < 16; i++) {
@@ -9799,7 +11336,8 @@
     document.getElementById('fold-clear-all-btn').addEventListener('click', () => {
       pushUndoState();
       const secStart = state.activeSection * 64;
-      for (let v = 0; v < DRUM_VOICES.length; v++) {
+      const voices = getActiveVoices();
+      for (let v = 0; v < voices.length; v++) {
         for (let s = secStart; s < secStart + 64; s++) {
           state.grid[v][s] = { state: 0, sub: 1 };
         }
@@ -9821,6 +11359,11 @@
 
     document.getElementById('fold-target-track-select')?.addEventListener('change', (e) => {
       state.targetTrack = e.target.value;
+      updatePlayerButtons();
+    });
+
+    document.getElementById('fold-target-bass-track-select')?.addEventListener('change', (e) => {
+      state.targetBassTrack = e.target.value;
       updatePlayerButtons();
     });
 
@@ -10045,6 +11588,7 @@
       renderSequencerGrid();
       renderSongBuilderAndClipsUI();
       updateDialsUI();
+      renderComposeInstrumentUI();
       updatePlayerButtons();
     } else {
       loadSongGroove('zep_levee', true);
