@@ -2565,62 +2565,600 @@
   ];
 
   const ARTIST_BASS_PROFILES = {
-    zeppelin: { bassist: 'John Paul Jones', kit: 'jpj_jazz', rootMidi: 40, scale: 'minor', style: 'blues_riff' },
-    jamesbrown: { bassist: 'Bootsy Collins & Bernard Odum', kit: 'bootsy_funk', rootMidi: 38, scale: 'dorian', style: 'funk_one' },
-    prince: { bassist: 'BrownMark & Prince Synth Bass', kit: 'prince_synth', rootMidi: 45, scale: 'minor', style: 'synth_funk' },
-    gorillaz: { bassist: 'Murdoc Niccals / Dub Sub', kit: 'gorillaz_dub', rootMidi: 39, scale: 'minor', style: 'dub_bounce' },
-    dangelo: { bassist: 'Pino Palladino', kit: 'pino_flatwound', rootMidi: 38, scale: 'minor', style: 'neosoul_pocket' },
-    badu: { bassist: 'Ron Carter & Braylon Lacy', kit: 'badu_sub', rootMidi: 41, scale: 'minor', style: 'neosoul_pocket' },
-    mosdef: { bassist: 'Doug Wimbish / SP-1200 Sub', kit: 'mosdef_upright', rootMidi: 43, scale: 'minor', style: 'boombap_walk' },
-    kanye: { bassist: 'Motown Soul-Chop & 808 Sub', kit: 'kanye_soul', rootMidi: 41, scale: 'minor', style: 'soul_walk' },
-    beatles: { bassist: 'Paul McCartney', kit: 'mccartney_hofner', rootMidi: 38, scale: 'dorian', style: 'mccartney_melodic' },
-    daftpunk: { bassist: 'Thomas Bangalter & Nathan East', kit: 'daft_synth', rootMidi: 45, scale: 'minor', style: 'disco_octave' },
-    strokes: { bassist: 'Nikolai Fraiture', kit: 'strokes_pick', rootMidi: 48, scale: 'major', style: 'picked_8th' },
-    outkast: { bassist: 'Preston Crump & Stankonia Sub', kit: 'outkast_sub', rootMidi: 40, scale: 'minor', style: 'pfunk_sub' },
-    beegees: { bassist: 'Maurice Gibb', kit: 'beegees_disco', rootMidi: 41, scale: 'minor', style: 'disco_octave' },
-    rush: { bassist: 'Geddy Lee', kit: 'geddy_rick', rootMidi: 40, scale: 'minor', style: 'prog_drive' },
-    radiohead: { bassist: 'Colin Greenwood', kit: 'radiohead_p', rootMidi: 40, scale: 'minor', style: 'kraut_ostinato' },
-    philcollins: { bassist: 'Leland Sklar & Moog Taurus', kit: 'collins_taurus', rootMidi: 38, scale: 'minor', style: 'pedal_pulse' },
-    hotchip: { bassist: 'Al Doyle & Joe Goddard', kit: 'hotchip_sh101', rootMidi: 43, scale: 'minor', style: 'sh101_arp' },
-    blink182: { bassist: 'Mark Hoppus', kit: 'hoppus_pbass', rootMidi: 48, scale: 'major', style: 'punk_8th' },
-    tameimpala: { bassist: 'Kevin Parker (Höfner Fuzz)', kit: 'parker_fuzz', rootMidi: 37, scale: 'minor', style: 'parker_psych' },
-    paulsimon: { bassist: 'Bakithi Kumalo (Fretless)', kit: 'kumalo_fretless', rootMidi: 41, scale: 'major', style: 'kumalo_graceland' },
-    nirvana: { bassist: 'Krist Novoselic (Gibson Ripper)', kit: 'novoselic_svt', rootMidi: 40, scale: 'minor', style: 'novoselic_grunge' }
+    zeppelin: { bassist: 'John Paul Jones', kit: 'jpj_jazz', bassKit: 'jpj_jazz', rootMidi: 40, scale: 'minor', scaleLabel: 'E1 Minor Blues', style: 'blues_riff' },
+    jamesbrown: { bassist: 'Bootsy Collins & Bernard Odum', kit: 'bootsy_funk', bassKit: 'bootsy_funk', rootMidi: 38, scale: 'dorian', scaleLabel: 'D1 Dorian Funk', style: 'funk_one' },
+    prince: { bassist: 'BrownMark & Prince Synth Bass', kit: 'prince_synth', bassKit: 'prince_synth', rootMidi: 45, scale: 'minor', scaleLabel: 'A1 Synth Funk', style: 'synth_funk' },
+    gorillaz: { bassist: 'Murdoc Niccals / Dub Sub', kit: 'gorillaz_dub', bassKit: 'gorillaz_dub', rootMidi: 39, scale: 'minor', scaleLabel: 'Eb1 Dub Minor', style: 'dub_bounce' },
+    dangelo: { bassist: 'Pino Palladino', kit: 'pino_flatwound', bassKit: 'pino_flatwound', rootMidi: 38, scale: 'minor', scaleLabel: 'D1 Neo-Soul Pocket', style: 'neosoul_pocket' },
+    badu: { bassist: 'Ron Carter & Braylon Lacy', kit: 'badu_sub', bassKit: 'badu_sub', rootMidi: 41, scale: 'minor', scaleLabel: 'F1 Warm Sub', style: 'neosoul_pocket' },
+    mosdef: { bassist: 'Doug Wimbish / SP-1200 Sub', kit: 'mosdef_upright', bassKit: 'mosdef_upright', rootMidi: 43, scale: 'minor', scaleLabel: 'G1 Boom-Bap Upright', style: 'boombap_walk' },
+    kanye: { bassist: 'Motown Soul-Chop & 808 Sub', kit: 'kanye_soul', bassKit: 'kanye_soul', rootMidi: 41, scale: 'minor', scaleLabel: 'F1 Soul & 808', style: 'soul_walk' },
+    beatles: { bassist: 'Paul McCartney', kit: 'mccartney_hofner', bassKit: 'mccartney_hofner', rootMidi: 38, scale: 'dorian', scaleLabel: 'D1 McCartney Melodic', style: 'mccartney_melodic' },
+    daftpunk: { bassist: 'Thomas Bangalter & Nathan East', kit: 'daft_synth', bassKit: 'daft_synth', rootMidi: 45, scale: 'minor', scaleLabel: 'A1 French Touch', style: 'disco_octave' },
+    strokes: { bassist: 'Nikolai Fraiture', kit: 'strokes_pick', bassKit: 'strokes_pick', rootMidi: 48, scale: 'major', scaleLabel: 'C2 Picked Garage', style: 'picked_8th' },
+    outkast: { bassist: 'Preston Crump & Stankonia Sub', kit: 'outkast_sub', bassKit: 'outkast_sub', rootMidi: 40, scale: 'minor', scaleLabel: 'E1 ATLiens Funk', style: 'pfunk_sub' },
+    beegees: { bassist: 'Maurice Gibb', kit: 'beegees_disco', bassKit: 'beegees_disco', rootMidi: 41, scale: 'minor', scaleLabel: 'F1 Disco Strut', style: 'disco_octave' },
+    rush: { bassist: 'Geddy Lee', kit: 'geddy_rick', bassKit: 'geddy_rick', rootMidi: 40, scale: 'minor', scaleLabel: 'E1 Rick & Taurus', style: 'prog_drive' },
+    radiohead: { bassist: 'Colin Greenwood', kit: 'radiohead_p', bassKit: 'radiohead_p', rootMidi: 40, scale: 'minor', scaleLabel: 'E1 Kraut Ostinato', style: 'kraut_ostinato' },
+    philcollins: { bassist: 'Leland Sklar & Moog Taurus', kit: 'collins_taurus', bassKit: 'collins_taurus', rootMidi: 38, scale: 'minor', scaleLabel: 'D1 Taurus Pedal', style: 'pedal_pulse' },
+    hotchip: { bassist: 'Al Doyle & Joe Goddard', kit: 'hotchip_sh101', bassKit: 'hotchip_sh101', rootMidi: 43, scale: 'minor', scaleLabel: 'G1 SH-101 Arp', style: 'sh101_arp' },
+    blink182: { bassist: 'Mark Hoppus', kit: 'hoppus_pbass', bassKit: 'hoppus_pbass', rootMidi: 48, scale: 'major', scaleLabel: 'C2 Pop-Punk Pick', style: 'punk_8th' },
+    tameimpala: { bassist: 'Kevin Parker (Höfner Fuzz)', kit: 'parker_fuzz', bassKit: 'parker_fuzz', rootMidi: 37, scale: 'minor', scaleLabel: 'C#1 Psych Fuzz', style: 'parker_psych' },
+    paulsimon: { bassist: 'Bakithi Kumalo (Fretless)', kit: 'kumalo_fretless', bassKit: 'kumalo_fretless', rootMidi: 41, scale: 'major', scaleLabel: 'F1 Graceland Fretless', style: 'kumalo_graceland' },
+    nirvana: { bassist: 'Krist Novoselic (Gibson Ripper)', kit: 'novoselic_svt', bassKit: 'novoselic_svt', rootMidi: 40, scale: 'minor', scaleLabel: 'E1 Grunge Ripper', style: 'novoselic_grunge' }
   };
 
-  // Song-level musical root MIDI pitches (36 = C1 .. 47 = B1) & mode overrides for signature basslines
+  // ==========================================================================
+  // 95 Distinct Song-Specific Basslines (Unique Key, Bar 1 & Bar 2 Riffs, & Bar Progression)
+  // Voice indices: 0=Root, 1=Low Sub(b7), 2=3rd, 3=4th, 4=5th, 5=6th/b7th, 6=Octave, 7=High 10th
+  // ==========================================================================
   const SONG_KEY_OVERRIDES = {
-    zep_levee: { rootMidi: 41, scale: 'minor' },         // F minor
-    zep_kashmir: { rootMidi: 38, scale: 'dorian' },      // D modal
-    zep_immigrant: { rootMidi: 42, scale: 'minor' },     // F#m octave gallop
-    zep_goodtimes: { rootMidi: 40, scale: 'minor' },     // E minor
-    zep_foolinrain: { rootMidi: 48, scale: 'major' },    // C major samba-blues
-    bea_cometogether: { rootMidi: 38, scale: 'minor' },  // D minor slide hook
-    bea_tomorrownever: { rootMidi: 48, scale: 'major' }, // C mixolydian drone
-    bea_rain: { rootMidi: 43, scale: 'major' },          // G major McCartney high bass
-    dp_aroundtheworld: { rootMidi: 45, scale: 'minor' }, // A minor disco octave walk
-    dp_getlucky: { rootMidi: 47, scale: 'dorian' },      // B dorian slap groove
-    bg_stayinalive: { rootMidi: 41, scale: 'minor' },    // F minor octave strut
-    rush_tomsawyer: { rootMidi: 40, scale: 'minor' },    // E minor Taurus + Rick
-    rush_yyz: { rootMidi: 47, scale: 'minor' },          // B tritone/minor prog
-    rad_15step: { rootMidi: 37, scale: 'minor' },        // C# minor
-    rad_weirdfishes: { rootMidi: 40, scale: 'minor' },   // E minor arpeggio ostinato
-    pc_intheair: { rootMidi: 38, scale: 'minor' },       // D minor Taurus pedal
-    ti_lessiknow: { rootMidi: 37, scale: 'minor' },      // C# minor ("The Less I Know the Better")
-    ti_elephant: { rootMidi: 38, scale: 'minor' },       // D blues-fuzz swing ("Elephant")
-    ti_letithappen: { rootMidi: 45, scale: 'minor' },    // A minor psych-disco
-    ti_backwards: { rootMidi: 41, scale: 'major' },      // F major walking hook
-    ti_borderline: { rootMidi: 45, scale: 'minor' },     // A minor boogie
-    ps_callmeal: { rootMidi: 41, scale: 'major' },       // F major Bakithi Kumalo bounce
-    ps_graceland: { rootMidi: 40, scale: 'major' },      // E major mbaqanga walk
-    ps_50ways: { rootMidi: 40, scale: 'minor' },         // E minor Tony Levin pocket
-    ps_diamonds: { rootMidi: 41, scale: 'major' },       // F major fretless singing bass
-    ps_lateintheevening: { rootMidi: 41, scale: 'major' }, // F mixolydian horn-locked bass
-    nir_teenspirit: { rootMidi: 41, scale: 'minor' },    // F -> Bb -> Ab -> Db grunge riff
-    nir_comeasyouare: { rootMidi: 40, scale: 'minor' },  // E minor walking chorus riff
-    nir_inbloom: { rootMidi: 46, scale: 'minor' },       // Bb power riff
-    nir_heartshapedbox: { rootMidi: 45, scale: 'minor' },// A -> F -> D drop-D riff
-    nir_loungeact: { rootMidi: 47, scale: 'major' }      // B major Novoselic signature bass intro!
+    // 1. LED ZEPPELIN (John Paul Jones)
+    zep_levee: {
+      rootMidi: 41, scale: 'minor', label: 'F1 Minor Stairwell Drone',
+      bar1: [[0, 0, 2], [6, 1, 3], [7, 0, 2], [8, 0, 2], [10, 5, 1], [14, 4, 1]],
+      bar2: [[0, 0, 2], [7, 2, 1], [8, 3, 2], [10, 4, 2], [13, 5, 1], [14, 6, 2], [15, 1, 2]]
+    },
+    zep_kashmir: {
+      rootMidi: 38, scale: 'dorian', label: 'D1 Dadgad Ascending Modal',
+      bar1: [[0, 0, 2], [2, 2, 1], [4, 2, 2], [6, 3, 1], [8, 3, 2], [10, 4, 1], [12, 4, 2], [14, 5, 2]],
+      bar2: [[0, 5, 2], [2, 6, 2], [4, 4, 1], [6, 3, 1], [8, 2, 2], [10, 1, 1], [12, 0, 2], [14, 4, 2]]
+    },
+    zep_goodtimes: {
+      rootMidi: 40, scale: 'minor', label: 'E1 16th-Run Riff',
+      bar1: [[0, 0, 2], [2, 0, 2], [5, 2, 1], [6, 3, 1], [7, 4, 2], [8, 6, 2], [10, 5, 1], [11, 4, 1], [13, 3, 1], [14, 2, 2], [15, 1, 1]],
+      bar2: [[0, 3, 2], [2, 3, 2], [6, 4, 1], [7, 5, 2], [8, 4, 2], [10, 6, 2], [12, 7, 1], [14, 4, 2], [15, 2, 1]]
+    },
+    zep_wholelotta: {
+      rootMidi: 40, scale: 'minor', label: 'E1 Blues Chug Ostinato',
+      bar1: [[0, 0, 2], [2, 1, 1], [3, 1, 2], [4, 0, 2], [6, 1, 1], [7, 1, 2], [8, 0, 2], [10, 1, 1], [11, 1, 2], [12, 0, 2], [14, 2, 2], [15, 1, 1]],
+      bar2: [[0, 0, 2], [2, 1, 1], [3, 1, 2], [4, 0, 2], [6, 2, 1], [7, 4, 2], [8, 0, 2], [10, 1, 1], [11, 1, 2], [12, 4, 2], [14, 6, 2], [15, 4, 1]]
+    },
+    zep_immigrant: {
+      rootMidi: 42, scale: 'minor', label: 'F#1 Octave Hammer Gallop',
+      bar1: [[0, 0, 2], [2, 0, 1], [3, 6, 2], [6, 0, 1], [8, 0, 2], [10, 0, 1], [11, 6, 2], [14, 5, 1]],
+      bar2: [[0, 0, 2], [2, 0, 1], [3, 6, 2], [6, 4, 1], [8, 0, 2], [10, 0, 1], [11, 6, 2], [13, 5, 1], [14, 3, 2], [15, 2, 1]]
+    },
+
+    // 2. JAMES BROWN (Bootsy Collins & Bernard Odum)
+    jb_funkydrummer: {
+      rootMidi: 38, scale: 'dorian', label: 'D1 Clyde Break Pocket',
+      bar1: [[0, 0, 2], [2, 0, 1], [6, 5, 1], [7, 6, 2], [10, 4, 2], [13, 5, 1], [15, 2, 1]],
+      bar2: [[0, 0, 2], [2, 4, 1], [6, 5, 2], [9, 2, 3], [10, 3, 2], [12, 4, 1], [13, 6, 2], [15, 1, 1]]
+    },
+    jb_coldsweat: {
+      rootMidi: 38, scale: 'dorian', label: 'D1 Bernard Odum Displaced Hook',
+      bar1: [[0, 0, 2], [3, 2, 1], [6, 4, 2], [8, 0, 2], [10, 5, 2], [12, 4, 1]],
+      bar2: [[0, 3, 2], [4, 5, 2], [6, 6, 2], [8, 4, 1], [10, 2, 2], [11, 3, 1], [14, 1, 2]]
+    },
+    jb_sexmachine: {
+      rootMidi: 39, scale: 'dorian', label: 'Eb1 Bootsy Staccato 16ths',
+      bar1: [[0, 0, 2], [1, 0, 3], [3, 6, 2], [4, 5, 1], [7, 2, 1], [10, 0, 2], [11, 6, 2], [14, 4, 1], [15, 5, 2]],
+      bar2: [[0, 0, 2], [3, 6, 2], [6, 5, 1], [7, 4, 2], [10, 2, 2], [11, 3, 1], [13, 5, 2], [14, 6, 2], [15, 7, 1]]
+    },
+    jb_giveitup: {
+      rootMidi: 41, scale: 'minor', label: 'F1 B-Boy Rolling Ostinato',
+      bar1: [[0, 0, 2], [2, 2, 1], [3, 3, 2], [6, 4, 2], [8, 0, 2], [10, 5, 1], [12, 4, 2], [14, 2, 1]],
+      bar2: [[0, 0, 2], [2, 2, 1], [3, 3, 2], [6, 6, 2], [8, 5, 1], [10, 4, 2], [13, 2, 2], [15, 1, 1]]
+    },
+    jb_payback: {
+      rootMidi: 46, scale: 'minor', label: 'Bb1 On-The-One Revenge Strut',
+      bar1: [[0, 0, 2], [2, 0, 2], [6, 2, 1], [9, 4, 2], [10, 5, 2], [14, 1, 1]],
+      bar2: [[0, 0, 2], [2, 0, 2], [6, 6, 2], [7, 5, 1], [9, 4, 2], [10, 2, 2], [14, 4, 2], [15, 1, 1]]
+    },
+
+    // 3. PRINCE (Minneapolis Synth & Slap Bass)
+    prince_doves: {
+      rootMidi: 45, scale: 'minor', label: 'A1 Baroque Synth Stabs',
+      bar1: [[0, 0, 2], [3, 6, 2], [8, 0, 2], [10, 4, 2], [14, 5, 1]],
+      bar2: [[0, 0, 2], [3, 2, 1], [6, 3, 2], [8, 4, 2], [11, 5, 1], [12, 6, 2], [13, 7, 2], [14, 6, 1], [15, 4, 2]]
+    },
+    prince_kiss: {
+      rootMidi: 45, scale: 'dorian', label: 'A1 Staccato Slap Pocket',
+      bar1: [[0, 0, 2], [3, 1, 3], [6, 2, 2], [10, 0, 2], [14, 6, 2], [15, 5, 1]],
+      bar2: [[0, 3, 2], [3, 3, 3], [6, 5, 2], [8, 4, 2], [10, 6, 2], [11, 7, 2], [14, 4, 1]]
+    },
+    prince_1999: {
+      rootMidi: 41, scale: 'major', label: 'F1 OB-Xa Party Synth',
+      bar1: [[0, 0, 2], [2, 6, 1], [4, 4, 2], [7, 5, 1], [8, 0, 2], [10, 2, 2], [12, 3, 2], [14, 4, 2]],
+      bar2: [[0, 3, 2], [3, 5, 2], [4, 4, 2], [6, 6, 2], [8, 0, 2], [10, 5, 1], [12, 4, 2], [14, 1, 2]]
+    },
+    prince_raspberry: {
+      rootMidi: 45, scale: 'major', label: 'A1 Major Pop-Funk Walk',
+      bar1: [[0, 0, 2], [4, 2, 1], [7, 3, 2], [8, 4, 2], [10, 5, 1], [12, 6, 2], [14, 4, 1]],
+      bar2: [[0, 3, 2], [3, 4, 1], [7, 6, 2], [8, 4, 2], [10, 2, 2], [12, 1, 1], [14, 0, 2]]
+    },
+    prince_purplerain: {
+      rootMidi: 46, scale: 'major', label: 'Bb1 Stadium Ballad Pedal',
+      bar1: [[0, 0, 2], [6, 0, 1], [7, 4, 1], [8, 5, 2], [14, 4, 1], [15, 2, 1]],
+      bar2: [[0, 3, 2], [6, 3, 1], [8, 4, 2], [10, 6, 2], [12, 7, 1], [14, 4, 2], [15, 1, 1]]
+    },
+
+    // 4. GORILLAZ (Murdoc Niccals / Dub Sub)
+    gor_clint: {
+      rootMidi: 39, scale: 'minor', label: 'Eb1 Swung Dub Sub',
+      bar1: [[0, 0, 2], [3, 0, 2], [6, 4, 1], [8, 1, 2], [10, 1, 2], [14, 2, 1]],
+      bar2: [[0, 0, 2], [3, 5, 2], [6, 4, 2], [7, 3, 1], [8, 2, 2], [10, 1, 2], [14, 4, 1]]
+    },
+    gor_feelgood: {
+      rootMidi: 39, scale: 'minor', label: 'Eb1 Murdoc Iconic Riff',
+      bar1: [[0, 0, 2], [2, 1, 2], [3, 2, 2], [6, 3, 2], [8, 5, 2], [14, 4, 2]],
+      bar2: [[0, 3, 2], [2, 4, 2], [3, 5, 2], [6, 3, 2], [8, 0, 2], [10, 0, 1], [14, 1, 1]]
+    },
+    gor_dare: {
+      rootMidi: 40, scale: 'minor', label: 'E1 Electro-Bounce Synth',
+      bar1: [[0, 0, 2], [2, 6, 1], [4, 0, 2], [6, 5, 2], [8, 3, 2], [10, 2, 1], [12, 4, 2], [14, 5, 1]],
+      bar2: [[0, 0, 2], [2, 6, 2], [4, 5, 2], [6, 4, 1], [8, 2, 2], [10, 3, 2], [12, 1, 2], [14, 4, 2]]
+    },
+    gor_dirtyharry: {
+      rootMidi: 42, scale: 'minor', label: 'F#1 Clav-Funk Bounce',
+      bar1: [[0, 0, 2], [2, 0, 2], [6, 2, 1], [7, 3, 2], [10, 4, 2], [11, 6, 2], [14, 5, 1]],
+      bar2: [[0, 0, 2], [2, 2, 1], [6, 4, 2], [10, 5, 2], [12, 6, 2], [14, 4, 1], [15, 2, 1]]
+    },
+    gor_tomorrow: {
+      rootMidi: 36, scale: 'minor', label: 'C1 Trip-Hop Dub Walk',
+      bar1: [[0, 0, 2], [2, 0, 1], [8, 3, 2], [11, 3, 2], [14, 4, 1]],
+      bar2: [[0, 2, 2], [2, 2, 1], [7, 5, 1], [8, 4, 2], [11, 4, 2], [14, 1, 2]]
+    },
+
+    // 5. D'ANGELO (Pino Palladino)
+    dan_untitled: {
+      rootMidi: 40, scale: 'major', label: 'E1 6/8 Pino Soul Walk',
+      bar1: [[0, 0, 2], [4, 2, 1], [7, 3, 1], [8, 4, 2], [11, 5, 1], [14, 6, 2], [15, 4, 1]],
+      bar2: [[0, 3, 2], [4, 5, 1], [6, 6, 2], [8, 7, 2], [10, 6, 1], [12, 4, 2], [15, 1, 2]]
+    },
+    dan_brownsugar: {
+      rootMidi: 46, scale: 'minor', label: 'Bb1 Smokey Rhodes Sub',
+      bar1: [[0, 0, 2], [3, 0, 2], [6, 2, 1], [8, 3, 2], [10, 3, 2], [15, 1, 1]],
+      bar2: [[0, 5, 2], [3, 5, 1], [7, 4, 2], [8, 4, 2], [10, 6, 2], [14, 4, 1], [15, 2, 1]]
+    },
+    dan_devilspie: {
+      rootMidi: 36, scale: 'minor', label: 'C1 Premier Two-Note Sub',
+      bar1: [[0, 0, 2], [2, 0, 2], [7, 1, 2], [10, 0, 2], [11, 0, 1], [15, 1, 3]],
+      bar2: [[0, 0, 2], [2, 0, 2], [7, 2, 1], [10, 3, 2], [11, 4, 2], [14, 1, 2]]
+    },
+    dan_playaplaya: {
+      rootMidi: 42, scale: 'minor', label: 'F#1 Pino High Slide Pocket',
+      bar1: [[0, 0, 2], [3, 4, 1], [6, 6, 2], [9, 7, 2], [11, 5, 2], [15, 4, 1]],
+      bar2: [[0, 3, 2], [3, 5, 1], [7, 6, 2], [9, 4, 2], [11, 2, 2], [13, 1, 1], [15, 0, 2]]
+    },
+    dan_sugah: {
+      rootMidi: 41, scale: 'minor', label: 'F1 Black Messiah Pentatonic',
+      bar1: [[0, 0, 2], [2, 0, 1], [3, 2, 2], [6, 3, 2], [7, 4, 1], [10, 5, 2], [11, 6, 2], [14, 4, 2]],
+      bar2: [[0, 0, 2], [3, 6, 2], [6, 5, 2], [8, 4, 1], [10, 2, 2], [11, 3, 2], [13, 4, 1], [14, 1, 2]]
+    },
+
+    // 6. ERYKAH BADU (J Dilla & Ron Carter)
+    badu_onandon: {
+      rootMidi: 42, scale: 'minor', label: 'F#1 Baduizm Two-Chord Sway',
+      bar1: [[0, 0, 2], [3, 0, 2], [7, 2, 1], [8, 4, 2], [10, 4, 2], [14, 5, 1]],
+      bar2: [[0, 3, 2], [3, 3, 2], [7, 5, 1], [8, 2, 2], [10, 4, 2], [14, 1, 2], [15, 0, 1]]
+    },
+    badu_didntcha: {
+      rootMidi: 39, scale: 'minor', label: 'Eb1 Dilla Tarika Walk',
+      bar1: [[0, 0, 2], [3, 2, 2], [6, 3, 2], [7, 4, 1], [10, 5, 2], [12, 4, 1], [14, 2, 2]],
+      bar2: [[0, 3, 2], [3, 4, 2], [6, 5, 2], [10, 6, 2], [12, 7, 1], [13, 5, 2], [15, 4, 1]]
+    },
+    badu_baglady: {
+      rootMidi: 43, scale: 'minor', label: 'G1 West Coast Sub Bounce',
+      bar1: [[0, 0, 2], [2, 0, 2], [7, 1, 2], [10, 0, 2], [14, 4, 1], [15, 5, 2]],
+      bar2: [[0, 3, 2], [2, 3, 2], [7, 6, 2], [10, 5, 2], [13, 4, 2], [15, 2, 1]]
+    },
+    badu_loveofmylife: {
+      rootMidi: 38, scale: 'minor', label: 'D1 Saadiq Funk-Hop Pocket',
+      bar1: [[0, 0, 2], [3, 6, 2], [6, 5, 1], [8, 0, 2], [10, 2, 2], [11, 3, 2], [14, 4, 1]],
+      bar2: [[0, 0, 2], [3, 2, 2], [6, 3, 2], [10, 4, 2], [11, 5, 2], [14, 6, 2], [15, 4, 1]]
+    },
+    badu_windowseat: {
+      rootMidi: 36, scale: 'minor', label: 'C1 Warm Chord-Change Walk',
+      bar1: [[0, 0, 2], [7, 4, 1], [8, 5, 2], [10, 5, 2], [15, 4, 1]],
+      bar2: [[0, 3, 2], [6, 3, 1], [8, 4, 2], [10, 4, 2], [14, 6, 2], [15, 1, 1]]
+    },
+
+    // 7. MOS DEF (DJ Premier, Ayatollah & Madlib)
+    mos_mathematics: {
+      rootMidi: 43, scale: 'minor', label: 'G1 Premier Chopped Upright',
+      bar1: [[0, 0, 2], [3, 0, 2], [8, 4, 2], [10, 5, 2], [11, 4, 2], [14, 1, 1]],
+      bar2: [[0, 0, 2], [2, 2, 2], [6, 3, 2], [7, 2, 1], [10, 1, 2], [14, 4, 2]]
+    },
+    mos_fatbooty: {
+      rootMidi: 42, scale: 'minor', label: 'F#1 Aretha Soul Bassline',
+      bar1: [[0, 0, 2], [2, 2, 1], [4, 3, 2], [7, 4, 2], [8, 6, 2], [10, 5, 1], [12, 4, 2], [14, 2, 1]],
+      bar2: [[0, 3, 2], [3, 5, 2], [6, 6, 2], [8, 4, 2], [10, 2, 2], [12, 0, 2], [15, 1, 2]]
+    },
+    mos_hiphop: {
+      rootMidi: 46, scale: 'minor', label: 'Bb1 Descending Crate Stomp',
+      bar1: [[0, 6, 2], [2, 6, 2], [6, 5, 2], [8, 4, 2], [11, 3, 2], [14, 2, 2]],
+      bar2: [[0, 0, 2], [2, 0, 2], [7, 1, 2], [8, 2, 2], [11, 4, 2], [14, 5, 2]]
+    },
+    mos_umisays: {
+      rootMidi: 39, scale: 'major', label: 'Eb1 Meditative Jazz Upright',
+      bar1: [[0, 0, 2], [4, 2, 1], [7, 4, 1], [8, 5, 2], [12, 4, 1], [14, 6, 2]],
+      bar2: [[0, 3, 2], [3, 4, 1], [7, 5, 2], [10, 4, 2], [12, 2, 1], [14, 1, 2]]
+    },
+    mos_auditorium: {
+      rootMidi: 40, scale: 'minor', label: 'E1 Madlib Orchestral Walk',
+      bar1: [[0, 0, 2], [3, 2, 2], [6, 3, 2], [8, 4, 2], [10, 5, 2], [14, 4, 2]],
+      bar2: [[0, 5, 2], [2, 6, 2], [6, 4, 2], [10, 3, 2], [11, 2, 2], [14, 1, 2]]
+    },
+
+    // 8. KANYE WEST (Soul-Chop P-Bass & 808)
+    ye_jesuswalks: {
+      rootMidi: 39, scale: 'minor', label: 'Eb1 Gospel Choir March',
+      bar1: [[0, 0, 2], [2, 0, 2], [6, 2, 1], [7, 2, 2], [8, 3, 2], [10, 3, 2], [14, 4, 2], [15, 4, 2]],
+      bar2: [[0, 0, 2], [2, 0, 2], [6, 5, 1], [7, 5, 2], [8, 4, 2], [10, 2, 2], [14, 1, 2], [15, 0, 1]]
+    },
+    ye_golddigger: {
+      rootMidi: 44, scale: 'major', label: 'Ab1 Ray Charles Soul Walk',
+      bar1: [[0, 0, 2], [3, 2, 1], [4, 4, 2], [6, 5, 1], [8, 3, 2], [10, 4, 2], [12, 6, 2], [14, 4, 1]],
+      bar2: [[0, 4, 2], [3, 5, 2], [6, 6, 2], [8, 0, 2], [10, 2, 1], [12, 4, 2], [14, 1, 2]]
+    },
+    ye_flashing: {
+      rootMidi: 42, scale: 'minor', label: 'F#1 Synth-String Progression',
+      bar1: [[0, 0, 2], [3, 0, 2], [7, 6, 1], [8, 5, 2], [11, 5, 2], [14, 4, 1]],
+      bar2: [[0, 3, 2], [3, 3, 2], [7, 5, 1], [8, 4, 2], [11, 4, 2], [14, 6, 2]]
+    },
+    ye_runaway: {
+      rootMidi: 40, scale: 'major', label: 'E1 Minimal Piano-Root Sub',
+      bar1: [[0, 6, 2], [7, 6, 1], [8, 5, 2], [10, 5, 2], [14, 4, 1]],
+      bar2: [[0, 4, 2], [3, 4, 1], [7, 2, 1], [8, 0, 2], [10, 0, 2], [15, 6, 2]]
+    },
+    ye_blackskinhead: {
+      rootMidi: 41, scale: 'minor', label: 'F1 Industrial Fuzz Stampede',
+      bar1: [[0, 0, 2], [2, 0, 1], [4, 0, 2], [6, 2, 2], [8, 0, 2], [10, 3, 2], [12, 0, 2], [14, 4, 2]],
+      bar2: [[0, 0, 2], [3, 6, 2], [4, 0, 2], [6, 5, 2], [8, 0, 2], [10, 4, 2], [12, 2, 2], [14, 1, 2], [15, 0, 2]]
+    },
+
+    // 9. THE BEATLES (Paul McCartney)
+    bea_cometogether: {
+      rootMidi: 38, scale: 'dorian', label: 'D1 Swampy Slide Hook',
+      bar1: [[0, 0, 2], [2, 0, 2], [3, 4, 1], [4, 7, 2], [6, 7, 1], [8, 6, 2], [12, 0, 1]],
+      bar2: [[0, 0, 2], [2, 0, 2], [3, 4, 1], [4, 7, 2], [8, 6, 2], [10, 4, 2], [12, 3, 2], [14, 2, 1]]
+    },
+    bea_tomorrow: {
+      rootMidi: 36, scale: 'major', label: 'C1 Revolver Raga Drone',
+      bar1: [[0, 0, 2], [2, 0, 2], [6, 6, 2], [8, 0, 2], [10, 5, 2], [11, 6, 2], [14, 4, 1]],
+      bar2: [[0, 0, 2], [2, 0, 2], [6, 5, 2], [8, 0, 2], [10, 6, 2], [11, 7, 1], [12, 5, 2], [14, 4, 2]]
+    },
+    bea_tickettoride: {
+      rootMidi: 45, scale: 'major', label: 'A1 Stuttering Rickenbacker',
+      bar1: [[0, 0, 2], [4, 4, 1], [6, 4, 2], [8, 6, 2], [10, 4, 2], [12, 2, 2]],
+      bar2: [[0, 0, 2], [6, 4, 2], [8, 6, 2], [10, 5, 2], [12, 4, 2], [14, 2, 2]]
+    },
+    bea_rain: {
+      rootMidi: 43, scale: 'major', label: 'G1 High Melodic Lead-Bass',
+      bar1: [[0, 6, 2], [2, 6, 1], [3, 5, 2], [6, 4, 2], [8, 3, 2], [10, 4, 2], [12, 6, 2], [14, 7, 2]],
+      bar2: [[0, 3, 2], [3, 5, 2], [6, 6, 2], [8, 4, 2], [10, 2, 2], [11, 3, 1], [13, 4, 2], [14, 0, 2]]
+    },
+    bea_sgtpepper: {
+      rootMidi: 41, scale: 'major', label: 'F1 Walking Reprise Drive',
+      bar1: [[0, 0, 2], [2, 2, 1], [4, 3, 2], [6, 4, 1], [8, 5, 2], [10, 6, 2], [12, 4, 1], [14, 2, 2]],
+      bar2: [[0, 3, 2], [2, 4, 1], [6, 5, 2], [7, 6, 2], [8, 4, 2], [10, 2, 1], [14, 1, 2], [15, 0, 1]]
+    },
+
+    // 10. DAFT PUNK (Thomas Bangalter & Nathan East)
+    dp_aroundtheworld: {
+      rootMidi: 45, scale: 'minor', label: 'A1 Iconic Melodic Walk',
+      bar1: [[0, 0, 2], [2, 0, 1], [4, 1, 2], [6, 1, 1], [8, 2, 2], [10, 2, 1], [12, 3, 2], [14, 4, 2]],
+      bar2: [[0, 4, 2], [2, 6, 2], [4, 7, 2], [6, 6, 1], [8, 5, 2], [10, 4, 2], [12, 3, 2], [14, 2, 2], [15, 1, 1]]
+    },
+    dp_onemoretime: {
+      rootMidi: 38, scale: 'major', label: 'D1 Sidechain Filter-House',
+      bar1: [[0, 4, 2], [2, 6, 1], [4, 4, 2], [6, 6, 2], [8, 0, 2], [10, 6, 1], [12, 0, 2], [14, 2, 1]],
+      bar2: [[0, 3, 2], [2, 6, 1], [4, 3, 2], [8, 3, 2], [11, 5, 2], [12, 4, 2], [14, 6, 2]]
+    },
+    dp_getlucky: {
+      rootMidi: 47, scale: 'dorian', label: 'B1 Nathan East 4-Chord Slap',
+      bar1: [[0, 0, 2], [2, 6, 1], [3, 0, 3], [4, 0, 2], [6, 5, 2], [8, 2, 2], [10, 7, 2], [12, 2, 2], [14, 4, 1]],
+      bar2: [[0, 4, 2], [2, 6, 2], [4, 4, 2], [6, 5, 1], [8, 3, 2], [10, 6, 2], [12, 3, 2], [14, 2, 2], [15, 1, 2]]
+    },
+    dp_dafunk: {
+      rootMidi: 43, scale: 'minor', label: 'G1 Acid MS-20 Gangsta Riff',
+      bar1: [[0, 0, 2], [3, 2, 2], [4, 3, 2], [6, 4, 1], [8, 0, 2], [10, 5, 2], [11, 6, 2], [14, 4, 2]],
+      bar2: [[0, 0, 2], [3, 6, 2], [6, 5, 2], [8, 4, 2], [10, 3, 2], [12, 2, 2], [14, 1, 2]]
+    },
+    dp_something: {
+      rootMidi: 38, scale: 'minor', label: 'D1 Late-Night Lounge Glide',
+      bar1: [[0, 5, 2], [6, 6, 1], [7, 5, 2], [8, 4, 2], [10, 4, 1], [14, 2, 1]],
+      bar2: [[0, 0, 2], [3, 2, 1], [7, 3, 2], [8, 3, 2], [10, 4, 2], [14, 5, 2]]
+    },
+
+    // 11. THE STROKES (Nikolai Fraiture)
+    str_lastnite: {
+      rootMidi: 48, scale: 'major', label: 'C2 Garage-Soul Bounce',
+      bar1: [[0, 0, 2], [3, 0, 2], [4, 2, 1], [6, 3, 2], [8, 3, 2], [10, 4, 2], [12, 5, 1], [14, 4, 2]],
+      bar2: [[0, 4, 2], [3, 4, 2], [6, 6, 2], [8, 3, 2], [10, 2, 2], [12, 0, 2], [14, 1, 2]]
+    },
+    str_hardtoexplain: {
+      rootMidi: 43, scale: 'major', label: 'G1 Motorik 8th Chord Chug',
+      bar1: [[0, 0, 2], [2, 0, 1], [4, 0, 2], [6, 0, 1], [8, 5, 2], [10, 5, 1], [12, 5, 2], [14, 6, 2]],
+      bar2: [[0, 3, 2], [2, 3, 1], [4, 3, 2], [6, 3, 1], [8, 4, 2], [10, 4, 1], [12, 4, 2], [14, 7, 2]]
+    },
+    str_someday: {
+      rootMidi: 45, scale: 'major', label: 'A1 Melodic Counter-Walk',
+      bar1: [[0, 0, 2], [2, 2, 1], [6, 4, 2], [8, 6, 2], [10, 5, 2], [12, 4, 1], [14, 2, 2]],
+      bar2: [[0, 3, 2], [3, 5, 2], [6, 4, 2], [8, 2, 2], [10, 4, 2], [12, 1, 1], [14, 0, 2]]
+    },
+    str_reptilia: {
+      rootMidi: 47, scale: 'minor', label: 'B1 Staccato Two-Chord Hook',
+      bar1: [[0, 0, 2], [2, 0, 2], [3, 6, 1], [6, 0, 2], [8, 0, 2], [10, 5, 2], [12, 4, 1], [14, 2, 2]],
+      bar2: [[0, 3, 2], [2, 3, 2], [3, 7, 1], [6, 3, 2], [8, 3, 2], [10, 4, 2], [11, 5, 2], [14, 6, 2]]
+    },
+    str_1251: {
+      rootMidi: 40, scale: 'major', label: 'E1 Synth-Locked Quarter Pulse',
+      bar1: [[0, 0, 2], [4, 0, 2], [6, 2, 1], [8, 3, 2], [12, 3, 2], [14, 4, 1]],
+      bar2: [[0, 5, 2], [4, 5, 2], [8, 4, 2], [10, 6, 2], [12, 4, 2], [14, 2, 1]]
+    },
+
+    // 12. OUTKAST (Preston Crump & Stankonia 808)
+    out_msjackson: {
+      rootMidi: 41, scale: 'minor', label: 'F1 Preston Crump Melodic Walk',
+      bar1: [[0, 0, 2], [3, 2, 2], [6, 3, 2], [9, 4, 1], [11, 5, 2], [14, 6, 2]],
+      bar2: [[0, 3, 2], [2, 4, 1], [6, 6, 2], [8, 7, 2], [11, 5, 2], [13, 4, 1], [14, 2, 2]]
+    },
+    out_sofresh: {
+      rootMidi: 39, scale: 'minor', label: 'Eb1 Trunk-Rattling 808 Sub',
+      bar1: [[0, 0, 2], [2, 0, 2], [7, 1, 2], [10, 0, 2], [13, 1, 2], [15, 2, 1]],
+      bar2: [[0, 0, 2], [2, 0, 2], [7, 3, 2], [10, 4, 2], [13, 5, 2], [15, 1, 2]]
+    },
+    out_rosaparks: {
+      rootMidi: 43, scale: 'minor', label: 'G1 Aquemini Acoustic-Funk',
+      bar1: [[0, 0, 2], [3, 2, 2], [6, 3, 2], [8, 0, 2], [10, 4, 2], [12, 5, 1], [14, 4, 2]],
+      bar2: [[0, 0, 2], [3, 6, 2], [6, 5, 2], [8, 4, 2], [10, 3, 2], [13, 2, 2], [15, 1, 2]]
+    },
+    out_atliens: {
+      rootMidi: 37, scale: 'minor', label: 'C#1 Dungeon Space-Bass',
+      bar1: [[0, 0, 2], [3, 2, 2], [6, 1, 1], [8, 0, 2], [10, 5, 2], [14, 4, 1]],
+      bar2: [[0, 0, 2], [3, 3, 2], [7, 4, 2], [8, 5, 2], [10, 6, 2], [14, 2, 2]]
+    },
+    out_heyya: {
+      rootMidi: 43, scale: 'major', label: 'G1 4-Chord Shake-It Walk',
+      bar1: [[0, 0, 2], [2, 6, 1], [3, 0, 2], [6, 2, 2], [8, 3, 2], [10, 6, 2], [12, 3, 2], [14, 4, 2]],
+      bar2: [[0, 4, 2], [2, 7, 2], [6, 4, 2], [8, 5, 2], [10, 6, 2], [12, 5, 2], [14, 2, 2]]
+    },
+
+    // 13. THE BEE GEES (Maurice Gibb)
+    bg_stayinalive: {
+      rootMidi: 41, scale: 'minor', label: 'F1 Maurice Gibb Disco Strut',
+      bar1: [[0, 0, 2], [2, 6, 2], [3, 5, 1], [4, 0, 2], [6, 4, 2], [8, 0, 2], [10, 6, 2], [12, 5, 2], [14, 4, 2]],
+      bar2: [[0, 0, 2], [2, 6, 2], [4, 3, 2], [6, 4, 2], [8, 5, 2], [10, 4, 2], [12, 2, 2], [14, 1, 2], [15, 0, 2]]
+    },
+    bg_nightfever: {
+      rootMidi: 42, scale: 'minor', label: 'F#1 Silky 16th Disco Glide',
+      bar1: [[0, 0, 2], [3, 2, 1], [4, 4, 2], [6, 6, 2], [8, 5, 2], [10, 4, 2], [12, 3, 2], [14, 4, 1]],
+      bar2: [[0, 3, 2], [2, 5, 1], [4, 6, 2], [8, 4, 2], [10, 6, 2], [12, 2, 2], [14, 1, 2]]
+    },
+    bg_youshouldbedancing: {
+      rootMidi: 43, scale: 'minor', label: 'G1 Horn-Locked Latin Disco',
+      bar1: [[0, 0, 2], [2, 6, 2], [3, 5, 2], [6, 4, 2], [8, 0, 2], [10, 2, 2], [11, 3, 2], [14, 4, 2]],
+      bar2: [[0, 0, 2], [3, 6, 2], [4, 7, 2], [6, 5, 2], [8, 4, 2], [11, 2, 2], [12, 3, 2], [14, 1, 2]]
+    },
+    bg_jivetalkin: {
+      rootMidi: 39, scale: 'major', label: 'Eb1 Syncopated Moog + Bass Hook',
+      bar1: [[0, 0, 2], [2, 2, 1], [3, 4, 2], [6, 6, 2], [8, 5, 2], [10, 4, 2], [14, 2, 1]],
+      bar2: [[0, 0, 2], [3, 3, 2], [6, 4, 2], [8, 6, 2], [10, 5, 2], [11, 4, 2], [14, 1, 2]]
+    },
+    bg_morethanawoman: {
+      rootMidi: 36, scale: 'major', label: 'C1 Breezy Octave-Bounce Walk',
+      bar1: [[0, 0, 2], [2, 6, 1], [4, 0, 2], [6, 6, 2], [7, 4, 1], [8, 3, 2], [10, 6, 2], [12, 3, 2], [14, 4, 2], [15, 5, 1]],
+      bar2: [[0, 2, 2], [2, 7, 1], [4, 2, 2], [7, 5, 2], [8, 4, 2], [10, 6, 2], [12, 4, 2], [14, 2, 1], [15, 1, 2]]
+    },
+
+    // 14. RUSH (Geddy Lee)
+    rush_tomsawyer: {
+      rootMidi: 40, scale: 'minor', label: 'E1 Taurus Pedal + Rick Hook',
+      bar1: [[0, 0, 2], [6, 6, 2], [7, 5, 1], [8, 0, 2], [10, 4, 2], [13, 3, 1], [14, 2, 2]],
+      bar2: [[0, 0, 2], [3, 2, 2], [6, 3, 2], [8, 4, 2], [10, 5, 2], [12, 6, 2], [14, 7, 2], [15, 4, 1]]
+    },
+    rush_yyz: {
+      rootMidi: 47, scale: 'minor', label: 'B1 Virtuoso Jazz-Prog Runs',
+      bar1: [[0, 0, 2], [2, 3, 1], [3, 4, 2], [6, 6, 2], [7, 7, 2], [9, 5, 2], [10, 4, 2], [12, 3, 1], [14, 2, 2]],
+      bar2: [[0, 0, 2], [3, 6, 2], [6, 5, 2], [8, 4, 2], [10, 7, 2], [11, 6, 2], [13, 4, 1], [14, 2, 2], [15, 1, 2]]
+    },
+    rush_subdivisions: {
+      rootMidi: 42, scale: 'minor', label: 'F#1 Synth-Prog Counterpoint',
+      bar1: [[0, 0, 2], [2, 0, 2], [6, 4, 1], [7, 5, 2], [10, 3, 2], [14, 4, 2]],
+      bar2: [[0, 2, 2], [2, 2, 2], [6, 6, 2], [7, 5, 2], [10, 4, 2], [13, 3, 1], [14, 1, 2]]
+    },
+    rush_spiritofradio: {
+      rootMidi: 40, scale: 'major', label: 'E1 Stadium Prog-Reggae Drive',
+      bar1: [[0, 0, 2], [2, 4, 1], [4, 6, 2], [6, 4, 2], [8, 3, 2], [10, 5, 2], [12, 4, 2], [14, 2, 2]],
+      bar2: [[0, 0, 2], [2, 6, 2], [6, 5, 2], [8, 4, 2], [10, 7, 2], [11, 6, 2], [14, 4, 2]]
+    },
+    rush_limelight: {
+      rootMidi: 47, scale: 'major', label: 'B1 Le Studio Melodic Riff',
+      bar1: [[0, 0, 2], [2, 0, 2], [7, 2, 2], [8, 3, 2], [10, 4, 2], [12, 5, 1], [14, 6, 2]],
+      bar2: [[0, 3, 2], [2, 3, 2], [6, 5, 2], [7, 6, 2], [8, 4, 2], [10, 7, 2], [14, 4, 2]]
+    },
+
+    // 15. RADIOHEAD (Colin Greenwood)
+    rad_weirdfishes: {
+      rootMidi: 40, scale: 'minor', label: 'E1 Arpeggi Kraut-Melody',
+      bar1: [[0, 0, 2], [3, 2, 2], [6, 4, 1], [8, 0, 2], [10, 5, 2], [12, 4, 1], [14, 3, 2]],
+      bar2: [[0, 2, 2], [3, 4, 2], [6, 6, 2], [8, 5, 2], [10, 4, 2], [14, 1, 2]]
+    },
+    rad_15step: {
+      rootMidi: 37, scale: 'minor', label: 'C#1 Late-Bar Soul Walk',
+      bar1: [[0, 0, 2], [3, 0, 1], [7, 4, 2], [10, 6, 2], [11, 5, 1], [13, 4, 2], [15, 2, 1]],
+      bar2: [[0, 3, 2], [3, 3, 1], [6, 5, 2], [10, 7, 2], [12, 6, 2], [13, 4, 2], [15, 1, 2]]
+    },
+    rad_nationalanthem: {
+      rootMidi: 38, scale: 'dorian', label: 'D1 Fuzz-Bass Hypnotic Loop',
+      bar1: [[0, 0, 2], [2, 0, 2], [3, 2, 2], [6, 3, 2], [8, 4, 2], [10, 6, 2], [11, 5, 2], [14, 4, 2]],
+      bar2: [[0, 0, 2], [2, 0, 2], [3, 2, 2], [6, 3, 2], [7, 4, 1], [8, 4, 2], [10, 6, 2], [12, 7, 2], [14, 5, 2]]
+    },
+    rad_paranoidandroid: {
+      rootMidi: 43, scale: 'minor', label: 'G1 Chromatic Acoustic Walk',
+      bar1: [[0, 0, 2], [3, 5, 2], [6, 4, 2], [10, 3, 2], [11, 2, 2], [14, 1, 2]],
+      bar2: [[0, 3, 2], [3, 2, 2], [6, 1, 2], [8, 0, 2], [10, 4, 2], [14, 6, 2]]
+    },
+    rad_idioteque: {
+      rootMidi: 39, scale: 'minor', label: 'Eb1 4-Chord Modular Sub',
+      bar1: [[0, 0, 2], [3, 0, 2], [6, 0, 1], [10, 4, 2], [12, 4, 2], [14, 5, 1]],
+      bar2: [[0, 2, 2], [3, 2, 2], [6, 3, 2], [8, 3, 2], [11, 6, 2], [14, 4, 2]]
+    },
+
+    // 16. PHIL COLLINS (Leland Sklar & Moog Taurus)
+    pc_intheair: {
+      rootMidi: 38, scale: 'minor', label: 'D1 Ominous Taurus Drone',
+      bar1: [[0, 0, 2], [10, 1, 2], [14, 0, 1]],
+      bar2: [[0, 5, 2], [6, 5, 1], [10, 1, 2], [14, 4, 2]]
+    },
+    pc_sussudio: {
+      rootMidi: 36, scale: 'minor', label: 'C1 David Frank Minimoog Funk',
+      bar1: [[0, 0, 2], [2, 6, 2], [3, 5, 1], [6, 3, 2], [7, 4, 2], [10, 6, 2], [11, 5, 1], [14, 4, 2]],
+      bar2: [[0, 0, 2], [3, 2, 2], [6, 3, 2], [8, 4, 2], [10, 7, 2], [11, 6, 2], [13, 4, 1], [14, 1, 2]]
+    },
+    pc_easylover: {
+      rootMidi: 41, scale: 'minor', label: 'F1 Nathan East Fusion Drive',
+      bar1: [[0, 0, 2], [2, 0, 1], [4, 2, 2], [6, 3, 2], [8, 4, 2], [10, 6, 2], [12, 5, 1], [14, 4, 2]],
+      bar2: [[0, 5, 2], [2, 5, 1], [6, 4, 2], [8, 3, 2], [10, 4, 2], [11, 6, 2], [14, 1, 2]]
+    },
+    pc_mama: {
+      rootMidi: 36, scale: 'minor', label: 'C1 Industrial Taurus Pulse',
+      bar1: [[0, 0, 2], [4, 0, 2], [6, 6, 2], [10, 0, 2], [11, 5, 2], [14, 4, 2]],
+      bar2: [[0, 0, 2], [3, 1, 2], [4, 0, 2], [6, 6, 2], [8, 3, 2], [10, 4, 2], [14, 1, 2]]
+    },
+    pc_invisibletouch: {
+      rootMidi: 43, scale: 'major', label: 'G1 80s Stadium Synth-Pop',
+      bar1: [[0, 0, 2], [3, 2, 1], [6, 3, 2], [8, 4, 2], [10, 6, 2], [14, 4, 2]],
+      bar2: [[0, 3, 2], [3, 4, 2], [6, 5, 2], [8, 6, 2], [10, 4, 2], [12, 2, 1], [14, 0, 2]]
+    },
+
+    // 17. HOT CHIP (Al Doyle & Joe Goddard SH-101)
+    hc_overandover: {
+      rootMidi: 43, scale: 'minor', label: 'G1 Punk-Funk Octave Stomp',
+      bar1: [[0, 0, 2], [2, 6, 2], [4, 0, 2], [7, 2, 2], [8, 3, 2], [10, 6, 2], [12, 4, 2], [15, 5, 2]],
+      bar2: [[0, 0, 2], [2, 6, 2], [4, 5, 2], [6, 4, 2], [8, 3, 2], [11, 2, 2], [12, 1, 2], [15, 4, 2]]
+    },
+    hc_readyforthefloor: {
+      rootMidi: 45, scale: 'minor', label: 'A1 Euphoric SH-101 Bounce',
+      bar1: [[0, 0, 2], [3, 2, 2], [4, 3, 2], [6, 4, 2], [8, 5, 2], [10, 6, 2], [12, 4, 2], [14, 2, 1]],
+      bar2: [[0, 3, 2], [3, 5, 2], [4, 6, 2], [8, 4, 2], [10, 7, 2], [12, 5, 2], [15, 1, 2]]
+    },
+    hc_boyfromschool: {
+      rootMidi: 41, scale: 'major', label: 'F1 Filter-Disco Chord Glide',
+      bar1: [[0, 0, 2], [3, 2, 1], [6, 5, 2], [8, 5, 2], [10, 4, 2], [14, 2, 1]],
+      bar2: [[0, 3, 2], [3, 5, 2], [6, 6, 2], [8, 4, 2], [11, 2, 2], [14, 1, 2]]
+    },
+    hc_flutes: {
+      rootMidi: 38, scale: 'minor', label: 'D1 Motorik Arpeggio Roller',
+      bar1: [[0, 0, 2], [2, 2, 1], [4, 4, 2], [6, 6, 2], [8, 5, 2], [10, 4, 1], [12, 3, 2], [14, 2, 1]],
+      bar2: [[0, 3, 2], [2, 5, 1], [4, 6, 2], [6, 7, 2], [8, 4, 2], [11, 5, 2], [12, 2, 2], [15, 1, 2]]
+    },
+    hc_onelifes: {
+      rootMidi: 36, scale: 'minor', label: 'C1 Steel-Pan Electro-Sub',
+      bar1: [[0, 0, 2], [4, 2, 2], [7, 4, 2], [10, 6, 2], [12, 5, 2], [14, 4, 1]],
+      bar2: [[0, 3, 2], [3, 5, 2], [6, 6, 2], [8, 4, 2], [10, 2, 2], [12, 1, 2], [14, 4, 2]]
+    },
+
+    // 18. BLINK-182 (Mark Hoppus)
+    blink_allthesmall: {
+      rootMidi: 48, scale: 'major', label: 'C2 Power-Pop Picked 8ths',
+      bar1: [[0, 0, 2], [2, 0, 1], [4, 0, 2], [6, 0, 1], [8, 4, 2], [10, 4, 1], [12, 4, 2], [14, 6, 2]],
+      bar2: [[0, 3, 2], [2, 3, 1], [4, 3, 2], [6, 3, 1], [8, 4, 2], [10, 4, 1], [12, 5, 2], [14, 4, 2]]
+    },
+    blink_whatsmyage: {
+      rootMidi: 42, scale: 'major', label: 'F#1 Melodic Arpeggio Hook',
+      bar1: [[0, 0, 2], [2, 4, 1], [4, 6, 2], [6, 4, 1], [8, 5, 2], [10, 4, 1], [12, 6, 2], [14, 7, 2]],
+      bar2: [[0, 3, 2], [2, 4, 1], [4, 6, 2], [6, 4, 1], [8, 4, 2], [10, 6, 2], [11, 7, 2], [14, 4, 2]]
+    },
+    blink_feelingthis: {
+      rootMidi: 40, scale: 'major', label: 'E1 Flanged Breakbeat Hook',
+      bar1: [[0, 0, 2], [3, 0, 2], [6, 4, 2], [10, 5, 2], [14, 6, 1]],
+      bar2: [[0, 3, 2], [2, 3, 1], [6, 4, 2], [8, 5, 2], [10, 6, 2], [12, 4, 2], [14, 2, 2]]
+    },
+    blink_imissyou: {
+      rootMidi: 47, scale: 'major', label: 'B1 Acoustic Upright Loop',
+      bar1: [[0, 0, 2], [3, 0, 2], [6, 6, 1], [8, 5, 2], [10, 5, 2], [11, 4, 1], [14, 2, 1]],
+      bar2: [[0, 3, 2], [3, 3, 2], [6, 5, 2], [8, 4, 2], [10, 6, 2], [14, 4, 2]]
+    },
+    blink_adamssong: {
+      rootMidi: 38, scale: 'minor', label: 'D1 Hoppus Melodic Verse Riff',
+      bar1: [[0, 0, 2], [2, 2, 1], [3, 3, 2], [6, 4, 2], [8, 5, 2], [10, 4, 1], [12, 3, 2], [14, 2, 1]],
+      bar2: [[0, 5, 2], [3, 6, 2], [6, 4, 2], [8, 3, 2], [10, 2, 2], [12, 1, 2], [14, 4, 2]]
+    },
+
+    // 19. TAME IMPALA (Kevin Parker)
+    ti_letithappen: {
+      rootMidi: 45, scale: 'minor', label: 'A1 Psych-Disco Odyssey',
+      bar1: [[0, 0, 2], [3, 2, 1], [6, 4, 2], [8, 5, 2], [10, 6, 2], [14, 4, 1]],
+      bar2: [[0, 3, 2], [3, 5, 2], [6, 6, 2], [8, 4, 2], [10, 2, 2], [11, 3, 1], [14, 1, 2]]
+    },
+    ti_lessiknow: {
+      rootMidi: 37, scale: 'minor', label: 'C#1 Currents Fuzz Hook',
+      bar1: [[0, 0, 2], [3, 2, 1], [4, 3, 2], [6, 4, 2], [8, 5, 2], [10, 6, 1], [12, 4, 2], [14, 2, 1]],
+      bar2: [[0, 0, 2], [2, 6, 1], [3, 4, 2], [6, 5, 1], [8, 3, 2], [10, 2, 1], [12, 4, 2], [14, 5, 1]]
+    },
+    ti_elephant: {
+      rootMidi: 38, scale: 'minor', label: 'D1 Swung Blues-Fuzz Stomp',
+      bar1: [[0, 0, 2], [2, 0, 1], [4, 0, 2], [6, 6, 2], [8, 0, 2], [10, 0, 1], [12, 2, 2], [14, 4, 2]],
+      bar2: [[0, 0, 2], [2, 0, 1], [4, 2, 2], [6, 3, 2], [8, 4, 2], [10, 6, 2], [12, 5, 2], [14, 2, 2]]
+    },
+    ti_backwards: {
+      rootMidi: 41, scale: 'major', label: 'F1 Singing Psych-Soul Walk',
+      bar1: [[0, 0, 2], [2, 2, 1], [4, 3, 2], [7, 4, 2], [8, 5, 2], [10, 6, 2], [12, 4, 1], [15, 2, 1]],
+      bar2: [[0, 3, 2], [2, 5, 1], [6, 6, 2], [7, 7, 2], [8, 4, 2], [10, 2, 2], [14, 1, 2], [15, 0, 1]]
+    },
+    ti_borderline: {
+      rootMidi: 45, scale: 'minor', label: 'A1 Slow-Rush Yacht Boogie',
+      bar1: [[0, 0, 2], [3, 6, 2], [6, 5, 2], [8, 3, 2], [10, 4, 2], [14, 2, 1]],
+      bar2: [[0, 2, 2], [4, 4, 2], [6, 6, 2], [8, 5, 2], [10, 4, 2], [12, 3, 2], [14, 1, 2]]
+    },
+
+    // 20. PAUL SIMON (Bakithi Kumalo & Tony Levin)
+    ps_50ways: {
+      rootMidi: 40, scale: 'minor', label: 'E1 Tony Levin Linear Pocket',
+      bar1: [[0, 0, 2], [6, 1, 2], [10, 5, 2], [14, 4, 1]],
+      bar2: [[0, 3, 2], [3, 2, 1], [6, 4, 2], [8, 4, 2], [10, 6, 2], [14, 1, 2]]
+    },
+    ps_callmeal: {
+      rootMidi: 41, scale: 'major', label: 'F1 Kumalo Mbaqanga Bounce',
+      bar1: [[0, 0, 2], [2, 2, 1], [3, 4, 3], [4, 3, 2], [6, 4, 1], [8, 4, 2], [10, 6, 2], [12, 2, 1], [14, 1, 1]],
+      bar2: [[0, 3, 2], [2, 5, 1], [4, 4, 2], [6, 6, 2], [8, 0, 2], [10, 2, 1], [12, 4, 2], [14, 7, 2], [15, 4, 3]]
+    },
+    ps_lateintheevening: {
+      rootMidi: 41, scale: 'major', label: 'F1 Salsa-Funk Horn Tumbao',
+      bar1: [[0, 0, 2], [3, 2, 2], [6, 4, 2], [10, 5, 2], [14, 6, 2]],
+      bar2: [[0, 0, 2], [3, 3, 2], [6, 4, 2], [7, 6, 2], [10, 5, 2], [11, 4, 2], [14, 2, 2]]
+    },
+    ps_graceland: {
+      rootMidi: 40, scale: 'major', label: 'E1 Train-Beat Fretless Glide',
+      bar1: [[0, 0, 2], [3, 4, 1], [6, 6, 2], [8, 3, 2], [11, 5, 2], [14, 4, 1]],
+      bar2: [[0, 0, 2], [3, 2, 1], [6, 4, 2], [8, 4, 2], [11, 7, 2], [12, 6, 2], [14, 2, 1]]
+    },
+    ps_diamonds: {
+      rootMidi: 41, scale: 'major', label: 'F1 Singing Fretless Lead',
+      bar1: [[0, 0, 2], [3, 6, 2], [6, 7, 2], [8, 3, 2], [11, 5, 2], [14, 4, 2]],
+      bar2: [[0, 3, 2], [3, 5, 2], [6, 6, 2], [8, 4, 2], [10, 7, 2], [11, 6, 2], [14, 2, 2], [15, 0, 1]]
+    },
+
+    // 21. NIRVANA (Krist Novoselic)
+    nir_teenspirit: {
+      rootMidi: 41, scale: 'minor', label: 'F1 -> Bb -> Ab -> Db Anthem',
+      bar1: [[0, 0, 2], [2, 0, 1], [3, 0, 3], [6, 3, 2], [8, 3, 2], [10, 3, 1], [11, 4, 1], [14, 2, 2]],
+      bar2: [[0, 2, 2], [2, 2, 1], [3, 6, 1], [6, 5, 2], [8, 5, 2], [10, 5, 1], [11, 4, 2], [14, 1, 2]]
+    },
+    nir_inbloom: {
+      rootMidi: 46, scale: 'minor', label: 'Bb1 Sludge-Grunge Half-Time',
+      bar1: [[0, 0, 2], [2, 0, 2], [6, 4, 2], [7, 5, 2], [8, 3, 2], [10, 2, 2], [14, 1, 1]],
+      bar2: [[0, 0, 2], [2, 0, 2], [6, 6, 2], [7, 5, 2], [8, 4, 2], [10, 3, 2], [13, 2, 2], [14, 1, 2]]
+    },
+    nir_comeasyouare: {
+      rootMidi: 40, scale: 'minor', label: 'E1 Watery Chorus Walk',
+      bar1: [[0, 0, 2], [2, 0, 1], [4, 1, 2], [6, 2, 2], [8, 0, 1], [10, 2, 2], [12, 0, 1], [14, 1, 2]],
+      bar2: [[0, 0, 2], [2, 2, 1], [4, 3, 2], [6, 4, 2], [8, 2, 1], [10, 4, 2], [12, 3, 1], [14, 1, 2]]
+    },
+    nir_heartshapedbox: {
+      rootMidi: 45, scale: 'minor', label: 'A1 -> F -> D Drop-D Riff',
+      bar1: [[0, 0, 2], [3, 4, 1], [6, 5, 2], [8, 5, 2], [10, 6, 1], [14, 3, 2]],
+      bar2: [[0, 3, 2], [3, 5, 2], [6, 4, 2], [8, 4, 2], [10, 2, 2], [11, 1, 2], [14, 0, 2]]
+    },
+    nir_scentless: {
+      rootMidi: 40, scale: 'minor', label: 'E1 Chromatic Double-Kick Riff',
+      bar1: [[0, 0, 2], [1, 0, 2], [6, 1, 2], [7, 0, 2], [8, 2, 2], [9, 0, 2], [14, 6, 2]],
+      bar2: [[0, 0, 2], [1, 0, 2], [6, 4, 2], [7, 5, 2], [8, 6, 2], [9, 5, 2], [11, 4, 2], [14, 2, 2], [15, 1, 2]]
+    }
   };
 
   const NOTE_NAMES_SHARP = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -2634,15 +3172,25 @@
   function getArtistBassProfile(artistId, songId) {
     const base = ARTIST_BASS_PROFILES[artistId] || ARTIST_BASS_PROFILES.zeppelin;
     const over = songId && SONG_KEY_OVERRIDES[songId] ? SONG_KEY_OVERRIDES[songId] : null;
+    const rootMidi = over ? over.rootMidi : base.rootMidi;
+    const scale = over ? over.scale : base.scale;
+    const label = over && over.label ? over.label : base.scaleLabel || `${midiToNoteLabel(rootMidi)} ${scale}`;
     return {
       ...base,
-      rootMidi: over ? over.rootMidi : base.rootMidi,
-      scale: over ? over.scale : base.scale
+      kit: base.kit || base.bassKit || 'jpj_jazz',
+      bassKit: base.bassKit || base.kit || 'jpj_jazz',
+      rootMidi,
+      scale,
+      scaleLabel: label,
+      songBassSpec: over
     };
   }
 
   function getBassVoicesForSong(songId = null) {
-    const sid = songId || (typeof state !== 'undefined' && state.selectedSongId) || 'zep_levee';
+    const sid =
+      songId ||
+      (typeof state !== 'undefined' && (state.selectedBassSongId || state.selectedSongId)) ||
+      'zep_levee';
     const { artist } = findSongById(sid);
     const prof = getArtistBassProfile(artist.artistId, sid);
     const root = prof.rootMidi || 40;
@@ -2679,7 +3227,9 @@
         id: l.id,
         name: `${l.role} (${nLbl})`,
         short: nLbl,
+        noteName: nLbl,
         pitch: p,
+        midi: p,
         color: l.color
       };
     });
@@ -2688,7 +3238,11 @@
   function getActiveVoices(instrumentOverride = null, songIdOverride = null) {
     const inst = instrumentOverride || (typeof state !== 'undefined' && state.composeInstrument) || 'drums';
     if (inst === 'bass') {
-      return getBassVoicesForSong(songIdOverride);
+      const sid =
+        songIdOverride ||
+        (typeof state !== 'undefined' && (state.selectedBassSongId || state.selectedSongId)) ||
+        'zep_levee';
+      return getBassVoicesForSong(sid);
     }
     return DRUM_VOICES;
   }
@@ -3496,21 +4050,29 @@
   }
 
   // ==========================================================================
-  // 5B. 16-Bar (256-Step) Artist & Song Signature Bassline Generator
+  // 5B. 16-Bar (256-Step) Song-Specific Signature Bassline Generator
   //     Maps 8 Bass Scale Voices (0: Root, 1: Sub, 2: 3rd, 3: 4th, 4: 5th, 5: 7th, 6: Octave, 7: High Run)
   // ==========================================================================
   function generateSongBassGrid(songId, intensity = 70, ghostPct = 45, octaveEnergy = 60, fillPct = 65) {
     const { artist, song } = findSongById(songId);
     const prof = getArtistBassProfile(artist.artistId, song.id);
-    const style = prof.style || 'blues_riff';
+    const songSpec = prof.songBassSpec || SONG_KEY_OVERRIDES[song.id] || SONG_KEY_OVERRIDES.zep_levee;
     const g = createEmptyGrid256();
+
+    // Deterministic song hash so any procedural fills/ghosts also differ per song within the same artist
+    let songHash = 0;
+    const idStr = String(song.id || '');
+    for (let c = 0; c < idStr.length; c++) {
+      songHash = (songHash * 31 + idStr.charCodeAt(c)) & 0x7fffffff;
+    }
 
     const setNote = (vIdx, step, st = 1, sub = 1) => {
       if (step < 0 || step >= TOTAL_STEPS) return;
+      const clampedV = Math.max(0, Math.min(7, Number(vIdx) || 0));
       for (let v = 0; v < 8; v++) {
         g[v][step] = { state: 0, sub: 1 };
       }
-      g[vIdx][step] = { state: st, sub };
+      g[clampedV][step] = { state: st, sub };
     };
 
     for (let b = 0; b < TOTAL_BARS; b++) {
@@ -3521,144 +4083,122 @@
 
       const secIntensity =
         secIdx === 0
-          ? Math.max(20, intensity - 12)
+          ? Math.max(20, intensity - 10)
           : secIdx === 1
           ? Math.min(100, intensity + 10)
           : secIdx === 2
           ? intensity
-          : Math.min(100, intensity + 20);
+          : Math.min(100, intensity + 18);
 
       const secOctave =
         secIdx === 0
-          ? Math.max(15, octaveEnergy - 15)
+          ? Math.max(15, octaveEnergy - 12)
           : secIdx === 1
           ? Math.min(100, octaveEnergy + 15)
           : secIdx === 3
           ? Math.min(100, octaveEnergy + 22)
           : octaveEnergy;
 
-      // 1. Anchor Bass to the Song's Kick Drum Pattern first
+      // 1. Lay down the Song's Unique Bar 1 / Bar 2 Signature Bass Riff from SONG_KEY_OVERRIDES
+      const baseRiff = isEvenBar
+        ? (songSpec.bar2 || songSpec.bar1 || [[0, 0, 2], [8, 4, 2]])
+        : (songSpec.bar1 || [[0, 0, 2], [8, 0, 2]]);
+
+      for (let i = 0; i < baseRiff.length; i++) {
+        const [st, rawV, rawVel] = baseRiff[i];
+        // Filter out lighter passing notes if Intensity dial is turned down low
+        if (secIntensity < 40 && st % 4 !== 0 && i % 2 === 1) continue;
+        if (rawVel === 3 && ghostPct < 20) continue;
+
+        let v = rawV;
+        // Section-aware musical progression & harmonic development:
+        if (secIdx === 1) {
+          // Chorus (Bars 5–8): harmonic lift on Bar 2/3 & Octave/High-10th energy boost
+          if (barInSec === 1 && v === 0) {
+            v = (songHash % 2 === 0) ? 3 : 4;
+          } else if (barInSec === 2 && v === 0) {
+            v = 2;
+          }
+          if (secOctave >= 68 && st % 4 === 2 && v === 0) {
+            v = 6;
+          }
+        } else if (secIdx === 2) {
+          // Bridge (Bars 9–12): shift root voice to relative degree (3rd, 4th, 5th, or b7th) for Bridge contrast
+          const bridgeMap = [3, 5, 2, 4, 3, 6, 4, 7];
+          if (barInSec < 2) {
+            v = bridgeMap[rawV] ?? rawV;
+          } else if (barInSec === 2 && rawV === 0) {
+            v = 1; // Deep Sub drop in Bar 11
+          }
+        } else if (secIdx === 3) {
+          // Climax (Bars 13–16): push upper tones & octaves harder
+          if (secOctave >= 55 && (v === 4 || v === 5) && st >= 10) {
+            v = v === 4 ? 6 : 7;
+          }
+        }
+
+        // If Octave / Filter dial is set very low (<30%), fold high octave notes down to Root/5th
+        if (secOctave < 30 && v >= 6) {
+          v = v === 6 ? 0 : 4;
+        }
+
+        setNote(v, o + st, rawVel || 1, 1);
+      }
+
+      // 2. Lock extra syncopated Kick Drum hits from this specific song when Intensity is high
       const kickList = isEvenBar && song.kicksBar2 ? song.kicksBar2 : song.kicks || [0, 8];
-      for (let i = 0; i < kickList.length; i++) {
-        const s = kickList[i];
-        if (s === 0) {
-          setNote(0, o + s, 2, 1); // Strong Root on Beat 1
-        } else if (s === 8) {
-          // Beat 3: alternate Root, 4th, or 5th depending on section/bar
-          const vBeat3 = secIdx === 1 ? (isEvenBar ? 3 : 4) : secIdx === 2 ? 2 : 0;
-          setNote(vBeat3, o + s, 2, 1);
-        } else if (secIntensity >= 28 + (i % 3) * 14) {
-          const degCycle = [0, 4, 2, 3, 5, 1];
-          const vPick = degCycle[(i + b + secIdx) % degCycle.length];
-          setNote(vPick, o + s, 1, 1);
+      if (secIntensity >= 62) {
+        const songScaleWalk = [0, 2, 3, 4, 5, 6, 1];
+        for (let kIdx = 0; kIdx < kickList.length; kIdx++) {
+          const ks = kickList[kIdx];
+          const alreadyHasNote = [0, 1, 2, 3, 4, 5, 6, 7].some((v) => g[v][o + ks].state > 0);
+          if (!alreadyHasNote && (secIntensity >= 80 || (kIdx + barInSec) % 2 === 0)) {
+            const pickV = songScaleWalk[(ks + songHash + b + secIdx) % songScaleWalk.length];
+            setNote(pickV, o + ks, ks % 4 === 0 ? 2 : 1, 1);
+          }
         }
       }
 
-      // 2. Song & Artist Signature Bass Riff Overlay
-      if (songId === 'ti_lessiknow') {
-        // Kevin Parker "The Less I Know the Better" signature disco-psych bass hook
-        const riff = isEvenBar
-          ? [[0, 0, 2], [2, 6, 1], [3, 4, 2], [6, 5, 1], [8, 3, 2], [10, 2, 1], [12, 4, 2], [14, 5, 1]]
-          : [[0, 0, 2], [3, 2, 1], [4, 3, 2], [6, 4, 2], [8, 5, 2], [10, 6, 1], [12, 4, 2], [14, 2, 1]];
-        for (const [st, v, vel] of riff) setNote(v, o + st, vel, 1);
-      } else if (songId === 'ti_elephant') {
-        // Kevin Parker "Elephant" heavy swung blues-fuzz 8th chug
-        for (let s = 0; s < 16; s += 2) {
-          const v = s >= 12 && isEvenBar ? (s === 12 ? 2 : 4) : s === 6 ? 6 : 0;
-          setNote(v, o + s, s % 4 === 0 ? 2 : 1, 1);
-        }
-      } else if (songId === 'ps_callmeal' || style === 'kumalo_graceland') {
-        // Bakithi Kumalo joyous Graceland major-pentatonic bounce (Root - 3rd - 5th - 6th - Octave)
-        const kumalo = isEvenBar
-          ? [[0, 3, 2], [2, 5, 1], [4, 4, 2], [6, 6, 2], [8, 0, 2], [10, 2, 1], [12, 4, 2], [14, 7, 1], [15, 4, 3]]
-          : [[0, 0, 2], [2, 2, 1], [3, 4, 3], [4, 3, 2], [6, 4, 1], [8, 4, 2], [10, 6, 2], [12, 2, 1], [14, 1, 1]];
-        for (const [st, v, vel] of kumalo) {
-          if (vel !== 3 || ghostPct >= 25) setNote(v, o + st, vel, 1);
-        }
-      } else if (songId === 'nir_comeasyouare') {
-        // Krist Novoselic "Come As You Are" watery chorus 8th-note walking riff
-        const walk = [0, 0, 1, 2, 0, 2, 0, 1];
-        for (let i = 0; i < 8; i++) {
-          setNote(walk[i], o + i * 2, i === 0 || i === 3 ? 2 : 1, 1);
-        }
-      } else if (songId === 'nir_loungeact') {
-        // Krist Novoselic "Lounge Act" iconic melodic jumping bassline
-        const lounge = [[0, 0, 2], [2, 4, 1], [3, 6, 2], [4, 5, 1], [6, 3, 2], [8, 2, 2], [10, 3, 1], [12, 4, 2], [14, 1, 1]];
-        for (const [st, v, vel] of lounge) setNote(v, o + st, vel, 1);
-      } else if (style === 'novoselic_grunge' || style === 'punk_8th' || style === 'picked_8th') {
-        // Driving picked 8th-note rock/grunge/pop-punk progression (Root -> 4th -> 3rd -> 5th across bars)
-        const barRootV = [0, 3, 2, 4][barInSec];
-        const stepStride = secIntensity >= 55 ? 2 : 4;
-        for (let s = 0; s < 16; s += stepStride) {
-          const v = s === 14 && secOctave >= 50 ? 6 : barRootV;
-          setNote(v, o + s, s % 4 === 0 ? 2 : 1, 1);
-        }
-      } else if (style === 'disco_octave' || style === 'sh101_arp') {
-        // Disco / French Touch / Indie-Dance Octave Bounce (Low Root on beat, Octave on '&' offbeat!)
-        for (let beat = 0; beat < 4; beat++) {
-          const bs = beat * 4;
-          const lowV = secIdx === 1 && beat >= 2 ? 3 : 0;
-          const highV = secIdx === 1 && beat >= 2 ? 7 : 6;
-          setNote(lowV, o + bs, 2, 1);
-          if (secOctave >= 30) {
-            setNote(highV, o + bs + 2, 2, 1);
-          }
-          if (secIntensity >= 68 && beat % 2 === 1) {
-            setNote(4, o + bs + 3, 1, 1);
-          }
-        }
-      } else if (style === 'funk_one' || style === 'synth_funk' || style === 'pfunk_sub') {
-        // "On The One" heavy funk pocket + syncopated 16th b7 / 3rd / octave pops
-        setNote(0, o + 0, 2, 1);
-        setNote(1, o + 3, 1, 1);
-        if (secOctave >= 45) setNote(6, o + 6, 2, 1);
-        setNote(2, o + 7, 1, 1);
-        setNote(4, o + 10, 1, 1);
-        if (isEvenBar || secIdx >= 1) {
-          setNote(5, o + 13, 2, 1);
-          setNote(2, o + 14, 1, 1);
-        }
-      } else if (style === 'prog_drive' || style === 'kraut_ostinato') {
-        // Geddy Lee / Colin Greenwood hypnotic 16th/8th melodic ostinato
-        const pat = [[0, 0, 2], [2, 0, 1], [3, 4, 1], [6, 5, 2], [8, 0, 2], [10, 2, 1], [11, 3, 1], [14, 4, 2]];
-        for (const [st, v, vel] of pat) setNote(v, o + st, vel, 1);
-      } else {
-        // Classic Blues-Rock / Neo-Soul / Boom-Bap / McCartney melodic pocket
-        if (secOctave >= 55 && barInSec % 2 === 0) {
-          setNote(6, o + 6, 1, 1);
-        }
-        if (secIntensity >= 50) {
-          setNote(isEvenBar ? 3 : 2, o + 10, 1, 1);
-          setNote(4, o + 14, 1, 1);
-        }
-      }
-
-      // 3. Ghost / Muted Percussive Dead-Notes in the Pocket
+      // 3. Ghost / Muted Percussive Dead-Notes in the Pocket (unique positions per song)
       if (ghostPct >= 35) {
-        const ghostCandidates = [1, 5, 9, 11, 15];
-        for (const gs of ghostCandidates) {
+        const ghostCandidates = [1, 5, 9, 11, 13, 15];
+        for (let gIdx = 0; gIdx < ghostCandidates.length; gIdx++) {
+          const gs = ghostCandidates[gIdx];
           const hasAny = [0, 1, 2, 3, 4, 5, 6, 7].some((v) => g[v][o + gs].state > 0);
-          if (!hasAny && (gs + b) % 3 === 0 && ghostPct >= 40 + (gs % 4) * 10) {
-            setNote(0, o + gs, 3, 1); // State 3 = Muted/Dead Ghost Pluck
+          if (!hasAny && (gs + b + songHash) % 3 === 0 && ghostPct >= 38 + (gIdx % 3) * 14) {
+            const ghostV = (songHash + gIdx) % 2 === 0 ? 0 : 1;
+            setNote(ghostV, o + gs, 3, 1); // State 3 = Muted/Dead Ghost Pluck
           }
         }
       }
 
-      // 4. Section-End Bass Walkup / Turnaround Runs (Bar 4, 8, 12, 16)
+      // 4. Song-Specific Section-End Bass Walkup / Turnaround Runs (Bar 4, 8, 12, 16)
       if (barInSec === 3 && fillPct >= 30) {
         const isClimaxBar = secIdx === 3;
+        const fillVariant = (songHash + secIdx) % 4;
         if (fillPct >= 65 || isClimaxBar) {
-          // 2-beat melodic bass turnaround run (steps 8..15) walking up/down the scale into Beat 1
-          const runSteps = isClimaxBar
-            ? [[8, 2, 2], [9, 3, 1], [10, 4, 2], [11, 5, 1], [12, 6, 2], [13, 7, 2], [14, 6, 2], [15, 4, 2]]
-            : [[10, 2, 1], [12, 3, 2], [13, 4, 1], [14, 5, 2], [15, 1, 2]];
+          const turnaroundPatterns = [
+            [[10, 2, 1], [12, 3, 2], [13, 4, 1], [14, 5, 2], [15, 6, 2]],
+            [[10, 6, 2], [11, 5, 1], [12, 4, 2], [14, 2, 2], [15, 1, 2]],
+            [[9, 2, 1], [10, 3, 2], [12, 4, 2], [13, 6, 2], [14, 7, 2], [15, 4, 1]],
+            [[10, 4, 2], [12, 5, 2], [13, 6, 1], [14, 4, 2], [15, 2, 2]]
+          ];
+          const climaxPatterns = [
+            [[8, 2, 2], [9, 3, 1], [10, 4, 2], [11, 5, 1], [12, 6, 2], [13, 7, 2], [14, 6, 2], [15, 4, 2]],
+            [[8, 6, 2], [9, 7, 2], [10, 6, 1], [11, 5, 2], [12, 4, 2], [13, 3, 1], [14, 2, 2], [15, 1, 2]],
+            [[8, 0, 2], [9, 2, 1], [10, 4, 2], [11, 6, 2], [12, 7, 2], [13, 5, 2], [14, 4, 2], [15, 1, 2]],
+            [[8, 3, 2], [10, 4, 2], [11, 5, 1], [12, 6, 2], [13, 7, 2], [14, 5, 2], [15, 2, 2]]
+          ];
+          const runSteps = isClimaxBar ? climaxPatterns[fillVariant] : turnaroundPatterns[fillVariant];
           for (const [st, v, vel] of runSteps) {
             setNote(v, o + st, vel, 1);
           }
         } else {
-          // 1-beat chromatic/pentatonic approach (steps 12..15)
-          setNote(2, o + 12, 1, 1);
-          setNote(4, o + 14, 2, 1);
+          // 1-beat approach (steps 12..15)
+          const v12 = [2, 3, 4, 5][fillVariant];
+          const v14 = [4, 5, 6, 2][fillVariant];
+          setNote(v12, o + 12, 1, 1);
+          setNote(v14, o + 14, 2, 1);
           setNote(1, o + 15, 2, 1);
         }
       }
@@ -3742,7 +4282,7 @@
   const CRATE_STORAGE_KEY = 'sessh_crate_v1';
   const HISTORY_STORAGE_KEY = 'sessh_history_v1';
   const PLAYER_PROFILE_KEY = 'sessh_player_v1';
-  const APP_VERSION = 'v2.8.0 (PWA Build v29)';
+  const APP_VERSION = 'v2.8.1 (PWA Build v30)';
 
   const WORKSPACE_TABS = [
     { id: 'drums', icon: '🥁', label: 'Drums', sub: 'Select Song · Edit Groove · Pads' },
@@ -4155,6 +4695,7 @@
         activeSection: state.activeSection,
         loopMode: state.loopMode,
         autoFollowSection: state.autoFollowSection,
+        bassEngineVer: 2,
         grid: state.grid,
         drumGrid: state.drumGrid,
         bassGrid: state.bassGrid
@@ -4176,6 +4717,11 @@
       }
       if (saved.activeTab) {
         state.activeTab = normalizeTabId(saved.activeTab);
+      }
+      if (state.activeTab === 'bass') {
+        state.composeInstrument = 'bass';
+      } else if (state.activeTab === 'drums') {
+        state.composeInstrument = 'drums';
       }
       if (typeof saved.playBothInCompose === 'boolean') {
         state.playBothInCompose = saved.playBothInCompose;
@@ -4276,21 +4822,18 @@
             state.hatEnergyPct,
             state.fillPct
           );
-      state.bassGrid = isValidGrid(saved.bassGrid)
-        ? cloneGrid256(saved.bassGrid)
-        : generateSongBassGrid(
-            state.selectedBassSongId,
-            state.intensityPct,
-            state.ghostPct,
-            state.hatEnergyPct,
-            state.fillPct
-          );
+      state.bassGrid =
+        saved.bassEngineVer === 2 && isValidGrid(saved.bassGrid)
+          ? cloneGrid256(saved.bassGrid)
+          : generateSongBassGrid(
+              state.selectedBassSongId,
+              state.intensityPct,
+              state.ghostPct,
+              state.hatEnergyPct,
+              state.fillPct
+            );
 
-      if (isValidGrid(saved.grid)) {
-        state.grid = cloneGrid256(saved.grid);
-      } else {
-        state.grid = cloneGrid256(state.composeInstrument === 'bass' ? state.bassGrid : state.drumGrid);
-      }
+      state.grid = cloneGrid256(state.composeInstrument === 'bass' ? state.bassGrid : state.drumGrid);
       return true;
     } catch (e) {
       return false;
@@ -6208,6 +6751,7 @@
   function openSongSelectModal(targetInst = null) {
     state.songModalOpen = true;
     state.songModalInstrument = targetInst || state.composeInstrument || 'drums';
+    state.songModalArtistBrowseId = null;
     const modalEl = document.getElementById('fold-song-modal');
     if (modalEl) {
       modalEl.style.display = 'flex';
@@ -6429,6 +6973,33 @@
       switchInstTabBtn.textContent = isBass
         ? '🥁 Switch to Drums Tab →'
         : '🎸 Switch to Bass Tab →';
+    }
+
+    const artistSongsStripEl = document.getElementById('fold-compose-artist-songs-strip');
+    if (artistSongsStripEl && artist && Array.isArray(artist.songs)) {
+      artistSongsStripEl.innerHTML = '';
+      const stripLabel = document.createElement('span');
+      stripLabel.style.cssText = 'font-size:11px;font-weight:800;color:#d1d5db;margin-right:2px;';
+      stripLabel.textContent = `${artist.artistName} Songs:`;
+      artistSongsStripEl.appendChild(stripLabel);
+
+      artist.songs.forEach((s) => {
+        const isCurrent = s.id === activeSongId;
+        const sKey = SONG_KEY_OVERRIDES[s.id]?.label || bProf.scaleLabel;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `fold-btn ${isCurrent ? (isBass ? 'teal chip-on' : 'primary chip-on') : ''}`;
+        btn.style.cssText = isCurrent
+          ? `font-size:11px;padding:4px 10px;font-weight:900;border-color:${isBass ? '#38bdf8' : '#84dcc6'};`
+          : 'font-size:11px;padding:4px 10px;opacity:0.9;';
+        btn.textContent = isBass
+          ? `${isCurrent ? '🎸 ' : ''}${s.title} (${s.bpm} BPM · ${sKey})`
+          : `${isCurrent ? '🥁 ' : ''}${s.title} (${s.bpm} BPM)`;
+        btn.addEventListener('click', () => {
+          loadSongGroove(s.id, true, state.composeInstrument);
+        });
+        artistSongsStripEl.appendChild(btn);
+      });
     }
 
     const drumsTabBadgeEl = document.getElementById('fold-tab-badge-drums');
@@ -10539,6 +11110,9 @@
           </div>
         </div>
 
+        <!-- ROW 1B: QUICK SAME-ARTIST SONG SWITCHER (1-TAP SWITCH BETWEEN THIS ARTIST'S SONGS) -->
+        <div id="fold-compose-artist-songs-strip" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.12);"></div>
+
         <!-- ROW 2: PLAY INDEPENDENTLY OR TOGETHER + TAB SWITCHER -->
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
           <div class="fold-btn-row">
@@ -11727,9 +12301,9 @@
       if (!state.phonePlayer.playing) {
         const ctx = getAudioCtx();
         if (state.composeInstrument === 'bass') {
-          const bVoices = getActiveVoices('bass', state.selectedSongId);
-          triggerBassVoice(ctx, bVoices[0].midi, 118, ctx.currentTime, state.bassKitId);
-          triggerBassVoice(ctx, bVoices[4].midi, 114, ctx.currentTime + 0.18, state.bassKitId);
+          const bVoices = getActiveVoices('bass', getInstrumentSongId('bass'));
+          triggerBassVoice(ctx, bVoices[0].pitch, 118, ctx.currentTime, 0.25, state.bassKitId);
+          triggerBassVoice(ctx, bVoices[4].pitch, 114, ctx.currentTime + 0.18, 0.25, state.bassKitId);
         } else {
           triggerDrumVoice(ctx, 36, 118, ctx.currentTime);
           triggerDrumVoice(ctx, 38, 115, ctx.currentTime + 0.18);

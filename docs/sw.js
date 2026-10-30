@@ -1,10 +1,10 @@
 // Session Drummer ("sessh") WebAPK / PWA Service Worker
-const CACHE_NAME = 'sessh-pwa-v29';
+const CACHE_NAME = 'sessh-pwa-v30';
 const PRECACHE_URLS = [
   './',
   './index.html',
   './fold-studio-dock.js',
-  './fold-studio-dock.js?v=29',
+  './fold-studio-dock.js?v=30',
   './manifest.json',
   './icon.svg',
   './icon-192.png',
