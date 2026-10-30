@@ -3742,11 +3742,12 @@
   const CRATE_STORAGE_KEY = 'sessh_crate_v1';
   const HISTORY_STORAGE_KEY = 'sessh_history_v1';
   const PLAYER_PROFILE_KEY = 'sessh_player_v1';
-  const APP_VERSION = 'v2.6.0 (PWA Build v27)';
+  const APP_VERSION = 'v2.7.0 (PWA Build v28)';
 
   const WORKSPACE_TABS = [
     { id: 'songs', icon: '🎵', label: 'Songs', sub: '21 Bands · 105 Songs' },
-    { id: 'compose', icon: '🎛️', label: 'Compose', sub: 'Pick Drums or Bass · Edit · Play' },
+    { id: 'drums', icon: '🥁', label: 'Drums', sub: 'Edit Drum Groove · Kit · Pads' },
+    { id: 'bass', icon: '🎸', label: 'Bass', sub: 'Edit Bassline · Rig · Pads' },
     { id: 'arrange', icon: '🎬', label: 'Arrange', sub: 'Timeline · Review · Save' },
     { id: 'arrangements', icon: '📂', label: 'Arrangements', sub: 'Past Arrangements' },
     { id: 'settings', icon: '⚙️', label: 'Settings', sub: 'Sync · Ableton · Wi-Fi · Peers' }
@@ -3857,12 +3858,16 @@
   function normalizeTabId(rawTab) {
     if (
       rawTab === 'songs' ||
-      rawTab === 'compose' ||
+      rawTab === 'drums' ||
+      rawTab === 'bass' ||
       rawTab === 'arrange' ||
       rawTab === 'arrangements' ||
       rawTab === 'settings'
     ) {
       return rawTab;
+    }
+    if (rawTab === 'compose') {
+      return state && state.composeInstrument === 'bass' ? 'bass' : 'drums';
     }
     if (rawTab === 'builder') return 'arrange';
     if (rawTab === 'crate') return 'arrangements';
@@ -5083,9 +5088,13 @@
     const playBtn = document.getElementById('fold-play-phone-btn');
     const padsPlayBtn = document.getElementById('fold-pads-play-btn');
     const tlPlayBtn = document.getElementById('fold-timeline-play-btn');
+    const tlPlayDrumsOnlyBtn = document.getElementById('fold-timeline-play-drums-only-btn');
+    const tlPlayBassOnlyBtn = document.getElementById('fold-timeline-play-bass-only-btn');
     const tlLoopBtn = document.getElementById('fold-timeline-loop-mode-btn');
     const disableSecLoopBtn = document.getElementById('fold-disable-sec-loop-btn');
     const playBothBtn = document.getElementById('fold-compose-play-both-btn');
+    const playSoloBtn = document.getElementById('fold-compose-play-solo-btn');
+    const playTogetherBtn = document.getElementById('fold-compose-play-together-btn');
     const { barsCount } = getActiveLoopStepBounds();
     const secName = SONG_SECTIONS[state.activeSection]?.badge || '4-Bar';
     const loopLabel =
@@ -5105,12 +5114,32 @@
       ? Math.max(0, Math.min(bassArr.length - 1, state.selectedBassTimelineIdx || 0))
       : Math.max(0, Math.min(arr.length - 1, state.selectedTimelineIdx || 0));
     const loopTrackIcon = isBassLoop ? '🎸 Bass' : '🥁 Drum';
+    const isBassTab = state.composeInstrument === 'bass';
+    const isPlayingCompose = state.phonePlayer.playing && state.playbackMode !== 'timeline';
 
     if (playBothBtn) {
       playBothBtn.classList.toggle('chip-on', Boolean(state.playBothInCompose));
       playBothBtn.textContent = state.playBothInCompose
-        ? '🔊 Hear Drums + Bass Together: ON'
-        : `🔈 Solo ${state.composeInstrument === 'bass' ? 'Bass' : 'Drums'} Only`;
+        ? '🔊 Mode: Drums + Bass Together'
+        : `🔈 Mode: Solo ${isBassTab ? 'Bass' : 'Drums'} Only`;
+    }
+
+    if (playSoloBtn) {
+      const isPlayingSolo = isPlayingCompose && !state.playBothInCompose;
+      playSoloBtn.classList.toggle('active', isPlayingSolo);
+      playSoloBtn.classList.toggle('chip-on', !state.playBothInCompose);
+      playSoloBtn.textContent = isPlayingSolo
+        ? `⏹ Stop ${isBassTab ? '🎸 Bass' : '🥁 Drums'} Solo`
+        : `▶ Play ${isBassTab ? '🎸 Bass' : '🥁 Drums'} Only`;
+    }
+
+    if (playTogetherBtn) {
+      const isPlayingTogether = isPlayingCompose && state.playBothInCompose;
+      playTogetherBtn.classList.toggle('active', isPlayingTogether);
+      playTogetherBtn.classList.toggle('chip-on', Boolean(state.playBothInCompose));
+      playTogetherBtn.textContent = isPlayingTogether
+        ? '⏹ Stop 🥁 Drums + 🎸 Bass'
+        : '▶ Play 🥁 Drums + 🎸 Bass Together';
     }
 
     if (playBtn) {
@@ -5124,7 +5153,7 @@
       } else {
         const instBadge = state.playBothInCompose
           ? '🥁+🎸'
-          : state.composeInstrument === 'bass'
+          : isBassTab
           ? '🎸 Bass'
           : '🥁 Drums';
         playBtn.textContent = `▶ Play ${instBadge} (${loopLabel})`;
@@ -5133,21 +5162,39 @@
     }
 
     if (padsPlayBtn) {
-      const isPlayingCompose = state.phonePlayer.playing && state.playbackMode !== 'timeline';
+      const instBadge = state.playBothInCompose ? '🥁+🎸 Together' : isBassTab ? '🎸 Bass Solo' : '🥁 Drums Solo';
       padsPlayBtn.textContent = isPlayingCompose
-        ? `⏹ Stop Groove (${loopLabel})`
-        : `▶ Play Groove to Jam Over (${loopLabel})`;
+        ? `⏹ Stop ${instBadge} (${loopLabel})`
+        : `▶ Play ${instBadge} (${loopLabel})`;
       padsPlayBtn.classList.toggle('active', isPlayingCompose);
     }
 
+    const isTlPlaying = state.phonePlayer.playing && state.playbackMode === 'timeline';
+    const isTlBoth = isTlPlaying && !state.drumTrackMuted && !state.bassTrackMuted;
+    const isTlDrumsOnly = isTlPlaying && !state.drumTrackMuted && state.bassTrackMuted;
+    const isTlBassOnly = isTlPlaying && state.drumTrackMuted && !state.bassTrackMuted;
+
     if (tlPlayBtn) {
-      const isTlPlaying = state.phonePlayer.playing && state.playbackMode === 'timeline';
-      tlPlayBtn.textContent = isTlPlaying
-        ? '⏹ Stop Playback'
+      tlPlayBtn.textContent = isTlBoth
+        ? '⏹ Stop Together Playback'
         : state.timelineLoopSingle
         ? `▶ Play ${loopTrackIcon} Section #${activeLoopSecIdx + 1} Loop`
-        : `▶ Play Full Timeline (${totalTlBars} Bars · Drums + Bass)`;
-      tlPlayBtn.classList.toggle('active', isTlPlaying);
+        : `▶ Play Together (🥁 Drums + 🎸 Bass · ${totalTlBars}B)`;
+      tlPlayBtn.classList.toggle('active', isTlBoth);
+    }
+
+    if (tlPlayDrumsOnlyBtn) {
+      tlPlayDrumsOnlyBtn.textContent = isTlDrumsOnly
+        ? '⏹ Stop Drums Solo'
+        : `🥁 Play Drums Only (${totalDrumBars}B)`;
+      tlPlayDrumsOnlyBtn.classList.toggle('chip-on', isTlDrumsOnly);
+    }
+
+    if (tlPlayBassOnlyBtn) {
+      tlPlayBassOnlyBtn.textContent = isTlBassOnly
+        ? '⏹ Stop Bass Solo'
+        : `🎸 Play Bass Only (${totalBassBars}B)`;
+      tlPlayBassOnlyBtn.classList.toggle('chip-on', isTlBassOnly);
     }
 
     if (tlLoopBtn) {
@@ -6063,11 +6110,16 @@
   }
 
   // ==========================================================================
-  // 10. 5-Tab Navigation (Songs, Compose, Arrange, Arrangements, Settings) & Timeline
+  // 10. 6-Tab Navigation (Songs, Drums, Bass, Arrange, Arrangements, Settings) & Timeline
   // ==========================================================================
   function switchWorkspaceTab(rawTabId) {
     const tabId = normalizeTabId(rawTabId);
     state.activeTab = tabId;
+    if (tabId === 'drums' && state.composeInstrument !== 'drums') {
+      setComposeInstrument('drums');
+    } else if (tabId === 'bass' && state.composeInstrument !== 'bass') {
+      setComposeInstrument('bass');
+    }
     if (state.phonePlayer.playing) {
       state.playbackMode = tabId === 'arrange' ? 'timeline' : 'compose';
     }
@@ -6083,7 +6135,7 @@
       renderSongBuilderAndClipsUI();
     } else if (tabId === 'arrangements' || tabId === 'settings') {
       renderCrateAndJamUI();
-    } else if (tabId === 'compose') {
+    } else if (tabId === 'drums' || tabId === 'bass') {
       renderComposeInstrumentUI();
       renderSectionTabs();
       renderMini4BarMap();
@@ -6115,7 +6167,7 @@
     if (layoutBtn) {
       layoutBtn.classList.toggle('chip-on', state.workspaceLayoutMode === 'all');
       layoutBtn.textContent =
-        state.workspaceLayoutMode === 'all' ? '🗂️ Use 5-Tab View' : '⊞ Show All Zones';
+        state.workspaceLayoutMode === 'all' ? '🗂️ Use 6-Tab View' : '⊞ Show All Zones';
     }
 
     const cardArtists = document.getElementById('card-artists');
@@ -6141,8 +6193,8 @@
       if (isSongs) cardArtists.classList.remove('collapsed');
     }
 
-    // 2. COMPOSE: Pick Drums or Bass + Tweak Dials + Edit 16-Bar Grid + Play/Overdub Finger Instruments
-    const isCompose = tab === 'compose';
+    // 2. DRUMS or BASS: Dedicated Instrument Tab (Play Solo or Together + Tweak Dials + Edit 16-Bar Grid + Finger Pads + Add Independently or Together)
+    const isCompose = tab === 'drums' || tab === 'bass';
     if (cardComposeInst) cardComposeInst.style.display = isCompose ? 'flex' : 'none';
     if (cardDials) cardDials.style.display = isCompose ? 'flex' : 'none';
     if (cardSeq) cardSeq.style.display = isCompose ? 'flex' : 'none';
@@ -6207,29 +6259,45 @@
     const scaleBadge = keyOverride ? keyOverride.label : bProf.scaleLabel;
     const voices = getActiveVoices(state.composeInstrument, state.selectedSongId);
 
-    document.querySelectorAll('[data-compose-inst]').forEach((btn) => {
-      const inst = btn.getAttribute('data-compose-inst');
-      btn.classList.toggle('chip-on', inst === state.composeInstrument);
-    });
+    const cardComposeInst = document.getElementById('card-compose-inst');
+    if (cardComposeInst) {
+      cardComposeInst.style.background = isBass
+        ? 'linear-gradient(135deg, rgba(2,132,199,0.24), rgba(168,85,247,0.2))'
+        : 'linear-gradient(135deg, rgba(13,148,136,0.24), rgba(231,63,246,0.2))';
+      cardComposeInst.style.borderColor = isBass
+        ? 'rgba(56,189,248,0.6)'
+        : 'rgba(132,220,198,0.6)';
+    }
 
-    const playBothBtn = document.getElementById('fold-compose-play-both-btn');
-    if (playBothBtn) {
-      playBothBtn.classList.toggle('chip-on', Boolean(state.playBothInCompose));
-      playBothBtn.textContent = state.playBothInCompose
-        ? '🔊 Hear Drums + Bass Together: ON'
-        : `🔈 Solo ${isBass ? 'Bass' : 'Drums'} Only`;
+    const composeInstTitleEl = document.getElementById('fold-compose-inst-title');
+    if (composeInstTitleEl) {
+      composeInstTitleEl.textContent = isBass
+        ? `🎸 Bass Workstation — ${bProf.bassist} (${scaleBadge})`
+        : `🥁 Drums Workstation — ${artist.drummer}`;
+    }
+
+    const switchInstTabBtn = document.getElementById('fold-compose-switch-inst-tab-btn');
+    if (switchInstTabBtn) {
+      switchInstTabBtn.textContent = isBass
+        ? '🥁 Switch to Drums Tab →'
+        : '🎸 Switch to Bass Tab →';
     }
 
     const composeInstSummaryEl = document.getElementById('fold-compose-inst-summary');
     if (composeInstSummaryEl) {
       composeInstSummaryEl.textContent = isBass
-        ? `🎸 Bass Mode · ${bProf.bassist} (${scaleBadge}) · ${artist.artistName} — ${song.title}`
-        : `🥁 Drums Mode · ${artist.drummer} · ${artist.artistName} — ${song.title}`;
+        ? `🎸 ${artist.artistName} — ${song.title} (${state.tempo} BPM · ${scaleBadge})`
+        : `🥁 ${artist.artistName} — ${song.title} (${state.tempo} BPM)`;
     }
 
-    const composeTabBadgeEl = document.getElementById('fold-tab-badge-compose');
-    if (composeTabBadgeEl) {
-      composeTabBadgeEl.textContent = isBass ? '🎸 Bass' : '🥁 Drums';
+    const drumsTabBadgeEl = document.getElementById('fold-tab-badge-drums');
+    if (drumsTabBadgeEl) {
+      const kObj = DRUM_KITS.find((k) => k.id === state.kitId) || DRUM_KITS[0];
+      drumsTabBadgeEl.textContent = kObj.name.split(' ')[0] || 'Kit';
+    }
+    const bassTabBadgeEl = document.getElementById('fold-tab-badge-bass');
+    if (bassTabBadgeEl) {
+      bassTabBadgeEl.textContent = scaleBadge.split(' ')[0] || 'Key';
     }
 
     const artistsHeaderTitle = document.querySelector('#card-artists .fold-card-title-wrap h3');
@@ -6262,8 +6330,8 @@
     const seqHeaderTitle = document.querySelector('#card-sequencer .fold-card-title-wrap h3');
     if (seqHeaderTitle) {
       seqHeaderTitle.textContent = isBass
-        ? `📊 Edit 8-Note Bassline Sequencer (${scaleBadge}) & Add to Bass Track`
-        : `📊 Edit 8-Voice Drum Sequencer & Add to Drum Track`;
+        ? `📊 Edit 8-Note Bassline Sequencer (${scaleBadge}) & Add to Timeline`
+        : `📊 Edit 8-Voice Drum Sequencer & Add to Timeline`;
     }
 
     const padsHeaderTitle = document.querySelector('#card-pads .fold-card-title-wrap h3');
@@ -6288,6 +6356,7 @@
         }
       });
     }
+    updatePlayerButtons();
   }
 
   function renderComposeTimelineBanner() {
@@ -6295,24 +6364,43 @@
     const add1Btn = document.getElementById('fold-compose-add-1bar-btn');
     const add4Btn = document.getElementById('fold-compose-add-4bar-btn');
     const add16Btn = document.getElementById('fold-compose-add-16bar-btn');
+    const addBoth1Btn = document.getElementById('fold-compose-add-both-1bar-btn');
+    const addBoth4Btn = document.getElementById('fold-compose-add-both-4bar-btn');
+    const addBoth16Btn = document.getElementById('fold-compose-add-both-16bar-btn');
+
     const padsAdd1Btn = document.getElementById('fold-pads-add-1bar-btn');
     const padsAdd4Btn = document.getElementById('fold-pads-add-4bar-btn');
     const padsAdd16Btn = document.getElementById('fold-pads-add-16bar-btn');
-    const sec = SONG_SECTIONS[state.activeSection] || SONG_SECTIONS[0];
-    const { song } = findSongById(state.selectedSongId);
-    const isBass = state.composeInstrument === 'bass';
-    const trackLabel = isBass ? '🎸 Bass Track' : '🥁 Drum Track';
+    const padsAddBoth1Btn = document.getElementById('fold-pads-add-both-1bar-btn');
+    const padsAddBoth4Btn = document.getElementById('fold-pads-add-both-4bar-btn');
+    const padsAddBoth16Btn = document.getElementById('fold-pads-add-both-16bar-btn');
 
-    const txt1 = `➕ Add 1 Bar (Bar ${state.zoomedBar + 1}) → ${trackLabel}`;
-    const txt4 = `➕ Add 4 Bars (${sec.badge}) → ${trackLabel}`;
-    const txt16 = `➕ Add All 16 Bars (${song ? song.title : 'Full Song'}) → ${trackLabel}`;
+    const sec = SONG_SECTIONS[state.activeSection] || SONG_SECTIONS[0];
+    const isBass = state.composeInstrument === 'bass';
+    const instIcon = isBass ? '🎸' : '🥁';
+    const instWord = isBass ? 'Bass Only' : 'Drums Only';
+
+    const txt1 = `${instIcon} + 1 Bar (Bar ${state.zoomedBar + 1}) · ${instWord}`;
+    const txt4 = `${instIcon} + 4 Bars (${sec.badge}) · ${instWord}`;
+    const txt16 = `${instIcon} + All 16 Bars · ${instWord}`;
+
+    const txtBoth1 = `🥁+🎸 + 1 Bar (Bar ${state.zoomedBar + 1}) · Both Together`;
+    const txtBoth4 = `🥁+🎸 + 4 Bars (${sec.badge}) · Both Together`;
+    const txtBoth16 = `🥁+🎸 + All 16 Bars · Both Together`;
 
     if (add1Btn) add1Btn.textContent = txt1;
     if (add4Btn) add4Btn.textContent = txt4;
     if (add16Btn) add16Btn.textContent = txt16;
+    if (addBoth1Btn) addBoth1Btn.textContent = txtBoth1;
+    if (addBoth4Btn) addBoth4Btn.textContent = txtBoth4;
+    if (addBoth16Btn) addBoth16Btn.textContent = txtBoth16;
+
     if (padsAdd1Btn) padsAdd1Btn.textContent = txt1;
     if (padsAdd4Btn) padsAdd4Btn.textContent = txt4;
     if (padsAdd16Btn) padsAdd16Btn.textContent = txt16;
+    if (padsAddBoth1Btn) padsAddBoth1Btn.textContent = txtBoth1;
+    if (padsAddBoth4Btn) padsAddBoth4Btn.textContent = txtBoth4;
+    if (padsAddBoth16Btn) padsAddBoth16Btn.textContent = txtBoth16;
 
     if (!bannerEl) return;
     const editArr =
@@ -6363,18 +6451,20 @@
     trackTypeOverride = null
   ) {
     pushUndoState();
-    const trackType = trackTypeOverride || state.composeInstrument || 'drums';
-    const isBass = trackType === 'bass';
-    const targetArr = isBass ? state.bassArrangementSections : state.arrangementSections;
-    const isFirstSectionAdded =
-      !state.timelineHasUserSection ||
-      !Array.isArray(targetArr) ||
-      targetArr.length === 0;
+    // Ensure latest active grid edits are synced into state.drumGrid / state.bassGrid
+    if (state.composeInstrument === 'bass') {
+      state.bassGrid = cloneGrid256(state.grid);
+    } else {
+      state.drumGrid = cloneGrid256(state.grid);
+    }
+
+    const rawType = trackTypeOverride || state.composeInstrument || 'drums';
+    const isBoth = rawType === 'both';
+    const isBass = rawType === 'bass';
 
     const bars = barsToAdd === 1 ? 1 : barsToAdd === 16 ? 16 : 4;
     const targetSongId = songIdOverride || state.selectedSongId;
-    const isCurrentComposeSong =
-      targetSongId === state.selectedSongId && trackType === state.composeInstrument;
+    const isCurrentSong = targetSongId === state.selectedSongId;
     const { song } = findSongById(targetSongId);
 
     const defaultRoleForBars =
@@ -6390,10 +6480,10 @@
     let sourceBar = state.zoomedBar || 0;
     let sourceSlice = state.activeSection || 0;
     if (bars === 1) {
-      sourceBar = isCurrentComposeSong ? state.zoomedBar : 0;
+      sourceBar = isCurrentSong ? state.zoomedBar : 0;
       startStep = sourceBar * 16;
     } else if (bars === 4) {
-      sourceSlice = isCurrentComposeSong ? state.activeSection : roleObj.defaultSlice ?? 0;
+      sourceSlice = isCurrentSong ? state.activeSection : roleObj.defaultSlice ?? 0;
       startStep = sourceSlice * 64;
     } else {
       sourceSlice = 0;
@@ -6401,75 +6491,107 @@
       startStep = 0;
     }
 
-    const srcGrid = isCurrentComposeSong
-      ? state.grid
-      : isBass
-      ? generateSongBassGrid(
-          targetSongId,
-          state.intensityPct,
-          state.ghostPct,
-          state.hatEnergyPct,
-          state.fillPct
-        )
-      : generateSongGrooveGrid(
-          targetSongId,
-          state.intensityPct,
-          state.ghostPct,
-          state.hatEnergyPct,
-          state.fillPct
-        );
-    const customGrid = extractGridSlice(srcGrid, startStep, bars * 16);
-
-    const newBlock = {
-      id: `sec_${trackType}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-      trackType,
-      roleId: roleObj.id,
-      songId: targetSongId,
-      sourceSlice,
-      sourceBar,
-      bars,
-      customEdited: isCurrentComposeSong,
-      customGrid,
-      addedBy: state.playerName,
-      addedColor: state.playerColor
+    const buildBlockForTrack = (tType) => {
+      const tIsBass = tType === 'bass';
+      const srcGrid = isCurrentSong
+        ? tIsBass
+          ? state.bassGrid ||
+            generateSongBassGrid(
+              targetSongId,
+              state.intensityPct,
+              state.ghostPct,
+              state.hatEnergyPct,
+              state.fillPct
+            )
+          : state.drumGrid ||
+            generateSongGrooveGrid(
+              targetSongId,
+              state.intensityPct,
+              state.ghostPct,
+              state.hatEnergyPct,
+              state.fillPct
+            )
+        : tIsBass
+        ? generateSongBassGrid(
+            targetSongId,
+            state.intensityPct,
+            state.ghostPct,
+            state.hatEnergyPct,
+            state.fillPct
+          )
+        : generateSongGrooveGrid(
+            targetSongId,
+            state.intensityPct,
+            state.ghostPct,
+            state.hatEnergyPct,
+            state.fillPct
+          );
+      return {
+        id: `sec_${tType}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        trackType: tType,
+        roleId: roleObj.id,
+        songId: targetSongId,
+        sourceSlice,
+        sourceBar,
+        bars,
+        customEdited: isCurrentSong,
+        customGrid: extractGridSlice(srcGrid, startStep, bars * 16),
+        addedBy: state.playerName,
+        addedColor: state.playerColor
+      };
     };
 
-    if (!state.timelineHasUserSection) {
-      const firstSectionBpm = isCurrentComposeSong ? state.tempo : song.bpm;
+    const isFirstSectionAdded = !state.timelineHasUserSection;
+    if (isFirstSectionAdded) {
+      const firstSectionBpm = isCurrentSong ? state.tempo : song.bpm;
       state.timelineHasUserSection = true;
       setGlobalTimelineBpm(firstSectionBpm, song.title);
-      if (isBass) {
-        state.bassArrangementSections = [newBlock];
+      if (isBoth) {
+        state.arrangementSections = [buildBlockForTrack('drums')];
+        state.bassArrangementSections = [buildBlockForTrack('bass')];
+        state.selectedTimelineIdx = 0;
+        state.selectedBassTimelineIdx = 0;
+      } else if (isBass) {
+        state.bassArrangementSections = [buildBlockForTrack('bass')];
         state.selectedBassTimelineIdx = 0;
       } else {
-        state.arrangementSections = [newBlock];
+        state.arrangementSections = [buildBlockForTrack('drums')];
         state.selectedTimelineIdx = 0;
       }
     } else {
       if (state.timelineBpm) {
         state.tempo = state.timelineBpm;
       }
-      if (isBass) {
-        state.bassArrangementSections.push(newBlock);
+      if (isBoth) {
+        state.arrangementSections.push(buildBlockForTrack('drums'));
+        state.bassArrangementSections.push(buildBlockForTrack('bass'));
+        state.selectedTimelineIdx = state.arrangementSections.length - 1;
+        state.selectedBassTimelineIdx = state.bassArrangementSections.length - 1;
+      } else if (isBass) {
+        state.bassArrangementSections.push(buildBlockForTrack('bass'));
         state.selectedBassTimelineIdx = state.bassArrangementSections.length - 1;
       } else {
-        state.arrangementSections.push(newBlock);
+        state.arrangementSections.push(buildBlockForTrack('drums'));
         state.selectedTimelineIdx = state.arrangementSections.length - 1;
       }
     }
 
-    const updatedArr = isBass ? state.bassArrangementSections : state.arrangementSections;
-    const totalBars = updatedArr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
     const barDesc =
       bars === 1
         ? `1 Bar (Bar ${sourceBar + 1})`
         : bars === 16
         ? 'All 16 Bars'
         : `4 Bars (${SONG_SECTIONS[sourceSlice]?.badge || 'Section'})`;
-    const trackName = isBass ? '🎸 Bass Track' : '🥁 Drum Track';
+    const trackName = isBoth
+      ? '🥁 Drum Track + 🎸 Bass Track Together'
+      : isBass
+      ? '🎸 Bass Track'
+      : '🥁 Drum Track';
+    const updatedArr = isBass ? state.bassArrangementSections : state.arrangementSections;
+    const totalBars = updatedArr.reduce((acc, s) => acc + (Number(s.bars) || 4), 0);
     const msg = isFirstSectionAdded
       ? `✅ Added 1st Section (${barDesc} of "${song.title}") to ${trackName} → Global Timeline BPM set to ${state.tempo} BPM!`
-      : `✅ Added ${barDesc} of "${song.title}" → ${trackName} Block #${updatedArr.length} (${totalBars} Bars @ ${state.tempo} BPM)`;
+      : `✅ Added ${barDesc} of "${song.title}" → ${trackName} (${totalBars} Bars @ ${state.tempo} BPM)`;
     showTimelineToast(msg);
 
     recordSessionHistoryEntry(`Added ${barDesc} (${song.title}) to ${trackName}`);
@@ -6583,7 +6705,7 @@
     renderComposeInstrumentUI();
     updateViewModeButtons();
     updateDialsUI();
-    switchWorkspaceTab('compose');
+    switchWorkspaceTab(isBass ? 'bass' : 'drums');
     setTimeout(() => {
       const seqEl = document.getElementById('card-sequencer');
       if (seqEl) seqEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -6595,7 +6717,6 @@
     const songsGridEl = document.getElementById('fold-artist-songs');
     if (!artistTabsEl || !songsGridEl) return;
 
-    const isBass = state.composeInstrument === 'bass';
     const q = (state.songSearchQuery || '').trim().toLowerCase();
     const tf = state.songTempoFilter || 'all';
     const isFilteringAll = q.length > 0 || tf !== 'all';
@@ -6611,7 +6732,7 @@
       return `
         <button class="fold-artist-pill ${active ? 'active' : ''}" data-artist-tab="${a.artistId}">
           <span>${a.artistName}</span>
-          <span class="drummer-sub">${isBass ? `🎸 ${bProf.bassist}` : a.drummer}</span>
+          <span class="drummer-sub">🥁 ${a.drummer} · 🎸 ${bProf.bassist}</span>
         </button>`;
     }).join('');
 
@@ -6662,8 +6783,8 @@
     const filterCountEl = document.getElementById('fold-song-filter-count');
     if (filterCountEl) {
       filterCountEl.textContent = isFilteringAll
-        ? `Showing ${songsToRender.length} matching song(s) across all 21 bands — tap a song card to open it in Compose (where you pick Drums or Bass)!`
-        : `${(ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0]).artistName} — Tap any song card to open it in Compose (pick 🥁 Drums or 🎸 Bass, edit & play over it), or quick-add to your Timeline`;
+        ? `Showing ${songsToRender.length} matching song(s) across all 21 bands — open in 🥁 Drums or 🎸 Bass, or add to Timeline independently or together!`
+        : `${(ARTIST_CATALOG.find((a) => a.artistId === state.selectedArtistId) || ARTIST_CATALOG[0]).artistName} — Open any song in 🥁 Drums or 🎸 Bass, or add to Timeline independently or together`;
     }
 
     if (songsToRender.length === 0) {
@@ -6688,31 +6809,47 @@
             ${artistBadge}
             <div class="song-top-row">
               <span class="song-tempo-tag">${s.bpm} BPM · ${s.swing}% Swing · 🎸 ${scaleBadge}</span>
-              ${active ? `<span class="song-active-badge">● LOADED IN COMPOSE</span>` : `<span style="font-size:11px;color:#84dcc6;font-weight:800;">🎛️ Tap to Open in Compose →</span>`}
+              ${active ? `<span class="song-active-badge">● ACTIVE SONG</span>` : ''}
             </div>
             <div class="song-title">${s.title}</div>
             <div class="song-desc">🥁 ${artist.drummer} · 🎸 ${bProf.bassist} — ${s.desc}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">
-              <span style="font-size:10px;font-weight:800;color:#84dcc6;">➕ QUICK ADD TO TIMELINE:</span>
               <div style="display:flex;align-items:center;gap:4px;">
-                <button type="button" class="fold-song-send-btn" data-card-add-tl="1" data-card-song="${s.id}" title="Add 1 Bar of ${s.title} to your ${isBass ? 'Bass' : 'Drum'} Track">+ 1B</button>
-                <button type="button" class="fold-song-send-btn" data-card-add-tl="4" data-card-song="${s.id}" title="Add 4 Bars of ${s.title} to your ${isBass ? 'Bass' : 'Drum'} Track">+ 4B</button>
-                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.18);" data-card-add-tl="16" data-card-song="${s.id}" title="Add All 16 Bars of ${s.title} to your ${isBass ? 'Bass' : 'Drum'} Track">+ All 16B</button>
+                <button type="button" class="fold-song-send-btn" style="border-color:#84dcc6;color:#84dcc6;background:rgba(13,148,136,0.2);" data-card-open-tab="drums" data-card-song="${s.id}" title="Load ${s.title} and open the Drums tab">🥁 Edit Drums</button>
+                <button type="button" class="fold-song-send-btn" style="border-color:#38bdf8;color:#7dd3fc;background:rgba(2,132,199,0.2);" data-card-open-tab="bass" data-card-song="${s.id}" title="Load ${s.title} and open the Bass tab">🎸 Edit Bass</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                <button type="button" class="fold-song-send-btn" data-card-add-tl="4" data-card-add-track="drums" data-card-song="${s.id}" title="Add 4 Bars of ${s.title} Drums Only to Drum Track">🥁 +4B</button>
+                <button type="button" class="fold-song-send-btn" data-card-add-tl="4" data-card-add-track="bass" data-card-song="${s.id}" title="Add 4 Bars of ${s.title} Bass Only to Bass Track">🎸 +4B</button>
+                <button type="button" class="fold-song-send-btn" style="border-color:#e73ff6;color:#f5d0fe;background:rgba(231,63,246,0.22);" data-card-add-tl="4" data-card-add-track="both" data-card-song="${s.id}" title="Add 4 Bars of ${s.title} Drums + Bass Together to Timeline">🥁+🎸 +4B Both</button>
+                <button type="button" class="fold-song-send-btn" style="border-color:#f59e0b;color:#fde68a;background:rgba(245,158,11,0.2);" data-card-add-tl="16" data-card-add-track="both" data-card-song="${s.id}" title="Add All 16 Bars of ${s.title} Drums + Bass Together to Timeline">🥁+🎸 +16B Both</button>
               </div>
             </div>
           </div>`;
       })
       .join('');
 
+    songsGridEl.querySelectorAll('[data-card-open-tab]').forEach((openBtn) => {
+      openBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sid = openBtn.getAttribute('data-card-song');
+        const targetTab = openBtn.getAttribute('data-card-open-tab') === 'bass' ? 'bass' : 'drums';
+        pushUndoState();
+        state.composeInstrument = targetTab;
+        loadSongGroove(sid, true);
+        switchWorkspaceTab(targetTab);
+      });
+    });
+
     songsGridEl.querySelectorAll('[data-song-id]').forEach((cardEl) => {
       cardEl.addEventListener('click', (e) => {
-        if (e.target.closest('[data-card-add-tl]')) {
+        if (e.target.closest('[data-card-add-tl], [data-card-open-tab]')) {
           return;
         }
         pushUndoState();
         loadSongGroove(cardEl.getAttribute('data-song-id'), true);
         if (state.autoCollapseSongsOnSelect !== false) {
-          switchWorkspaceTab('compose');
+          switchWorkspaceTab(state.composeInstrument === 'bass' ? 'bass' : 'drums');
         }
       });
     });
@@ -6722,7 +6859,8 @@
         e.stopPropagation();
         const sid = addBtn.getAttribute('data-card-song');
         const bars = Number(addBtn.getAttribute('data-card-add-tl')) || 4;
-        addComposeToTimeline(bars, sid, null, state.composeInstrument);
+        const trackMode = addBtn.getAttribute('data-card-add-track') || 'both';
+        addComposeToTimeline(bars, sid, null, trackMode);
         const orig = addBtn.textContent;
         addBtn.textContent = '✅ Added!';
         setTimeout(() => {
@@ -7796,19 +7934,20 @@
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span style="font-size:12px;font-weight:900;color:#fff;background:#0d9488;padding:3px 9px;border-radius:6px;">🥁 TRACK 1: DRUM TRACK</span>
               <span style="font-size:11px;font-weight:800;color:#84dcc6;">${drumArr.length} Section${drumArr.length === 1 ? '' : 's'} · ${drumBars} Bars</span>
-              <button type="button" id="fold-tl-mute-drums-btn" class="fold-btn ${state.muteDrumTrackInTimeline ? 'amber' : ''}" style="padding:3px 9px;font-size:11px;">
-                ${state.muteDrumTrackInTimeline ? '🔇 Drum Track Muted (Tap to Unmute)' : '🔊 Drum Track: ON'}
+              <button type="button" id="fold-tl-mute-drums-btn" class="fold-btn ${state.drumTrackMuted ? 'amber' : ''}" style="padding:3px 9px;font-size:11px;">
+                ${state.drumTrackMuted ? '🔇 Drum Track Muted (Tap to Unmute)' : '🔊 Drum Track: ON'}
               </button>
             </div>
             <div class="fold-btn-row" style="gap:4px;">
-              <span style="font-size:10px;font-weight:800;color:#84dcc6;">+ ADD CURRENT SONG DRUMS:</span>
-              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="1" data-tl-add-role="fill">+ 1B Fill</button>
-              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="4" data-tl-add-role="verse">+ 4B Verse</button>
-              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="4" data-tl-add-role="chorus">+ 4B Chorus</button>
-              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="16" data-tl-add-role="verse">+ All 16B</button>
+              <span style="font-size:10px;font-weight:800;color:#84dcc6;">+ ADD CURRENT SONG:</span>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="1" data-tl-add-role="fill">🥁 +1B</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="4" data-tl-add-role="verse">🥁 +4B</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="drums" data-tl-add-bars="16" data-tl-add-role="verse">🥁 +16B</button>
+              <button type="button" class="fold-btn primary" style="padding:3px 8px;font-size:11px;" data-tl-add-track="both" data-tl-add-bars="4" data-tl-add-role="chorus">🥁+🎸 +4B Both</button>
+              <button type="button" class="fold-btn amber" style="padding:3px 8px;font-size:11px;" data-tl-add-track="both" data-tl-add-bars="16" data-tl-add-role="verse">🥁+🎸 +16B Both</button>
             </div>
           </div>
-          <div class="fold-tl-track" style="${state.muteDrumTrackInTimeline ? 'opacity:0.45;' : ''}">
+          <div class="fold-tl-track" style="${state.drumTrackMuted ? 'opacity:0.45;' : ''}">
             ${renderTimelineTrackRowHtml(drumArr, 'drums')}
           </div>
         </div>
@@ -7819,8 +7958,8 @@
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span style="font-size:12px;font-weight:900;color:#fff;background:#0284c7;padding:3px 9px;border-radius:6px;">🎸 TRACK 2: BASS TRACK</span>
               <span style="font-size:11px;font-weight:800;color:#38bdf8;">${bassArr.length} Section${bassArr.length === 1 ? '' : 's'} · ${bassBars} Bars</span>
-              <button type="button" id="fold-tl-mute-bass-btn" class="fold-btn ${state.muteBassTrackInTimeline ? 'amber' : ''}" style="padding:3px 9px;font-size:11px;">
-                ${state.muteBassTrackInTimeline ? '🔇 Bass Track Muted (Tap to Unmute)' : '🔊 Bass Track: ON'}
+              <button type="button" id="fold-tl-mute-bass-btn" class="fold-btn ${state.bassTrackMuted ? 'amber' : ''}" style="padding:3px 9px;font-size:11px;">
+                ${state.bassTrackMuted ? '🔇 Bass Track Muted (Tap to Unmute)' : '🔊 Bass Track: ON'}
               </button>
               <button type="button" id="fold-tl-match-bass-btn" class="fold-btn teal" style="padding:3px 9px;font-size:11px;" title="Copy all songs, roles, and bar lengths from your Drum Track so the Bass Track locks in with your Drums!">
                 🪄 Match Drum Timeline
@@ -7828,26 +7967,25 @@
             </div>
             <div class="fold-btn-row" style="gap:4px;">
               <span style="font-size:10px;font-weight:800;color:#38bdf8;">+ ADD CURRENT SONG BASSLINE:</span>
-              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="1" data-tl-add-role="fill">+ 1B Fill</button>
-              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="4" data-tl-add-role="verse">+ 4B Verse</button>
-              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="4" data-tl-add-role="chorus">+ 4B Chorus</button>
-              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="16" data-tl-add-role="verse">+ All 16B</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="1" data-tl-add-role="fill">🎸 +1B</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="4" data-tl-add-role="verse">🎸 +4B</button>
+              <button type="button" class="fold-btn" style="padding:3px 8px;font-size:11px;" data-tl-add-track="bass" data-tl-add-bars="16" data-tl-add-role="verse">🎸 +16B</button>
             </div>
           </div>
-          <div class="fold-tl-track" style="${state.muteBassTrackInTimeline ? 'opacity:0.45;' : ''}">
+          <div class="fold-tl-track" style="${state.bassTrackMuted ? 'opacity:0.45;' : ''}">
             ${renderTimelineTrackRowHtml(bassArr, 'bass')}
           </div>
         </div>
       `;
 
       document.getElementById('fold-tl-mute-drums-btn')?.addEventListener('click', () => {
-        state.muteDrumTrackInTimeline = !state.muteDrumTrackInTimeline;
+        state.drumTrackMuted = !state.drumTrackMuted;
         savePersistedState();
         renderSongBuilderAndClipsUI();
       });
 
       document.getElementById('fold-tl-mute-bass-btn')?.addEventListener('click', () => {
-        state.muteBassTrackInTimeline = !state.muteBassTrackInTimeline;
+        state.bassTrackMuted = !state.bassTrackMuted;
         savePersistedState();
         renderSongBuilderAndClipsUI();
       });
@@ -9848,8 +9986,8 @@
         }
         #fold-nav-rail .fold-ws-tab-list {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 4px;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 3px;
           width: 100%;
         }
         #fold-nav-rail .fold-ws-tab-btn {
@@ -9857,15 +9995,15 @@
           align-items: center;
           justify-content: center;
           text-align: center;
-          padding: 6px 4px;
-          gap: 3px;
+          padding: 5px 2px;
+          gap: 2px;
         }
         #fold-nav-rail .fold-ws-tab-main {
           align-items: center;
         }
         #fold-nav-rail .fold-ws-tab-label {
-          font-size: 11px;
-          gap: 3px;
+          font-size: 10px;
+          gap: 2px;
         }
         #fold-nav-rail .fold-ws-tab-sub {
           display: none;
@@ -10111,12 +10249,19 @@
             </div>
             <span class="fold-ws-tab-badge">105 Songs</span>
           </button>
-          <button type="button" class="fold-ws-tab-btn" data-ws-tab="compose">
+          <button type="button" class="fold-ws-tab-btn" data-ws-tab="drums">
             <div class="fold-ws-tab-main">
-              <span class="fold-ws-tab-label">🎛️ Compose</span>
-              <span class="fold-ws-tab-sub">Pick Drums or Bass, tweak & play</span>
+              <span class="fold-ws-tab-label">🥁 Drums</span>
+              <span class="fold-ws-tab-sub">Edit drum groove, kit & pads</span>
             </div>
-            <span id="fold-tab-badge-compose" class="fold-ws-tab-badge">🥁 Drums</span>
+            <span id="fold-tab-badge-drums" class="fold-ws-tab-badge">21 Kits</span>
+          </button>
+          <button type="button" class="fold-ws-tab-btn" data-ws-tab="bass">
+            <div class="fold-ws-tab-main">
+              <span class="fold-ws-tab-label">🎸 Bass</span>
+              <span class="fold-ws-tab-sub">Edit bassline, rig & pads</span>
+            </div>
+            <span id="fold-tab-badge-bass" class="fold-ws-tab-badge">21 Rigs</span>
           </button>
           <button type="button" class="fold-ws-tab-btn" data-ws-tab="arrange">
             <div class="fold-ws-tab-main">
@@ -10141,7 +10286,7 @@
           </button>
         </div>
         <div class="fold-nav-footer">
-          <button type="button" id="fold-layout-mode-btn" class="fold-btn" style="width:100%;" title="Switch between focused 5-Tab View or showing All Zones stacked">⊞ Show All Zones</button>
+          <button type="button" id="fold-layout-mode-btn" class="fold-btn" style="width:100%;" title="Switch between focused 6-Tab View or showing All Zones stacked">⊞ Show All Zones</button>
           <button type="button" id="fold-collapse-all-btn" class="fold-btn" style="width:100%;" title="Collapse or Expand All Panels">↕ Collapse All</button>
           <button type="button" id="fold-close-desktop-menu-btn" class="fold-btn" style="width:100%;border-color:rgba(231,63,246,0.45);color:#f5d0fe;" title="Close Left Menu on Desktop">✕ Close Menu</button>
         </div>
@@ -10157,9 +10302,10 @@
             <span id="fold-summary-artist" class="fold-panel-summary">🔨 Led Zeppelin · When the Levee Breaks (71 BPM · 16 Bars)</span>
           </div>
           <div class="fold-btn-row">
-            <button type="button" id="fold-auto-collapse-songs-btn" class="fold-btn chip-on" title="Automatically jump to the Compose tab when you tap a song so you can immediately pick Drums or Bass, tweak, edit & play over it">⚡ Open in Compose on Select: ON</button>
+            <button type="button" id="fold-auto-collapse-songs-btn" class="fold-btn chip-on" title="Automatically jump to the Drums or Bass tab when you tap a song card">⚡ Auto-Open on Select: ON</button>
             <button type="button" id="fold-random-groove-btn" class="fold-btn amber" title="Pick a random iconic song from all 105 songs">🎲 Random Song</button>
-            <button type="button" id="fold-songs-go-compose-btn" class="fold-btn primary">🎛️ Go to Compose (Drums / Bass) →</button>
+            <button type="button" id="fold-songs-go-drums-btn" class="fold-btn teal">🥁 Go to Drums →</button>
+            <button type="button" id="fold-songs-go-bass-btn" class="fold-btn primary">🎸 Go to Bass →</button>
           </div>
         </div>
         <div class="fold-card-body">
@@ -10175,7 +10321,7 @@
               <button type="button" id="fold-clear-song-filter-btn" class="fold-btn">✕ Clear</button>
             </div>
           </div>
-          <div id="fold-song-filter-count" style="font-size:11px;color:#9ca3af;font-weight:700;">Tap any song card to load it and open Compose (where you pick 🥁 Drums or 🎸 Bass)!</div>
+          <div id="fold-song-filter-count" style="font-size:11px;color:#9ca3af;font-weight:700;">Open any song in 🥁 Drums or 🎸 Bass, or add it to your Timeline independently or together!</div>
 
           <!-- 21 Artist Pills -->
           <div id="fold-artist-tabs"></div>
@@ -10185,30 +10331,31 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (TOP BAR): PICK DRUMS OR BASS & ACTIVE SONG         -->
+      <!-- TABS: DRUMS & BASS (TOP BAR): PLAY INDEPENDENTLY OR TOGETHER      -->
       <!-- ================================================================ -->
-      <div class="fold-card" id="card-compose-inst" style="background:linear-gradient(135deg, rgba(231,63,246,0.22), rgba(2,132,199,0.22));border:2px solid rgba(231,63,246,0.55);">
+      <div class="fold-card" id="card-compose-inst" style="background:linear-gradient(135deg, rgba(13,148,136,0.24), rgba(231,63,246,0.2));border:2px solid rgba(132,220,198,0.6);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <strong style="font-size:13px;color:#fff;">🎛️ Compose Instrument:</strong>
-            <button type="button" class="fold-btn chip-on" data-compose-inst="drums" style="font-size:13px;padding:8px 16px;">🥁 Drums (Groove & Kit)</button>
-            <button type="button" class="fold-btn" data-compose-inst="bass" style="font-size:13px;padding:8px 16px;">🎸 Bass (Bassline & Rig)</button>
-            <button type="button" id="fold-compose-play-both-btn" class="fold-btn chip-on" title="Hear both the song's Drums and Bassline together while you compose">🔊 Hear Drums + Bass Together: ON</button>
+            <strong id="fold-compose-inst-title" style="font-size:14px;color:#fff;">🥁 Drums Workstation — John Bonham</strong>
+            <span id="fold-compose-inst-summary" style="font-size:12px;font-weight:800;color:#84dcc6;background:rgba(0,0,0,0.38);padding:4px 10px;border-radius:8px;border:1px solid rgba(132,220,198,0.35);">🥁 Led Zeppelin — When the Levee Breaks (71 BPM)</span>
           </div>
           <div class="fold-btn-row">
-            <span id="fold-compose-inst-summary" style="font-size:12px;font-weight:800;color:#84dcc6;background:rgba(0,0,0,0.35);padding:5px 10px;border-radius:8px;border:1px solid rgba(132,220,198,0.35);">🥁 Drums Mode · Led Zeppelin — When the Levee Breaks</span>
+            <button type="button" id="fold-compose-play-solo-btn" class="fold-btn teal" title="Play only this tab's instrument independently">▶ Play 🥁 Drums Only</button>
+            <button type="button" id="fold-compose-play-together-btn" class="fold-btn primary chip-on" title="Play both Drums and Bass together in sync">▶ Play 🥁 Drums + 🎸 Bass Together</button>
+            <button type="button" id="fold-compose-play-both-btn" class="fold-btn chip-on" title="Toggle whether playback includes both Drums & Bass together or Solo only">🔊 Mode: Drums + Bass Together</button>
+            <button type="button" id="fold-compose-switch-inst-tab-btn" class="fold-btn" style="border-color:#38bdf8;color:#7dd3fc;">🎸 Switch to Bass Tab →</button>
             <button type="button" id="fold-compose-change-song-btn" class="fold-btn" style="border-color:#84dcc6;color:#84dcc6;">🎵 Change Song</button>
           </div>
         </div>
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (STEP 2): TWEAK DRUMMER DIALS & DRUM KIT            -->
+      <!-- TABS: DRUMS & BASS (STEP 2): TWEAK FEEL DIALS & KIT / RIG         -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-dials">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-dials">
-            <h3>🎛️ 2. Tweak Drummer Feel & Drum Kit</h3>
+            <h3>🎛️ Tweak Drummer Feel & Drum Kit</h3>
             <span id="fold-summary-dials" class="fold-panel-summary">Intensity 70% · Swing 8% · Fill 65%</span>
           </div>
           <div class="fold-btn-row">
@@ -10217,19 +10364,19 @@
               ${DRUM_KITS.map((k) => `<option value="${k.id}">${k.name}</option>`).join('')}
             </select>
             <button type="button" id="fold-toggle-fine-dials-btn" class="fold-btn" title="Show or hide Fine-Tune dials (Ghost Notes, Hat Energy, Snare Layback)">⚙️ Fine-Tune Dials</button>
-            <button type="button" id="fold-toggle-edit-pads-btn" class="fold-btn chip-on" title="Show or hide Finger Instruments directly on the Compose tab">🖐️ Finger Instruments: SHOWING</button>
+            <button type="button" id="fold-toggle-edit-pads-btn" class="fold-btn chip-on" title="Show or hide Finger Pads directly below the sequencer">🖐️ Finger Pads: ON</button>
             <button class="fold-collapse-btn" data-toggle-card="card-dials">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
-          <!-- 4 Primary Drummer Dials -->
+          <!-- 4 Primary Drummer / Bassist Dials -->
           <div class="fold-dials-grid">
             <div class="fold-dial-box">
               <label><span>⏱️ Tempo (BPM)</span><span id="val-bpm" class="dial-val">71 BPM</span></label>
               <input id="dial-bpm" type="range" min="50" max="200" step="1" value="71">
             </div>
             <div class="fold-dial-box">
-              <label><span>🔥 Drummer Intensity</span><span id="val-intensity" class="dial-val">70%</span></label>
+              <label><span>🔥 Groove Intensity</span><span id="val-intensity" class="dial-val">70%</span></label>
               <input id="dial-intensity" type="range" min="10" max="100" step="5" value="70">
             </div>
             <div class="fold-dial-box">
@@ -10249,11 +10396,11 @@
               <input id="dial-ghost" type="range" min="0" max="100" step="5" value="45">
             </div>
             <div class="fold-dial-box">
-              <label><span>🎩 Hat & Cymbal Energy</span><span id="val-hats" class="dial-val">60%</span></label>
+              <label><span>🎩 High / Octave Energy</span><span id="val-hats" class="dial-val">60%</span></label>
               <input id="dial-hats" type="range" min="10" max="100" step="5" value="60">
             </div>
             <div class="fold-dial-box">
-              <label><span>🍯 Snare Layback / Pocket</span><span id="val-pocket" class="dial-val">25%</span></label>
+              <label><span>🍯 Layback / Pocket</span><span id="val-pocket" class="dial-val">25%</span></label>
               <input id="dial-pocket" type="range" min="0" max="100" step="2" value="25">
             </div>
           </div>
@@ -10261,12 +10408,12 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (STEP 3): EDIT SEQUENCER & ADD TO ARRANGE TIMELINE  -->
+      <!-- TABS: DRUMS & BASS (STEP 3): EDIT SEQUENCER & ADD TO TIMELINE     -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-sequencer">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-sequencer">
-            <h3>📊 3. Edit Step Sequencer & Add to Arrange Timeline</h3>
+            <h3>📊 Edit Step Sequencer & Add to Arrange Timeline</h3>
             <span id="fold-summary-seq" class="fold-panel-summary">Intro / Verse (Bars 1–4) · Loop: 16 Bars</span>
           </div>
           <div class="fold-btn-row">
@@ -10284,17 +10431,28 @@
           <!-- Banner shown when editing a specific Timeline Block from the Arrange tab -->
           <div id="fold-compose-editing-banner" style="display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:rgba(231,63,246,0.16);border:1.5px solid #e73ff6;border-radius:10px;padding:9px 12px;"></div>
 
-          <!-- Prominent Action Bar: Add 1 Bar, 4 Bars, or All 16 Bars of Your Edited Groove to Arrange Timeline -->
-          <div class="fold-timeline-capture-bar">
-            <div style="display:flex;flex-direction:column;gap:2px;">
-              <strong style="font-size:12px;color:#fff;">🎬 Add Edited Groove to Arrange Timeline</strong>
-              <span style="font-size:11px;color:#d1d5db;">Captures your dial tweaks, step edits & pad overdubs into the Arrange Timeline:</span>
-            </div>
-            <div class="fold-btn-row">
-              <button type="button" id="fold-compose-add-1bar-btn" class="fold-btn teal">➕ Add 1 Bar (Bar 1) → Timeline</button>
-              <button type="button" id="fold-compose-add-4bar-btn" class="fold-btn primary">➕ Add 4 Bars (🟢 SEC 1) → Timeline</button>
-              <button type="button" id="fold-compose-add-16bar-btn" class="fold-btn amber">➕ Add All 16 Bars → Timeline</button>
+          <!-- Prominent Action Bar: Add to Timeline Independently (This Track Only) OR Together (Drums + Bass) -->
+          <div class="fold-timeline-capture-bar" style="flex-direction:column;align-items:stretch;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <strong style="font-size:12px;color:#fff;">🎬 Add to Arrange Timeline — Independently or Together</strong>
+                <span style="font-size:11px;color:#d1d5db;">Add only this tab's instrument, or add both 🥁 Drums + 🎸 Bass together in one tap:</span>
+              </div>
               <button type="button" id="fold-compose-go-arrange-btn" class="fold-btn" style="border-color:#84dcc6;color:#84dcc6;">🎬 Go to Arrange Timeline →</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <div class="fold-btn-row">
+                <span style="font-size:10px;font-weight:900;color:#84dcc6;">INDEPENDENT:</span>
+                <button type="button" id="fold-compose-add-1bar-btn" class="fold-btn teal">🥁 + 1 Bar · Drums Only</button>
+                <button type="button" id="fold-compose-add-4bar-btn" class="fold-btn teal">🥁 + 4 Bars · Drums Only</button>
+                <button type="button" id="fold-compose-add-16bar-btn" class="fold-btn teal">🥁 + All 16 Bars · Drums Only</button>
+              </div>
+              <div class="fold-btn-row">
+                <span style="font-size:10px;font-weight:900;color:#f5d0fe;">TOGETHER (DRUMS + BASS):</span>
+                <button type="button" id="fold-compose-add-both-1bar-btn" class="fold-btn primary">🥁+🎸 + 1 Bar · Both Together</button>
+                <button type="button" id="fold-compose-add-both-4bar-btn" class="fold-btn primary">🥁+🎸 + 4 Bars · Both Together</button>
+                <button type="button" id="fold-compose-add-both-16bar-btn" class="fold-btn amber">🥁+🎸 + All 16 Bars · Both Together</button>
+              </div>
             </div>
             <div class="fold-timeline-toast"></div>
           </div>
@@ -10330,12 +10488,12 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- TAB: COMPOSE (STEP 4): PLAY OVER IT WITH FINGER INSTRUMENTS      -->
+      <!-- TABS: DRUMS & BASS (STEP 4): PLAY OVER IT WITH FINGER PADS       -->
       <!-- ================================================================ -->
       <div class="fold-card" id="card-pads">
         <div class="fold-card-header">
           <div class="fold-card-title-wrap" data-toggle-card="card-pads">
-            <h3>🖐️ 4. Play Over It — Finger Instruments & Live Overdub (Keys 1–8)</h3>
+            <h3>🖐️ Play Over It — Finger Instruments & Live Overdub (Keys 1–8)</h3>
             <span id="fold-perform-hud-pill" class="fold-panel-summary" style="border:1px solid rgba(255,255,255,0.2);">⏸ Ready (🟢 SEC 1: Intro / Verse)</span>
           </div>
           <div class="fold-btn-row">
@@ -10347,16 +10505,16 @@
             <button class="fold-btn" data-repeat="0.25">1/16</button>
             <button class="fold-btn" data-repeat="0.1667">1/16T</button>
             <button class="fold-btn" data-repeat="0.125">1/32</button>
-            <button type="button" id="fold-tall-pads-btn" class="fold-btn" title="Expand pad height for two-handed finger drumming">↕ Tall Pads: OFF</button>
+            <button type="button" id="fold-tall-pads-btn" class="fold-btn" title="Expand pad height for two-handed playing">↕ Tall Pads: OFF</button>
             <button class="fold-collapse-btn" data-toggle-card="card-pads">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
-          <!-- Quick Section Jump Strip for Live Finger Drumming -->
+          <!-- Quick Section Jump Strip for Live Finger Playing -->
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,0.25);padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
             <div class="fold-btn-row" id="fold-perform-sec-tabs"></div>
             <div class="fold-btn-row">
-              <button type="button" id="fold-change-song-from-pads-btn" class="fold-btn">🎸 Pick Another Song ↑</button>
+              <button type="button" id="fold-change-song-from-pads-btn" class="fold-btn">🎵 Pick Another Song ↑</button>
             </div>
           </div>
 
@@ -10370,17 +10528,28 @@
             ).join('')}
           </div>
 
-          <!-- Bottom Capture Bar: Add Overdubbed Groove to Arrange Timeline & Open Arrange -->
-          <div class="fold-timeline-capture-bar">
-            <div style="display:flex;flex-direction:column;gap:2px;">
-              <strong style="font-size:12px;color:#fff;">🎬 Done Playing Over It? Add to Arrange Timeline:</strong>
-              <span style="font-size:11px;color:#d1d5db;">Add 1 bar, 4 bars, or all 16 bars of this groove to your Arrange Timeline, then review & send to Ableton:</span>
-            </div>
-            <div class="fold-btn-row">
-              <button type="button" id="fold-pads-add-1bar-btn" class="fold-btn teal">➕ Add 1 Bar (Bar 1) → Timeline</button>
-              <button type="button" id="fold-pads-add-4bar-btn" class="fold-btn primary">➕ Add 4 Bars (🟢 SEC 1) → Timeline</button>
-              <button type="button" id="fold-pads-add-16bar-btn" class="fold-btn amber">➕ Add All 16 Bars → Timeline</button>
+          <!-- Bottom Capture Bar: Add Overdubbed Groove Independently or Together -->
+          <div class="fold-timeline-capture-bar" style="flex-direction:column;align-items:stretch;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <strong style="font-size:12px;color:#fff;">🎬 Done Playing Over It? Add to Arrange Timeline (Independently or Together):</strong>
+                <span style="font-size:11px;color:#d1d5db;">Add 1 bar, 4 bars, or all 16 bars of this track only or both Drums + Bass together:</span>
+              </div>
               <button type="button" id="fold-pads-go-arrange-btn" class="fold-btn" style="border-color:#84dcc6;color:#84dcc6;">🎬 Go to Arrange Timeline →</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <div class="fold-btn-row">
+                <span style="font-size:10px;font-weight:900;color:#84dcc6;">INDEPENDENT:</span>
+                <button type="button" id="fold-pads-add-1bar-btn" class="fold-btn teal">🥁 + 1 Bar · Drums Only</button>
+                <button type="button" id="fold-pads-add-4bar-btn" class="fold-btn teal">🥁 + 4 Bars · Drums Only</button>
+                <button type="button" id="fold-pads-add-16bar-btn" class="fold-btn teal">🥁 + All 16 Bars · Drums Only</button>
+              </div>
+              <div class="fold-btn-row">
+                <span style="font-size:10px;font-weight:900;color:#f5d0fe;">TOGETHER (DRUMS + BASS):</span>
+                <button type="button" id="fold-pads-add-both-1bar-btn" class="fold-btn primary">🥁+🎸 + 1 Bar · Both Together</button>
+                <button type="button" id="fold-pads-add-both-4bar-btn" class="fold-btn primary">🥁+🎸 + 4 Bars · Both Together</button>
+                <button type="button" id="fold-pads-add-both-16bar-btn" class="fold-btn amber">🥁+🎸 + All 16 Bars · Both Together</button>
+              </div>
             </div>
             <div class="fold-timeline-toast"></div>
           </div>
@@ -10397,19 +10566,22 @@
             <span id="fold-summary-arrange" class="fold-panel-summary">🥁 Drums (16B) + 🎸 Bass (16B)</span>
           </div>
           <div class="fold-btn-row">
-            <button type="button" id="fold-arrange-back-songs-btn" class="fold-btn">🎵 + Pick Another Song</button>
-            <button type="button" id="fold-arrange-back-compose-btn" class="fold-btn">🎛️ Open Compose (Drums / Bass)</button>
+            <button type="button" id="fold-arrange-back-songs-btn" class="fold-btn">🎵 + Pick Song</button>
+            <button type="button" id="fold-arrange-back-drums-btn" class="fold-btn">🥁 Open Drums Tab</button>
+            <button type="button" id="fold-arrange-back-bass-btn" class="fold-btn">🎸 Open Bass Tab</button>
             <button type="button" id="fold-random-mashup-btn" class="fold-btn amber" title="Randomize songs across all blocks in the Drum & Bass timeline">🎲 Randomize Timeline</button>
             <button type="button" id="fold-timeline-clear-btn" class="fold-btn" title="Reset Drum & Bass timeline to 1 block so you can build from scratch">🧹 Start Fresh (1 Block)</button>
             <button class="fold-collapse-btn" data-toggle-card="card-builder">▼ Collapse</button>
           </div>
         </div>
         <div class="fold-card-body">
-          <!-- Timeline Transport, Loop Highlighting & Send Arrangement to Ableton Bar -->
+          <!-- Timeline Transport (Play Together or Independently), Loop Highlighting & Send Arrangement to Ableton Bar -->
           <div style="background:linear-gradient(135deg, rgba(231,63,246,0.18), rgba(13,148,136,0.18));border:1.5px solid rgba(231,63,246,0.45);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:9px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <div class="fold-btn-row">
-                <button type="button" id="fold-timeline-play-btn" class="fold-btn primary" style="font-size:13px;padding:8px 14px;">▶ Play Full Timeline (Drums + Bass)</button>
+                <button type="button" id="fold-timeline-play-btn" class="fold-btn primary" style="font-size:13px;padding:8px 14px;">▶ Play Together (🥁 Drums + 🎸 Bass)</button>
+                <button type="button" id="fold-timeline-play-drums-only-btn" class="fold-btn" style="border-color:#84dcc6;color:#84dcc6;">🥁 Play Drums Only</button>
+                <button type="button" id="fold-timeline-play-bass-only-btn" class="fold-btn" style="border-color:#38bdf8;color:#7dd3fc;">🎸 Play Bass Only</button>
                 <button type="button" id="fold-timeline-loop-mode-btn" class="fold-btn">🔁 Loop: Full Timeline</button>
                 <button type="button" id="fold-disable-sec-loop-btn" class="fold-btn amber" style="display:none;border-color:#f59e0b;background:rgba(245,158,11,0.28);color:#fff;font-weight:900;">✕ Disable Section Loop</button>
                 <span id="fold-timeline-hud-pill" class="fold-panel-summary" style="border:1px solid rgba(255,255,255,0.2);font-size:12px;">⏸ Ready (🥁 Drums + 🎸 Bass)</span>
@@ -10671,13 +10843,61 @@
       });
     }
 
-    // Wire Up Compose Instrument Switcher (Drums vs Bass) & Hear Both Toggle
+    // Wire Up Compose Instrument Switcher (Drums vs Bass) & Solo / Together Playback Controls
     dock.querySelectorAll('[data-compose-inst]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const inst = btn.getAttribute('data-compose-inst');
         setComposeInstrument(inst);
       });
     });
+
+    const composeSwitchInstTabBtn = document.getElementById('fold-compose-switch-inst-tab-btn');
+    if (composeSwitchInstTabBtn) {
+      composeSwitchInstTabBtn.addEventListener('click', () => {
+        const nextTab = state.composeInstrument === 'bass' ? 'drums' : 'bass';
+        switchWorkspaceTab(nextTab);
+      });
+    }
+
+    const composePlaySoloBtn = document.getElementById('fold-compose-play-solo-btn');
+    if (composePlaySoloBtn) {
+      composePlaySoloBtn.addEventListener('click', () => {
+        const isPlayingSoloNow =
+          state.phonePlayer.playing && state.playbackMode !== 'timeline' && !state.playBothInCompose;
+        if (isPlayingSoloNow) {
+          stopPhonePlayback();
+        } else {
+          state.playBothInCompose = false;
+          renderComposeInstrumentUI();
+          savePersistedState();
+          if (!state.phonePlayer.playing || state.playbackMode === 'timeline') {
+            startPhonePlayback('compose');
+          } else {
+            updatePlayerButtons();
+          }
+        }
+      });
+    }
+
+    const composePlayTogetherBtn = document.getElementById('fold-compose-play-together-btn');
+    if (composePlayTogetherBtn) {
+      composePlayTogetherBtn.addEventListener('click', () => {
+        const isPlayingBothNow =
+          state.phonePlayer.playing && state.playbackMode !== 'timeline' && state.playBothInCompose;
+        if (isPlayingBothNow) {
+          stopPhonePlayback();
+        } else {
+          state.playBothInCompose = true;
+          renderComposeInstrumentUI();
+          savePersistedState();
+          if (!state.phonePlayer.playing || state.playbackMode === 'timeline') {
+            startPhonePlayback('compose');
+          } else {
+            updatePlayerButtons();
+          }
+        }
+      });
+    }
 
     const composePlayBothBtn = document.getElementById('fold-compose-play-both-btn');
     if (composePlayBothBtn) {
@@ -10695,25 +10915,32 @@
       });
     }
 
-    const songsGoComposeBtn = document.getElementById('fold-songs-go-compose-btn');
-    if (songsGoComposeBtn) {
-      songsGoComposeBtn.addEventListener('click', () => {
-        switchWorkspaceTab('compose');
+    const songsGoDrumsBtn = document.getElementById('fold-songs-go-drums-btn');
+    if (songsGoDrumsBtn) {
+      songsGoDrumsBtn.addEventListener('click', () => {
+        switchWorkspaceTab('drums');
       });
     }
 
-    // Wire Up Search, Tempo Filter, Auto-Jump to Compose & Random Groove in Songs Tab
+    const songsGoBassBtn = document.getElementById('fold-songs-go-bass-btn');
+    if (songsGoBassBtn) {
+      songsGoBassBtn.addEventListener('click', () => {
+        switchWorkspaceTab('bass');
+      });
+    }
+
+    // Wire Up Search, Tempo Filter, Auto-Jump to Drums/Bass & Random Groove in Songs Tab
     if (state.autoCollapseSongsOnSelect === undefined) {
       state.autoCollapseSongsOnSelect = true;
     }
     const autoCollapseSongsBtn = document.getElementById('fold-auto-collapse-songs-btn');
     if (autoCollapseSongsBtn) {
       autoCollapseSongsBtn.classList.toggle('chip-on', state.autoCollapseSongsOnSelect !== false);
-      autoCollapseSongsBtn.textContent = `⚡ Open in Compose on Select: ${state.autoCollapseSongsOnSelect !== false ? 'ON' : 'OFF'}`;
+      autoCollapseSongsBtn.textContent = `⚡ Auto-Open on Select: ${state.autoCollapseSongsOnSelect !== false ? 'ON' : 'OFF'}`;
       autoCollapseSongsBtn.addEventListener('click', () => {
         state.autoCollapseSongsOnSelect = state.autoCollapseSongsOnSelect === false;
         autoCollapseSongsBtn.classList.toggle('chip-on', state.autoCollapseSongsOnSelect);
-        autoCollapseSongsBtn.textContent = `⚡ Open in Compose on Select: ${state.autoCollapseSongsOnSelect ? 'ON' : 'OFF'}`;
+        autoCollapseSongsBtn.textContent = `⚡ Auto-Open on Select: ${state.autoCollapseSongsOnSelect ? 'ON' : 'OFF'}`;
       });
     }
 
@@ -10753,7 +10980,7 @@
         pushUndoState();
         loadSongGroove(pick, true);
         if (state.autoCollapseSongsOnSelect !== false) {
-          switchWorkspaceTab('compose');
+          switchWorkspaceTab(state.composeInstrument === 'bass' ? 'bass' : 'drums');
         }
       });
     }
@@ -10792,7 +11019,7 @@
       });
     }
 
-    // Wire Up Compose -> Arrange Timeline Capture Buttons (in both Sequencer and Pads)
+    // Wire Up Drums/Bass -> Arrange Timeline Capture Buttons (Independent & Together in both Sequencer and Pads)
     const bindAddTimelineBtn = (btnId, barsCount) => {
       const el = document.getElementById(btnId);
       if (el) {
@@ -10808,6 +11035,21 @@
     bindAddTimelineBtn('fold-pads-add-4bar-btn', 4);
     bindAddTimelineBtn('fold-pads-add-16bar-btn', 16);
 
+    const bindAddBothTimelineBtn = (btnId, barsCount) => {
+      const el = document.getElementById(btnId);
+      if (el) {
+        el.addEventListener('click', () => {
+          addComposeToTimeline(barsCount, null, null, 'both');
+        });
+      }
+    };
+    bindAddBothTimelineBtn('fold-compose-add-both-1bar-btn', 1);
+    bindAddBothTimelineBtn('fold-compose-add-both-4bar-btn', 4);
+    bindAddBothTimelineBtn('fold-compose-add-both-16bar-btn', 16);
+    bindAddBothTimelineBtn('fold-pads-add-both-1bar-btn', 1);
+    bindAddBothTimelineBtn('fold-pads-add-both-4bar-btn', 4);
+    bindAddBothTimelineBtn('fold-pads-add-both-16bar-btn', 16);
+
     const goArrangeFromCompose = () => {
       syncEditingTimelineBlockFromCompose();
       switchWorkspaceTab('arrange');
@@ -10817,14 +11059,72 @@
     const padsGoArrangeBtn = document.getElementById('fold-pads-go-arrange-btn');
     if (padsGoArrangeBtn) padsGoArrangeBtn.addEventListener('click', goArrangeFromCompose);
 
-    // Wire Up Arrange Tab: Timeline Playback, Loop Mode, Quick Add, Full Send & Scene Split
+    // Wire Up Arrange Tab: Timeline Playback (Together vs Drums Only vs Bass Only), Loop Mode, & Navigation
     const timelinePlayBtn = document.getElementById('fold-timeline-play-btn');
     if (timelinePlayBtn) {
       timelinePlayBtn.addEventListener('click', () => {
-        if (state.phonePlayer.playing && state.playbackMode === 'timeline') {
+        const isPlayingBoth =
+          state.phonePlayer.playing &&
+          state.playbackMode === 'timeline' &&
+          !state.drumTrackMuted &&
+          !state.bassTrackMuted;
+        if (isPlayingBoth) {
           stopPhonePlayback();
         } else {
-          startPhonePlayback('timeline');
+          state.drumTrackMuted = false;
+          state.bassTrackMuted = false;
+          renderSongBuilderAndClipsUI();
+          if (!state.phonePlayer.playing || state.playbackMode !== 'timeline') {
+            startPhonePlayback('timeline');
+          } else {
+            updatePlayerButtons();
+          }
+        }
+      });
+    }
+
+    const timelinePlayDrumsOnlyBtn = document.getElementById('fold-timeline-play-drums-only-btn');
+    if (timelinePlayDrumsOnlyBtn) {
+      timelinePlayDrumsOnlyBtn.addEventListener('click', () => {
+        const isPlayingDrumsSolo =
+          state.phonePlayer.playing &&
+          state.playbackMode === 'timeline' &&
+          !state.drumTrackMuted &&
+          state.bassTrackMuted;
+        if (isPlayingDrumsSolo) {
+          stopPhonePlayback();
+        } else {
+          state.drumTrackMuted = false;
+          state.bassTrackMuted = true;
+          renderSongBuilderAndClipsUI();
+          if (!state.phonePlayer.playing || state.playbackMode !== 'timeline') {
+            startPhonePlayback('timeline');
+          } else {
+            updatePlayerButtons();
+          }
+        }
+      });
+    }
+
+    const timelinePlayBassOnlyBtn = document.getElementById('fold-timeline-play-bass-only-btn');
+    if (timelinePlayBassOnlyBtn) {
+      timelinePlayBassOnlyBtn.addEventListener('click', () => {
+        const isPlayingBassSolo =
+          state.phonePlayer.playing &&
+          state.playbackMode === 'timeline' &&
+          state.drumTrackMuted &&
+          !state.bassTrackMuted;
+        if (isPlayingBassSolo) {
+          stopPhonePlayback();
+        } else {
+          state.drumTrackMuted = true;
+          state.bassTrackMuted = false;
+          renderSongBuilderAndClipsUI();
+          if (!state.phonePlayer.playing || state.playbackMode !== 'timeline') {
+            startPhonePlayback('timeline');
+          } else {
+            updatePlayerButtons();
+          }
         }
       });
     }
@@ -10866,10 +11166,17 @@
       });
     }
 
-    const arrangeBackComposeBtn = document.getElementById('fold-arrange-back-compose-btn');
-    if (arrangeBackComposeBtn) {
-      arrangeBackComposeBtn.addEventListener('click', () => {
-        switchWorkspaceTab('compose');
+    const arrangeBackDrumsBtn = document.getElementById('fold-arrange-back-drums-btn');
+    if (arrangeBackDrumsBtn) {
+      arrangeBackDrumsBtn.addEventListener('click', () => {
+        switchWorkspaceTab('drums');
+      });
+    }
+
+    const arrangeBackBassBtn = document.getElementById('fold-arrange-back-bass-btn');
+    if (arrangeBackBassBtn) {
+      arrangeBackBassBtn.addEventListener('click', () => {
+        switchWorkspaceTab('bass');
       });
     }
 
